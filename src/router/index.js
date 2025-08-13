@@ -10,17 +10,16 @@ import ProductListPage from "../components/ProductListPage.vue";
 const routes = [
   {
     path: "/",
-    name: "Login",
-    component: Login,
-  },
-  {
-    path: "/home",
     name: "Home",
     component: Home,
   },
   {
+    path: "/home",
+    redirect: "/",
+  },
+  {
     path: "/login",
-    name: "LoginPage",
+    name: "Login",
     component: Login,
   },
   {
