@@ -10,12 +10,17 @@ import ProductListPage from "../components/ProductListPage.vue";
 const routes = [
   {
     path: "/",
+    name: "Login",
+    component: Login,
+  },
+  {
+    path: "/home",
     name: "Home",
     component: Home,
   },
   {
     path: "/login",
-    name: "Login",
+    name: "LoginPage",
     component: Login,
   },
   {
@@ -43,7 +48,7 @@ const routes = [
     path: "/product-list",
     name: "ProductListPage",
     component: ProductListPage,
-  }
+  },
 ];
 
 const router = createRouter({

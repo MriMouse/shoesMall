@@ -64,7 +64,7 @@ export default {
 
                     localStorage.setItem('user', JSON.stringify(userData))
                     alert('登录成功！')
-                    this.$router.push('/')
+                    this.$router.push('/home')
                 } else {
                     alert('用户名或密码错误')
                 }
