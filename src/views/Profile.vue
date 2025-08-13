@@ -88,7 +88,7 @@
 
 <script>
 export default {
-    name: 'Profile',
+    name: 'Profile-Page',
     data() {
         return {
             user: {

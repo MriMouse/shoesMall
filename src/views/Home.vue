@@ -4,6 +4,7 @@
             <div class="container">
                 <h1 class="logo">鞋之城</h1>
                 <nav class="nav">
+                    <router-link to="/product-list" class="nav-link">产品列表</router-link>
                     <router-link to="/men-shoes" class="nav-link">男鞋</router-link>
                     <router-link to="/women-shoes" class="nav-link">女鞋</router-link>
                     <router-link to="/kids-shoes" class="nav-link">童鞋</router-link>
@@ -19,6 +20,7 @@
                     <h2>欢迎来到鞋之城</h2>
                     <p>发现最新款式，找到您的完美鞋履</p>
                     <div class="hero-buttons">
+                        <router-link to="/product-list" class="btn btn-primary">查看所有产品</router-link>
                         <router-link to="/men-shoes" class="btn btn-primary">男鞋专区</router-link>
                         <router-link to="/women-shoes" class="btn btn-primary">女鞋专区</router-link>
                         <router-link to="/kids-shoes" class="btn btn-primary">童鞋专区</router-link>
@@ -55,7 +57,7 @@
 
 <script>
 export default {
-    name: 'Home',
+    name: 'HomePage',
     mounted() {
         console.log('主页加载完成')
     }

@@ -33,7 +33,7 @@
 
 <script>
 export default {
-    name: 'Login',
+    name: 'Login-Page',
     data() {
         return {
             loginForm: {

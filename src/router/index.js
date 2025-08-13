@@ -5,6 +5,7 @@ import Profile from "../views/Profile.vue";
 import MenShoes from "../views/MenShoes.vue";
 import WomenShoes from "../views/WomenShoes.vue";
 import KidsShoes from "../views/KidsShoes.vue";
+import ProductListPage from "../components/ProductListPage.vue";
 
 const routes = [
   {
@@ -38,6 +39,11 @@ const routes = [
     name: "KidsShoes",
     component: KidsShoes,
   },
+  {
+    path: "/product-list",
+    name: "ProductListPage",
+    component: ProductListPage,
+  }
 ];
 
 const router = createRouter({
