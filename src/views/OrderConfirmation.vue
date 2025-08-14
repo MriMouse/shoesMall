@@ -999,24 +999,26 @@ const confirmPayment = async () => {
             console.error('查询订单失败:', e)
         }
 
-        // 为每个订单插入鞋数量记录
+        // 为每个订单插入鞋数量记录（需要携带 shoeId 与 shoeNum）
         if (createdOrders && createdOrders.length > 0) {
-            const sizeIdToQtyQueue = {}
+            const sizeIdToItemQueue = {}
             for (const p of products.value) {
                 const sId = selectedSizes.value[p.shoeId]
                 const qty = productQuantities.value[p.shoeId] || 0
-                if (!sId) continue
-                if (!sizeIdToQtyQueue[sId]) sizeIdToQtyQueue[sId] = []
-                sizeIdToQtyQueue[sId].push(qty)
+                if (!sId || qty <= 0) continue
+                if (!sizeIdToItemQueue[sId]) sizeIdToItemQueue[sId] = []
+                sizeIdToItemQueue[sId].push({ shoeId: p.shoeId, qty })
             }
 
             const shoeNumPromises = createdOrders.map(async (ord) => {
-                const qList = sizeIdToQtyQueue[ord.sizeId] || []
-                const shoeNum = qList.length > 0 ? qList.shift() : 0
+                const list = sizeIdToItemQueue[ord.sizeId] || []
+                const item = list.length > 0 ? list.shift() : null
+                if (!item) return false
                 try {
                     const res = await axios.post('/api/orderShoeNum/insertOrderShoeNum', {
                         orderId: ord.orderId,
-                        shoeNum: shoeNum
+                        shoeId: item.shoeId,
+                        shoeNum: item.qty
                     })
                     return res.data && res.data.code === 200
                 } catch (e) {
