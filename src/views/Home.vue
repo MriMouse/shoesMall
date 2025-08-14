@@ -31,7 +31,10 @@ export default {
 		function goAll() { router.push({ name: 'ProductListPage' }); }
 		function goMen() { router.push('/men-shoes'); }
 		function goWomen() { router.push('/women-shoes'); }
-		function onLoginSuccess() { router.push('/profile'); }
+		function onLoginSuccess() {
+			// 登录成功后不再跳转到个人中心，保持在首页，避免闪烁
+			loginOpen.value = false;
+		}
 
 		return { loginOpen, goAll, goMen, goWomen, onLoginSuccess };
 	}

@@ -1,6 +1,6 @@
 <template>
 	<div>
-		<div class="overlay" v-if="modelValue" @click="onClose"></div>
+		<div class="overlay" v-if="modelValue"></div>
 		<aside class="drawer" :class="{ open: modelValue }" @click.stop>
 			<header class="drawer-header">
 				<h3 class="drawer-title">{{ currentView === 'login' ? '登录' : currentView === 'register' ? '注册' : currentView === 'forgot' ? '忘记密码' : '重置密码' }}</h3>
@@ -116,7 +116,7 @@
 </template>
 
 <script>
-import { ref, watch } from 'vue';
+import { ref, watch, onBeforeUnmount } from 'vue';
 import axios from 'axios';
 
 export default {
@@ -401,11 +401,18 @@ export default {
 			}
 		};
 
-		// 监听抽屉关闭时重置表单
+		// 监听抽屉开闭：开时锁定页面滚动并仅允许操作抽屉；关时恢复
 		watch(() => props.modelValue, (newVal) => {
-			if (!newVal) {
+			if (newVal) {
+				document.body.classList.add('drawer-lock');
+			} else {
+				document.body.classList.remove('drawer-lock');
 				resetForms();
 			}
+		});
+
+		onBeforeUnmount(() => {
+			document.body.classList.remove('drawer-lock');
 		});
 
 		return {
@@ -441,7 +448,7 @@ export default {
 	inset: 0;
 	background: rgba(0,0,0,0.5);
 	backdrop-filter: blur(8px);
-	z-index: 999;
+	z-index: 9998;
 	animation: fadeIn .3s ease-out;
 }
 
@@ -456,7 +463,7 @@ export default {
 	box-shadow: -8px 0 32px rgba(0,0,0,0.15);
 	transform: translateX(100%);
 	transition: transform .4s cubic-bezier(0.4, 0, 0.2, 1);
-	z-index: 1000;
+	z-index: 9999;
 	display: flex;
 	flex-direction: column;
 	border-left: 1px solid rgba(0,0,0,0.1);
@@ -811,6 +818,13 @@ export default {
 	background: linear-gradient(135deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.01) 100%);
 	pointer-events: none;
 	z-index: -1;
+}
+</style>
+
+<!-- 锁定背景滚动样式（非scoped，需全局影响）-->
+<style>
+body.drawer-lock {
+	overflow: hidden !important;
 }
 </style>
 

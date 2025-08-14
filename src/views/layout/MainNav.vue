@@ -5,7 +5,7 @@
 			<div class="top-bar-inner">
 				<div class="top-bar-left"></div>
 				<div class="top-bar-right">
-					<button class="login-status" @click="$emit('open-login')">
+					<button class="login-status" @click="onLoginStatusClick">
 						<svg class="login-icon" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 							<rect x="2" y="3" width="16" height="11" rx="2" ry="2"/>
 							<line x1="8" y1="15" x2="12" y2="15"/>
@@ -213,9 +213,9 @@ import { reactive, ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRouter } from 'vue-router';
 
 export default {
-	name: 'MainNav',
-	emits: ['open-login'],
-	setup() {
+    name: 'MainNav',
+    emits: ['open-login'],
+    setup(props, { emit }) {
 		const router = useRouter();
 		const isSticky = ref(false);
 		const activeMenuIndex = ref(null);
@@ -224,9 +224,17 @@ export default {
 		let closeTimer = null;
 
 		// 检查登录状态
-		const isLoggedIn = computed(() => {
+        const isLoggedIn = computed(() => {
 			return !!localStorage.getItem('user');
 		});
+
+        function onLoginStatusClick() {
+            if (isLoggedIn.value) {
+                alert('欢迎使用平台！');
+            } else {
+                emit('open-login');
+            }
+        }
 
 		const navGroups = reactive([
 			{
@@ -478,14 +486,15 @@ export default {
 			selectSuggestion,
 			hideSuggestions,
 			highlight,
-			isSearchPanelOpen,
+            isSearchPanelOpen,
 			toggleSearchPanel,
 			closeSearchPanel,
 			selectHotSearch,
 			searchInput,
 			currentHotSearchIndex,
 			currentHotSearchTerm,
-			hotSearchTerms
+            hotSearchTerms,
+            onLoginStatusClick
 		};
 	}
 };
