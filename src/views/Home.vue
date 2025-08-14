@@ -1,5 +1,5 @@
 <template>
-	<div class="home-page" :class="{ blurred: loginOpen }">
+	<div class="home-page">
 		<MainNav @open-login="loginOpen = true" />
 		<main>
 			<HeroCarousel
@@ -16,10 +16,10 @@
 <script>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import MainNav from '@/components/layout/MainNav.vue';
-import LoginDrawer from '@/components/auth/LoginDrawer.vue';
-import HeroCarousel from '@/components/home/HeroCarousel.vue';
-import ProductGrid from '@/components/home/ProductGrid.vue';
+import MainNav from '@/views/layout/MainNav.vue';
+import LoginDrawer from '@/views/auth/LoginDrawer.vue';
+import HeroCarousel from '@/views/home/HeroCarousel.vue';
+import ProductGrid from '@/views/home/ProductGrid.vue';
 
 export default {
 	name: 'HomePage',
@@ -40,6 +40,5 @@ export default {
 
 <style scoped>
 .home-page { min-height: 100vh; background: #fff; }
-.home-page.blurred { filter: blur(2px); pointer-events: none; user-select: none; }
 main { display: grid; gap: 24px; }
 </style>

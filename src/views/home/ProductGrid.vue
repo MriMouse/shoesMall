@@ -27,7 +27,11 @@ export default {
 
 <style scoped>
 .product-grid { background: #fff; }
-.grid-inner { max-width: 1200px; margin: 0 auto; padding: 24px 16px 48px; }
+.grid-inner { 
+	max-width: 1200px; 
+	margin: 0 auto; 
+	padding: 24px 8px 48px; 
+}
 .section-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
 .section-title { font-size: 22px; font-weight: 800; letter-spacing: .3px; }
 .view-all { background: transparent; border: none; color: #000; cursor: pointer; font-weight: 700; }

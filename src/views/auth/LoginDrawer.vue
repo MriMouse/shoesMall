@@ -21,7 +21,7 @@
 			</section>
 		</aside>
 	</div>
-	</template>
+</template>
 
 <script>
 import { ref, watch } from 'vue';
@@ -82,7 +82,6 @@ export default {
 	z-index: 1000;
 	display: flex;
 	flex-direction: column;
-	position: fixed;
 }
 .drawer.open { transform: translateX(0); }
 .drawer-header {
@@ -92,14 +91,30 @@ export default {
 	height: 64px;
 	padding: 0 16px;
 	border-bottom: 1px solid rgba(255,255,255,0.08);
+	position: relative;
 }
 .drawer-title { font-weight: 700; letter-spacing: .5px; }
 .close-btn {
 	position: absolute;
 	top: 12px;
 	right: 12px;
-	width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.32);
-	background: transparent; color: #fff; cursor: pointer;
+	width: 36px; 
+	height: 36px; 
+	border-radius: 50%; 
+	border: 1px solid rgba(255,255,255,0.32);
+	background: transparent; 
+	color: #fff; 
+	cursor: pointer;
+	font-size: 18px;
+	font-weight: bold;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: background .15s ease, border-color .15s ease;
+}
+.close-btn:hover {
+	background: rgba(255,255,255,0.1);
+	border-color: rgba(255,255,255,0.6);
 }
 .drawer-body { padding: 16px; }
 .login-form { display: grid; gap: 12px; }

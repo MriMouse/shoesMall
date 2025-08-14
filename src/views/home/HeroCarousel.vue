@@ -62,8 +62,14 @@ export default {
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	width: 100vw;
+	margin-left: calc(-50vw + 50%);
 }
-.hero-inner { width: 100%; max-width: 1200px; overflow: hidden; position: relative; }
+.hero-inner { 
+	width: 100%; 
+	overflow: hidden; 
+	position: relative; 
+}
 .slides { display: flex; transition: transform .5s ease; }
 .slide { min-width: 100%; position: relative; display: grid; grid-template-columns: 1fr; }
 .slide-media { height: 48vh; background: linear-gradient(135deg, #0f0f0f, #1a1a1a); }
