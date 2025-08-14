@@ -305,9 +305,82 @@
                     </form>
                 </div>
             </div>
-        </div>
-    </div>
-</template>
+                 </div>
+     </div>
+
+     <!-- 支付弹窗 -->
+     <div v-if="showPaymentModal" class="modal-overlay payment-modal-overlay">
+         <div class="modal-content payment-modal-content" @click.stop>
+             <div class="modal-header payment-header">
+                 <h3>💳 确认支付</h3>
+                 <div class="countdown-timer">
+                     <span class="countdown-label">支付倒计时:</span>
+                     <span class="countdown-value" :class="{ 'warning': paymentCountdown <= 3 }">{{ paymentCountdown }}s</span>
+                 </div>
+             </div>
+             
+             <div class="modal-body payment-body">
+                 <!-- 订单摘要 -->
+                 <div class="payment-order-summary">
+                     <h4>订单信息</h4>
+                     <div class="order-items">
+                         <div v-for="product in products" :key="product.shoeId" class="order-item">
+                             <div class="item-image">
+                                 <img v-if="product.images && product.images.length > 0" 
+                                      :src="`/api/shoeImg/getImage/${product.images[0].imagePath}`" 
+                                      :alt="product.name">
+                                 <div v-else class="no-image">📷</div>
+                             </div>
+                             <div class="item-details">
+                                 <h5>{{ product.name }}</h5>
+                                 <p class="item-size">尺码: {{ getSizeName(selectedSizes[product.shoeId]) }}</p>
+                                 <p class="item-quantity">数量: {{ productQuantities[product.shoeId] }} 件</p>
+                                 <p class="item-price">单价: ¥{{ getProductPrice(product) }}</p>
+                             </div>
+                             <div class="item-total">
+                                 ¥{{ (getProductPrice(product) * productQuantities[product.shoeId]).toFixed(2) }}
+                             </div>
+                         </div>
+                     </div>
+                     
+                     <div class="payment-total">
+                         <div class="total-row">
+                             <span>商品总价:</span>
+                             <span>¥{{ totalPrice.toFixed(2) }}</span>
+                         </div>
+                         <div class="total-row">
+                             <span>运费:</span>
+                             <span>¥{{ shippingFee.toFixed(2) }}</span>
+                         </div>
+                         <div class="total-row final-total">
+                             <span>支付总额:</span>
+                             <span>¥{{ orderTotal.toFixed(2) }}</span>
+                         </div>
+                     </div>
+                 </div>
+                 
+                 <!-- 收货地址 -->
+                 <div class="payment-address">
+                     <h4>收货地址</h4>
+                     <div class="address-display">
+                         <p><strong>{{ selectedAddress?.receiverName }}</strong></p>
+                         <p>{{ selectedAddress?.phone }}</p>
+                         <p>{{ selectedAddress?.addressInfo }}</p>
+                         <p v-if="selectedAddress?.postalCode">邮编: {{ selectedAddress.postalCode }}</p>
+                     </div>
+                 </div>
+             </div>
+             
+             <div class="modal-footer payment-footer">
+                 <button @click="cancelPayment" class="cancel-payment-btn">取消支付</button>
+                 <button @click="confirmPayment" class="confirm-payment-btn" :disabled="isProcessingPayment">
+                     <span v-if="isProcessingPayment">处理中...</span>
+                     <span v-else>确认支付 ¥{{ orderTotal.toFixed(2) }}</span>
+                 </button>
+             </div>
+         </div>
+     </div>
+ </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
@@ -326,6 +399,12 @@ const selectedAddress = ref(null)
 const showAddressModal = ref(false)
 const showAddressForm = ref(false)
 const isEditingAddress = ref(false)
+
+// 支付弹窗相关
+const showPaymentModal = ref(false)
+const paymentCountdown = ref(10)
+const paymentTimer = ref(null)
+const isProcessingPayment = ref(false)
 
 // 地址表单数据
 const addressForm = ref({
@@ -733,59 +812,232 @@ const setDefaultAddress = async (addressId) => {
     }
 }
 
-// 提交订单
-const submitOrder = async () => {
+// 提交订单 - 显示支付弹窗
+const submitOrder = () => {
     if (!canSubmitOrder.value) {
         alert('请完善订单信息')
         return
     }
+    
+    // 显示支付弹窗
+    showPaymentModal.value = true
+    startPaymentCountdown()
+}
 
+// 开始支付倒计时
+const startPaymentCountdown = () => {
+    paymentCountdown.value = 10
+    paymentTimer.value = setInterval(() => {
+        paymentCountdown.value--
+        if (paymentCountdown.value <= 0) {
+            clearInterval(paymentTimer.value)
+            paymentTimeout()
+        }
+    }, 1000)
+}
+
+// 支付超时处理
+const paymentTimeout = () => {
+    showPaymentModal.value = false
+    alert('支付超时，请重新提交订单')
+    // 可以在这里添加其他超时处理逻辑
+}
+
+// 取消支付
+const cancelPayment = () => {
+    clearInterval(paymentTimer.value)
+    showPaymentModal.value = false
+}
+
+// 确认支付
+const confirmPayment = async () => {
+    if (isProcessingPayment.value) return
+    
+    isProcessingPayment.value = true
+    
     try {
-        // 为每个商品创建订单
-        const orderPromises = products.value.map(async (product) => {
+        // 首先检查库存是否充足
+        const inventoryCheckPromises = products.value.map(async (product) => {
             const quantity = productQuantities.value[product.shoeId] || 0
             const sizeId = selectedSizes.value[product.shoeId]
             
             if (quantity > 0 && sizeId) {
-                const order = {
-                    userId: 1, // 这里应该从用户登录状态获取
-                    sizeId: sizeId,
-                    orderNumber: generateOrderNumber(),
-                    status: 'pending',
-                    addressId: selectedAddress.value.addressId,
-                    shippingFee: shippingFee.value
-                }
-
-                const response = await axios.post('/api/order/insertOrder', order)
-                if (response.data && response.data.code === 200) {
-                    return response.data.data
+                try {
+                    const response = await axios.get('/api/inventory/checkInventorySufficient', {
+                        params: {
+                            shoeId: product.shoeId,
+                            sizeId: sizeId,
+                            quantity: quantity
+                        }
+                    })
+                    return response.data && response.data.code === 200 && response.data.data
+                } catch (err) {
+                    console.error('检查库存失败:', err)
+                    return false
                 }
             }
-            return null
+            return true
         })
 
-        const orderResults = await Promise.all(orderPromises)
-        const successfulOrders = orderResults.filter(order => order !== null)
+        const inventoryResults = await Promise.all(inventoryCheckPromises)
+        const allInventorySufficient = inventoryResults.every(result => result === true)
 
-        if (successfulOrders.length > 0) {
-            alert(`订单提交成功！共创建 ${successfulOrders.length} 个订单`)
-            router.push('/profile') // 跳转到个人中心查看订单
+        if (!allInventorySufficient) {
+            alert('部分商品库存不足，请调整购买数量')
+            isProcessingPayment.value = false
+            return
+        }
+
+        // 直接减少库存并显示成功弹窗（不创建订单）
+        const inventoryDecreasePromises = products.value.map(async (product) => {
+            const quantity = productQuantities.value[product.shoeId] || 0
+            const sizeId = selectedSizes.value[product.shoeId]
+            if (quantity > 0 && sizeId) {
+                try {
+                    await axios.post('/api/inventory/decreaseInventory', null, {
+                        params: {
+                            shoeId: product.shoeId,
+                            sizeId: sizeId,
+                            quantity: quantity
+                        }
+                    })
+                    return true
+                } catch (err) {
+                    console.error('减少库存失败:', err)
+                    return false
+                }
+            }
+            return true
+        })
+
+        const inventoryDecreaseResults = await Promise.all(inventoryDecreasePromises)
+        const allInventoryDecreased = inventoryDecreaseResults.every(result => result === true)
+
+        if (allInventoryDecreased) {
+            clearInterval(paymentTimer.value)
+            showPaymentModal.value = false
+            showPaymentSuccessModal()
         } else {
-            alert('订单提交失败，请重试')
+            alert('库存更新失败，请联系客服处理')
         }
 
     } catch (err) {
-        console.error('提交订单失败:', err)
-        alert('提交订单失败，请重试')
+        console.error('支付失败:', err)
+        alert('支付失败，请重试')
+    } finally {
+        isProcessingPayment.value = false
     }
 }
 
-// 生成订单号
-const generateOrderNumber = () => {
-    const timestamp = Date.now()
-    const random = Math.floor(Math.random() * 1000)
-    return `ORD${timestamp}${random}`
+// 支付成功弹窗
+const showPaymentSuccessModal = () => {
+    // 创建支付成功弹窗
+    const successModal = document.createElement('div')
+    successModal.className = 'modal-overlay payment-success-modal'
+    successModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1200;
+    `
+
+    successModal.innerHTML = `
+        <div class="modal-content payment-success-content" style="
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            padding: 40px 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        ">
+            <div class="success-icon" style="
+                font-size: 4rem;
+                color: #28a745;
+                margin-bottom: 20px;
+            ">✅</div>
+            <h3 style="
+                color: #333;
+                margin: 0 0 15px 0;
+                font-size: 1.5rem;
+            ">支付成功！</h3>
+            <p style="
+                color: #666;
+                margin: 0 0 25px 0;
+                font-size: 1rem;
+            ">支付成功，库存已相应减少。</p>
+            <div class="success-actions" style="
+                display: flex;
+                gap: 15px;
+                justify-content: center;
+            ">
+                <button class="view-orders-btn" style="
+                    background: #007bff;
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 1rem;
+                    font-weight: 500;
+                ">查看订单</button>
+                <button class="continue-shopping-btn" style="
+                    background: #28a745;
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 1rem;
+                    font-weight: 500;
+                ">继续购物</button>
+            </div>
+        </div>
+    `
+
+    document.body.appendChild(successModal)
+
+    // 添加按钮事件
+    const viewOrdersBtn = successModal.querySelector('.view-orders-btn')
+    const continueShoppingBtn = successModal.querySelector('.continue-shopping-btn')
+
+    viewOrdersBtn.addEventListener('click', () => {
+        document.body.removeChild(successModal)
+        router.push('/profile')
+    })
+
+    continueShoppingBtn.addEventListener('click', () => {
+        document.body.removeChild(successModal)
+        router.push('/products')
+    })
+
+    // 点击背景关闭弹窗
+    successModal.addEventListener('click', (e) => {
+        if (e.target === successModal) {
+            document.body.removeChild(successModal)
+            router.push('/products')
+        }
+    })
 }
+
+// 获取尺码名称
+const getSizeName = (sizeId) => {
+    const size = availableSizes.value.find(s => s.sizeId === sizeId)
+    return size ? size.size : '未知尺码'
+}
+
+// 获取商品价格（考虑折扣）
+const getProductPrice = (product) => {
+    return (product.discountPrice && product.discountPrice < product.price) ? product.discountPrice : product.price
+}
+
+ 
 
 // 返回商品列表
 const goBack = () => {
@@ -1567,6 +1819,266 @@ onMounted(() => {
     .address-actions {
         flex-direction: column;
         gap: 6px;
-    }
-}
-</style>
+         }
+ }
+
+ /* 支付弹窗样式 */
+ .payment-modal-overlay {
+     z-index: 1100;
+ }
+
+ .payment-modal-content {
+     max-width: 700px;
+     max-height: 90vh;
+ }
+
+ .payment-header {
+     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+     color: white;
+     border-radius: 12px 12px 0 0;
+ }
+
+ .payment-header h3 {
+     color: white;
+     margin: 0;
+ }
+
+ .countdown-timer {
+     display: flex;
+     align-items: center;
+     gap: 8px;
+     font-size: 0.9rem;
+ }
+
+ .countdown-label {
+     color: rgba(255, 255, 255, 0.8);
+ }
+
+ .countdown-value {
+     background: rgba(255, 255, 255, 0.2);
+     padding: 4px 8px;
+     border-radius: 12px;
+     font-weight: 600;
+     min-width: 30px;
+     text-align: center;
+ }
+
+ .countdown-value.warning {
+     background: #ff6b6b;
+     animation: pulse 1s infinite;
+ }
+
+ @keyframes pulse {
+     0%, 100% { opacity: 1; }
+     50% { opacity: 0.7; }
+ }
+
+ .payment-body {
+     padding: 24px;
+ }
+
+ .payment-order-summary h4,
+ .payment-address h4 {
+     margin: 0 0 16px 0;
+     color: #333;
+     font-size: 1.1rem;
+     border-bottom: 2px solid #e9ecef;
+     padding-bottom: 8px;
+ }
+
+ .order-items {
+     display: flex;
+     flex-direction: column;
+     gap: 16px;
+     margin-bottom: 20px;
+ }
+
+ .order-item {
+     display: flex;
+     align-items: center;
+     gap: 16px;
+     padding: 16px;
+     border: 1px solid #e9ecef;
+     border-radius: 8px;
+     background: #f8f9fa;
+ }
+
+ .item-image {
+     width: 60px;
+     height: 60px;
+     border-radius: 6px;
+     overflow: hidden;
+     flex-shrink: 0;
+ }
+
+ .item-image img {
+     width: 100%;
+     height: 100%;
+     object-fit: cover;
+ }
+
+ .item-image .no-image {
+     width: 100%;
+     height: 100%;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+     background: #dee2e6;
+     color: #6c757d;
+     font-size: 1.2rem;
+ }
+
+ .item-details {
+     flex: 1;
+     min-width: 0;
+ }
+
+ .item-details h5 {
+     margin: 0 0 4px 0;
+     color: #333;
+     font-size: 1rem;
+ }
+
+ .item-details p {
+     margin: 0 0 2px 0;
+     color: #6c757d;
+     font-size: 0.85rem;
+ }
+
+ .item-total {
+     font-weight: 600;
+     color: #e74c3c;
+     font-size: 1.1rem;
+     flex-shrink: 0;
+ }
+
+ .payment-total {
+     background: #f8f9fa;
+     padding: 16px;
+     border-radius: 8px;
+     border: 1px solid #e9ecef;
+ }
+
+ .total-row {
+     display: flex;
+     justify-content: space-between;
+     align-items: center;
+     padding: 8px 0;
+     border-bottom: 1px solid #e9ecef;
+ }
+
+ .total-row:last-child {
+     border-bottom: none;
+ }
+
+ .total-row.final-total {
+     font-size: 1.2rem;
+     font-weight: 600;
+     color: #e74c3c;
+     border-top: 2px solid #e74c3c;
+     padding-top: 12px;
+     margin-top: 8px;
+ }
+
+ .payment-address {
+     margin-top: 20px;
+ }
+
+ .address-display {
+     background: #f8f9fa;
+     padding: 16px;
+     border-radius: 8px;
+     border: 1px solid #e9ecef;
+ }
+
+ .address-display p {
+     margin: 0 0 4px 0;
+     color: #495057;
+ }
+
+ .address-display p:last-child {
+     margin-bottom: 0;
+ }
+
+ .payment-footer {
+     display: flex;
+     justify-content: space-between;
+     gap: 16px;
+     padding: 20px 24px;
+     border-top: 1px solid #e9ecef;
+     background: #f8f9fa;
+     border-radius: 0 0 12px 12px;
+ }
+
+ .cancel-payment-btn,
+ .confirm-payment-btn {
+     padding: 12px 24px;
+     border: none;
+     border-radius: 6px;
+     font-size: 1rem;
+     font-weight: 600;
+     cursor: pointer;
+     transition: all 0.3s ease;
+ }
+
+ .cancel-payment-btn {
+     background: #6c757d;
+     color: white;
+ }
+
+ .cancel-payment-btn:hover {
+     background: #5a6268;
+ }
+
+ .confirm-payment-btn {
+     background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+     color: white;
+     flex: 1;
+     margin-left: 16px;
+ }
+
+ .confirm-payment-btn:hover:not(:disabled) {
+     background: linear-gradient(135deg, #218838 0%, #1ea085 100%);
+     transform: translateY(-2px);
+ }
+
+ .confirm-payment-btn:disabled {
+     background: #adb5bd;
+     cursor: not-allowed;
+     transform: none;
+ }
+
+ /* 响应式设计 */
+ @media (max-width: 768px) {
+     .payment-modal-content {
+         width: 95%;
+         margin: 20px;
+     }
+     
+     .payment-header {
+         flex-direction: column;
+         gap: 12px;
+         align-items: flex-start;
+     }
+     
+     .order-item {
+         flex-direction: column;
+         align-items: flex-start;
+         text-align: center;
+     }
+     
+     .item-image {
+         width: 80px;
+         height: 80px;
+     }
+     
+     .payment-footer {
+         flex-direction: column;
+     }
+     
+     .confirm-payment-btn {
+         margin-left: 0;
+         margin-top: 8px;
+     }
+ }
+ </style>
