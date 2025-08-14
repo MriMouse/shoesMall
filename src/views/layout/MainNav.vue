@@ -160,7 +160,7 @@
 						<path d="M9 8a3 3 0 0 1 6 0"/>
 					</svg>
 				</button>
-				<button class="icon-btn" @click="goProfile" aria-label="个人中心">
+				<button class="icon-btn" :class="{ 'disabled': !isLoggedIn }" @click="goProfile" aria-label="个人中心">
 					<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<circle cx="12" cy="8" r="3"/>
 						<path d="M4 20c0-3.314 3.582-6 8-6s8 2.686 8 6"/>
@@ -317,7 +317,13 @@ export default {
 		}
 
 		function goProfile() {
-			router.push('/profile');
+			// 检查是否已登录
+			if (isLoggedIn.value) {
+				router.push('/profile');
+			} else {
+				// 未登录时提示用户登录
+				alert('请先登录后再访问个人中心');
+			}
 		}
 
 		function goCart() {
@@ -685,6 +691,20 @@ mark { background: #c6ff00; color: #111; border-radius: 4px; padding: 0 2px; }
 }
 
 .icon-btn:hover { background: #000; color: #fff; border-color: #000; transform: translateY(-1px); }
+
+.icon-btn.disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+	border-color: #ccc;
+	color: #ccc;
+}
+
+.icon-btn.disabled:hover {
+	background: transparent;
+	color: #ccc;
+	border-color: #ccc;
+	transform: none;
+}
 
 .mega-menu {
 	position: fixed;

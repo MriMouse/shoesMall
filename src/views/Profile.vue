@@ -3,7 +3,10 @@
         <div class="profile-container">
             <div class="profile-header">
                 <div class="avatar">
-                    <img :src="user.avatar || '/default-avatar.png'" :alt="user.username" />
+                    <div class="avatar-placeholder" v-if="!user.avatar">
+                        <span>{{ user.username ? user.username.charAt(0).toUpperCase() : 'U' }}</span>
+                    </div>
+                    <img v-else :src="user.avatar" :alt="user.username" />
                 </div>
                 <div class="user-info">
                     <h2>{{ user.username }}</h2>
@@ -117,10 +120,33 @@ export default {
     },
     methods: {
         loadUserData() {
-            const userData = JSON.parse(localStorage.getItem('user') || '{}')
-            if (userData.username) {
-                this.user.username = userData.username
-                this.user.registerTime = userData.loginTime || new Date().toISOString()
+            try {
+                const userDataString = localStorage.getItem('user')
+                if (userDataString) {
+                    // 尝试解析JSON，如果失败则使用默认值
+                    let userData
+                    try {
+                        userData = JSON.parse(userDataString)
+                    } catch (parseError) {
+                        console.warn('用户数据格式错误，使用默认值:', parseError)
+                        // 如果localStorage中存储的不是JSON格式，可能是简单的用户名字符串
+                        if (typeof userDataString === 'string' && userDataString.trim()) {
+                            userData = { username: userDataString }
+                        } else {
+                            userData = {}
+                        }
+                    }
+                    
+                    if (userData.username) {
+                        this.user.username = userData.username
+                        this.user.registerTime = userData.loginTime || new Date().toISOString()
+                    }
+                }
+            } catch (error) {
+                console.error('加载用户数据时出错:', error)
+                // 使用默认值
+                this.user.username = '用户'
+                this.user.registerTime = new Date().toISOString()
             }
         },
 
@@ -136,7 +162,7 @@ export default {
         logout() {
             if (confirm('确定要退出登录吗？')) {
                 localStorage.removeItem('user')
-                this.$router.push('/login')
+                this.$router.push('/')
             }
         }
     }
@@ -167,12 +193,34 @@ export default {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-.avatar img {
+.avatar {
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    object-fit: cover;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #e1e8ed;
     border: 3px solid #e1e8ed;
+}
+
+.avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #3498db;
+    color: white;
+    font-size: 2rem;
+    font-weight: bold;
 }
 
 .user-info h2 {

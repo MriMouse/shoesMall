@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
 import Home from "../views/Home.vue";
-import Login from "../views/Login.vue";
 import Profile from "../views/Profile.vue";
 import MenShoes from "../views/MenShoes.vue";
 import WomenShoes from "../views/WomenShoes.vue";
@@ -18,11 +17,6 @@ const routes = [
   {
     path: "/home",
     redirect: "/",
-  },
-  {
-    path: "/login",
-    name: "Login",
-    component: Login,
   },
   {
     path: "/profile",
@@ -78,7 +72,8 @@ router.beforeEach((to, from, next) => {
     // 检查用户是否登录（这里简单使用localStorage检查）
     const isLoggedIn = localStorage.getItem("user");
     if (!isLoggedIn) {
-      next("/login");
+      // 重定向到首页，用户可以通过抽屉式登录进行登录
+      next("/");
     } else {
       next();
     }
