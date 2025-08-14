@@ -264,11 +264,12 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 
 // 路由相关
 const route = useRoute()
+const router = useRouter()
 
 // 响应式数据
 const product = ref(null)
@@ -507,14 +508,15 @@ const buyNow = () => {
         return
     }
     
-    // 这里实现立即购买的逻辑
-    console.log('立即购买:', {
-        product: product.value,
-        size: selectedSize.value,
-        quantity: quantity.value
+    // 跳转到订单确认页面，传递商品信息
+    router.push({
+        name: 'OrderConfirmation',
+        query: {
+            productId: product.value.shoeId,
+            sizeId: selectedSize.value,
+            quantity: quantity.value
+        }
     })
-    
-    alert('跳转到订单确认页面')
 }
 
 // 格式化日期
