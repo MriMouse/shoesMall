@@ -93,7 +93,7 @@
                     </div>
                 </div>
 
-                <!-- 尺码筛选 -->
+                <!-- 尺码筛选 - 显示所有尺码，不显示库存状态 -->
                 <div class="filter-group">
                     <label class="filter-label">尺码:</label>
                     <div class="filter-options">
@@ -103,6 +103,7 @@
                             @click="toggleSizeFilter(size.sizeId)"
                             class="filter-option"
                             :class="{ 'active': selectedSizes.includes(size.sizeId) }"
+                            :title="`选择尺码 ${size.size}`"
                         >
                             {{ size.size }}
                         </button>
@@ -180,6 +181,26 @@
                         <div class="product-meta">
                             <span class="sales-info">销量: {{ product.salesVolume || 0 }}</span>
                             <span class="points-info">积分: {{ product.points || 0 }}</span>
+                        </div>
+
+                        <!-- 显示产品所有尺码 - 修复尺码显示问题 -->
+                        <div class="available-sizes">
+                            <span class="sizes-label">可用尺码:</span>
+                            <div class="size-tags">
+                                <span 
+                                    v-for="size in getProductAllSizes(product.shoeId)" 
+                                    :key="size.sizeId"
+                                    class="size-tag"
+                                    :class="{ 'no-stock': size.inventoryNumber === 0 }"
+                                    :title="`尺码 ${size.size}: ${size.inventoryNumber > 0 ? size.inventoryNumber + ' 双库存' : '无库存'}`"
+                                >
+                                    {{ size.size }}
+                                </span>
+                                <!-- 如果没有尺码数据，显示提示信息 -->
+                                <span v-if="getProductAllSizes(product.shoeId).length === 0" class="no-sizes-info">
+                                    暂无尺码信息
+                                </span>
+                            </div>
                         </div>
 
                         <div class="product-actions">
@@ -272,7 +293,9 @@
 import { ref, onMounted, computed, reactive, nextTick } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
+
 const router = useRouter()
+
 // 响应式数据
 const products = ref([])
 const filteredProducts = ref([])
@@ -284,6 +307,7 @@ const brands = ref([])
 const types = ref([])
 const colors = ref([])
 const sizes = ref([])
+
 
 // 筛选状态
 const selectedBrands = ref([])
@@ -329,22 +353,29 @@ const paginatedProducts = computed(() => {
     return filteredProducts.value.slice(start, end)
 })
 
-// 获取所有产品数据
+// 修复后的 fetchProducts 函数 - 使用 ProductDetail 的库存调用方式
 const fetchProducts = async () => {
     loading.value = true
     error.value = ''
     try {
-        const response = await axios.post('/api/shoe/getAll', {}, {
+        // 获取产品数据
+        const productResponse = await axios.post('/api/shoe/getAll', {}, {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         })
 
-        if (response.data && response.data.data) {
-            const productList = response.data.data
+        if (productResponse.data && productResponse.data.data) {
+            const productList = productResponse.data.data
 
-            // 获取每个产品的图片
-            for (let product of productList) {
+            // 批量获取图片数据和库存数据，减少请求次数
+            const dataPromises = productList.map(async (product) => {
                 try {
-                    const imageResponse = await axios.get(`/api/shoeImg/list/${product.shoeId}`)
+                    // 并行获取图片和库存数据
+                    const [imageResponse, inventoryResponse] = await Promise.all([
+                        axios.get(`/api/shoeImg/list/${product.shoeId}`),
+                        axios.get(`/api/inventory/getInventoryByShoeId/${product.shoeId}`)
+                    ])
+
+                    // 处理图片数据
                     if (imageResponse.data && imageResponse.data.data) {
                         product.images = imageResponse.data.data
                         product.currentImageIndex = 0
@@ -352,11 +383,40 @@ const fetchProducts = async () => {
                         product.images = []
                         product.currentImageIndex = 0
                     }
-                } catch (imgError) {
+
+                    // 处理库存数据 - 使用 ProductDetail 的方式
+                    if (inventoryResponse.data && inventoryResponse.data.code === 200 && inventoryResponse.data.data) {
+                        let inventoryArray = []
+                        
+                        if (Array.isArray(inventoryResponse.data.data)) {
+                            // 如果返回的是数组
+                            inventoryArray = inventoryResponse.data.data
+                        } else if (inventoryResponse.data.data.inventories) {
+                            // 如果返回的是包含 inventories 字段的对象
+                            inventoryArray = inventoryResponse.data.data.inventories
+                        } else if (inventoryResponse.data.data.sizeInventories) {
+                            // 如果返回的是包含 sizeInventories 字段的对象
+                            inventoryArray = inventoryResponse.data.data.sizeInventories
+                        } else {
+                            // 如果返回的是单个库存对象，转换为数组
+                            inventoryArray = [inventoryResponse.data.data]
+                        }
+                        
+                        // 将库存数据存储到产品对象中，方便后续使用
+                        product.inventoryData = inventoryArray
+                    } else {
+                        product.inventoryData = []
+                    }
+                } catch (error) {
+                    console.warn(`获取产品 ${product.shoeId} 数据失败:`, error)
                     product.images = []
                     product.currentImageIndex = 0
+                    product.inventoryData = []
                 }
-            }
+            })
+
+            // 等待所有数据加载完成
+            await Promise.all(dataPromises)
 
             products.value = productList.map(product => reactive(product))
             applyFilters()
@@ -377,40 +437,74 @@ const fetchProducts = async () => {
 // 获取筛选选项数据
 const fetchOptions = async () => {
     try {
-        // 获取品牌
-        const brandResponse = await axios.post('/api/brand/getAll', {}, {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        })
+        // 并行请求所有筛选选项，提高加载速度
+        const [brandResponse, typeResponse, colorResponse, sizeResponse] = await Promise.all([
+            axios.post('/api/brand/getAll', {}, {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            }),
+            axios.post('/api/shoesType/getAll', {}, {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            }),
+            axios.post('/api/color/getAll', {}, {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            }),
+            axios.post('/api/shoesSize/getAll', {}, {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            })
+        ])
+
+        // 处理品牌数据
         if (brandResponse.data && brandResponse.data.data) {
             brands.value = brandResponse.data.data.filter(brand => !brand.brandDisabled)
         }
 
-        // 获取版型
-        const typeResponse = await axios.post('/api/shoesType/getAll', {}, {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        })
+        // 处理版型数据
         if (typeResponse.data && typeResponse.data.data) {
             types.value = typeResponse.data.data.filter(type => !type.typeDisabled)
         }
 
-        // 获取颜色
-        const colorResponse = await axios.post('/api/color/getAll', {}, {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        })
+        // 处理颜色数据
         if (colorResponse.data && colorResponse.data.data) {
             colors.value = colorResponse.data.data.filter(color => !color.colorDisabled)
         }
 
-        // 获取尺码
-        const sizeResponse = await axios.post('/api/shoesSize/getAll', {}, {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        })
+        // 处理尺码数据
         if (sizeResponse.data && sizeResponse.data.data) {
             sizes.value = sizeResponse.data.data.filter(size => !size.sizeDisabled)
         }
     } catch (error) {
         console.error('获取筛选选项失败:', error)
     }
+}
+
+// 修复后的 getProductAllSizes 函数 - 使用 ProductDetail 的库存调用方式
+const getProductAllSizes = (shoeId) => {
+    // 从产品对象中获取库存数据
+    const product = products.value.find(p => p.shoeId === shoeId)
+    if (!product || !product.inventoryData || !Array.isArray(product.inventoryData)) {
+        console.log(`产品 ${shoeId} 没有库存数据`)
+        return []
+    }
+    
+    console.log(`产品 ${shoeId} 的库存数据:`, product.inventoryData)
+    
+    // 直接使用库存数据，因为已经通过 ProductDetail 的方式处理过了
+    const result = product.inventoryData
+        .map(inv => ({
+            sizeId: inv.sizeId,
+            size: inv.size,
+            inventoryNumber: inv.inventoryNumber || 0
+        }))
+        .filter(item => item.size && item.size !== 'undefined') // 过滤掉无效的尺码
+        .sort((a, b) => {
+            // 按尺码大小排序，处理数字和字符串混合的情况
+            const aSize = parseInt(a.size) || 0
+            const bSize = parseInt(b.size) || 0
+            return aSize - bSize
+        })
+    
+    console.log(`产品 ${shoeId} 的最终尺码结果:`, result)
+    return result
 }
 
 // 搜索功能
@@ -521,8 +615,16 @@ const applyFilters = () => {
         )
     }
 
-    // 尺码筛选（这里需要根据实际库存数据来实现）
-    // 暂时跳过尺码筛选，因为需要额外的库存API
+    // 尺码筛选 - 修复：只要该产品有该尺码记录就显示
+    if (selectedSizes.value.length > 0) {
+        filtered = filtered.filter(product => {
+            const productInventory = product.inventoryData || []
+            // 只要该产品有选中尺码的库存记录就显示，不管库存数量
+            return productInventory.some(inv => 
+                selectedSizes.value.includes(inv.sizeId)
+            )
+        })
+    }
 
     filteredProducts.value = filtered
     totalCount.value = filtered.length
@@ -568,8 +670,7 @@ const nextGalleryImage = () => {
 
 // 产品操作
 const viewProductDetails = (product) => {
-    // 这里可以实现查看产品详情的功能
-    console.log('查看产品详情:', product)
+    // 跳转到产品详情页面
     router.push(`/product/${product.shoeId}`)
 }
 
@@ -591,9 +692,18 @@ const handlePageSizeChange = () => {
 }
 
 // 生命周期钩子
-onMounted(() => {
-    fetchProducts()
-    fetchOptions()
+onMounted(async () => {
+    try {
+        // 先获取筛选选项，再获取产品数据
+        console.log('开始获取筛选选项...')
+        await fetchOptions()
+        console.log('筛选选项获取完成，开始获取产品数据...')
+        await fetchProducts()
+        console.log('产品数据获取完成')
+    } catch (error) {
+        console.error('初始化失败:', error)
+        error.value = '初始化失败，请刷新页面重试'
+    }
 })
 </script>
 
@@ -1024,6 +1134,54 @@ onMounted(() => {
     color: #666;
 }
 
+/* 可用尺码样式 */
+.available-sizes {
+    margin-bottom: 16px;
+}
+
+.sizes-label {
+    display: block;
+    font-size: 0.8rem;
+    color: #666;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.size-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.size-tag {
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    background: rgba(40, 167, 69, 0.1);
+    color: #28a745;
+    border: 1px solid rgba(40, 167, 69, 0.2);
+}
+
+/* 新增：无库存尺码的样式 */
+.size-tag.no-stock {
+    background: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+    border-color: rgba(220, 53, 69, 0.2);
+}
+
+/* 新增：无尺码信息的提示样式 */
+.no-sizes-info {
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    background: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+    border: 1px solid rgba(108, 117, 125, 0.2);
+    font-style: italic;
+}
+
 .product-actions {
     display: flex;
     gap: 8px;
@@ -1119,8 +1277,7 @@ onMounted(() => {
 
 .page-btn:hover:not(:disabled) {
     background: rgb(211, 169, 101);
-    color: white;
-    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .page-btn:disabled {
@@ -1316,6 +1473,7 @@ onMounted(() => {
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     }
 }
+
 
 @media (max-width: 768px) {
     .product-display-container {
