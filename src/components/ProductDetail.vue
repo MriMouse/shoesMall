@@ -372,19 +372,34 @@ const loadProductDetail = async () => {
 const loadInventoryData = async (shoeId) => {
     try {
         const response = await axios.get(`/api/inventory/getInventoryByShoeId/${shoeId}`)
+        console.log('库存接口响应:', response.data) // 添加调试日志
+        
         if (response.data && response.data.code === 200 && response.data.data) {
-            // 确保返回的是数组
+            // 根据后端返回的数据结构处理
+            let inventoryArray = []
+            
             if (Array.isArray(response.data.data)) {
-                inventoryData.value = response.data.data
+                // 如果返回的是数组
+                inventoryArray = response.data.data
+            } else if (response.data.data.inventories) {
+                // 如果返回的是包含 inventories 字段的对象
+                inventoryArray = response.data.data.inventories
+            } else if (response.data.data.sizeInventories) {
+                // 如果返回的是包含 sizeInventories 字段的对象
+                inventoryArray = response.data.data.sizeInventories
             } else {
-                // 如果返回的是单个对象，转换为数组
-                inventoryData.value = [response.data.data]
+                // 如果返回的是单个库存对象，转换为数组
+                inventoryArray = [response.data.data]
             }
+            
+            console.log('处理后的库存数组:', inventoryArray)
+            inventoryData.value = inventoryArray
         } else {
+            console.warn('库存接口返回数据异常:', response.data)
             inventoryData.value = []
         }
     } catch (err) {
-        console.warn('获取库存信息失败:', err)
+        console.error('获取库存信息失败:', err)
         inventoryData.value = []
     }
 }
