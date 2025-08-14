@@ -271,7 +271,8 @@
 <script setup>
 import { ref, onMounted, computed, reactive, nextTick } from 'vue'
 import axios from 'axios'
-
+import { useRouter } from 'vue-router'
+const router = useRouter()
 // 响应式数据
 const products = ref([])
 const filteredProducts = ref([])
@@ -569,7 +570,7 @@ const nextGalleryImage = () => {
 const viewProductDetails = (product) => {
     // 这里可以实现查看产品详情的功能
     console.log('查看产品详情:', product)
-    alert(`查看产品详情: ${product.name}`)
+    router.push(`/product/${product.shoeId}`)
 }
 
 const addToCart = (product) => {

@@ -6,6 +6,7 @@ import MenShoes from "../views/MenShoes.vue";
 import WomenShoes from "../views/WomenShoes.vue";
 import KidsShoes from "../views/KidsShoes.vue";
 import ProductListPage from "../components/ProductListPage.vue";
+import ProductDetail from "../components/ProductDetail.vue";
 
 const routes = [
   {
@@ -45,10 +46,20 @@ const routes = [
     component: KidsShoes,
   },
   {
-    path: "/product-list",
+    path: "/products",  // 修改为 /products
     name: "ProductListPage",
     component: ProductListPage,
   },
+  {
+    path: "/product/:id",
+    name: "ProductDetail",
+    component: ProductDetail,
+  },
+  // 添加一个重定向，兼容旧的路由
+  {
+    path: "/product-list",
+    redirect: "/products"
+  }
 ];
 
 const router = createRouter({
