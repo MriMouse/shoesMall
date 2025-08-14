@@ -380,6 +380,66 @@
              </div>
          </div>
      </div>
+      
+      <!-- 订单详情弹窗 -->
+      <div v-if="showOrderDetailsModal" class="modal-overlay" @click="closeOrderDetailsModal">
+          <div class="modal-content" @click.stop>
+              <div class="modal-header">
+                  <h3>订单详情</h3>
+                  <button class="close-btn" @click="closeOrderDetailsModal">✕</button>
+              </div>
+              <div class="modal-body" v-if="orderDetails">
+                  <div class="order-meta" style="margin-bottom: 16px;">
+                      <p><strong>订单编号:</strong> {{ orderDetails.orderNumber }}</p>
+                      <p><strong>创建时间:</strong> {{ formatDateTime(orderDetails.createdAt) }}</p>
+                      <p><strong>订单状态:</strong> 已支付</p>
+                  </div>
+                  <div class="address-display" style="margin-bottom: 16px;">
+                      <h4>收货地址</h4>
+                      <p><strong>{{ orderDetails.address?.receiverName }}</strong></p>
+                      <p>{{ orderDetails.address?.phone }}</p>
+                      <p>{{ orderDetails.address?.addressInfo }}</p>
+                      <p v-if="orderDetails.address?.postalCode">邮编: {{ orderDetails.address.postalCode }}</p>
+                  </div>
+                  <div class="payment-order-summary">
+                      <h4>商品清单</h4>
+                      <div class="order-items">
+                          <div class="order-item" v-for="item in orderDetails.items" :key="item.shoeId + '-' + item.sizeId">
+                              <div class="item-image">
+                                  <img v-if="item.image" :src="`/api/shoeImg/getImage/${item.image}`" alt="product" />
+                                  <div v-else class="no-image">📷</div>
+                              </div>
+                              <div class="item-details">
+                                  <h5>{{ item.name }}</h5>
+                                  <p>尺码: {{ item.sizeName }}</p>
+                                  <p>数量: {{ item.quantity }}</p>
+                                  <p>单价: ¥{{ item.unitPrice }}</p>
+                              </div>
+                              <div class="item-total">¥{{ item.subtotal.toFixed(2) }}</div>
+                          </div>
+                      </div>
+                  </div>
+                  <div class="payment-total" style="margin-top: 12px;">
+                      <div class="total-row">
+                          <span>商品总价:</span>
+                          <span>¥{{ orderDetails.itemsTotal.toFixed(2) }}</span>
+                      </div>
+                      <div class="total-row">
+                          <span>运费:</span>
+                          <span>¥{{ orderDetails.shippingFee.toFixed(2) }}</span>
+                      </div>
+                      <div class="total-row final-total">
+                          <span>订单总额:</span>
+                          <span>¥{{ orderDetails.orderTotal.toFixed(2) }}</span>
+                      </div>
+                  </div>
+              </div>
+              <div class="payment-footer">
+                  <button class="cancel-payment-btn" @click="closeOrderDetailsModal">关闭</button>
+                  <button class="confirm-payment-btn" @click="() => { closeOrderDetailsModal(); router.push('/products') }">继续购物</button>
+              </div>
+          </div>
+      </div>
  </template>
 
 <script setup>
@@ -405,6 +465,10 @@ const showPaymentModal = ref(false)
 const paymentCountdown = ref(10)
 const paymentTimer = ref(null)
 const isProcessingPayment = ref(false)
+
+// 订单详情弹窗相关
+const showOrderDetailsModal = ref(false)
+const orderDetails = ref(null)
 
 // 地址表单数据
 const addressForm = ref({
@@ -888,7 +952,82 @@ const confirmPayment = async () => {
             return
         }
 
-        // 直接减少库存并显示成功弹窗（不创建订单）
+        // 先创建订单（按商品逐个创建），使用同一订单号
+        const masterOrderNumber = generateOrderNumber()
+        const createOrderPromises = products.value.map(async (product) => {
+            const quantity = productQuantities.value[product.shoeId] || 0
+            const sizeId = selectedSizes.value[product.shoeId]
+            if (quantity > 0 && sizeId) {
+                try {
+                    const orderPayload = {
+                        userId: 1,
+                        sizeId: sizeId,
+                        orderNumber: masterOrderNumber,
+                        status: '1',
+                        addressId: selectedAddress.value.addressId,
+                        shippingFee: shippingFee.value / Math.max(products.value.length, 1),
+                        createdAt: formatDate(new Date()),
+                        updatedAt: formatDate(new Date()),
+                        deliveryTime: formatDate(addDays(new Date(), 3))
+                    }
+                    const res = await axios.post('/api/order/insertOrder', orderPayload)
+                    return res.data && res.data.code === 200 && res.data.data === true
+                } catch (e) {
+                    console.error('创建订单失败:', e)
+                    return false
+                }
+            }
+            return true
+        })
+
+        const createOrderResults = await Promise.all(createOrderPromises)
+        const allOrdersCreated = createOrderResults.every(v => v === true)
+        if (!allOrdersCreated) {
+            alert('创建订单失败，请重试或联系客服')
+            isProcessingPayment.value = false
+            return
+        }
+
+        // 拉取刚创建的订单（通过订单号匹配）
+        let createdOrders = []
+        try {
+            const fetchRes = await axios.post('/api/order/getAll')
+            if (fetchRes.data && fetchRes.data.code === 200 && Array.isArray(fetchRes.data.data)) {
+                createdOrders = fetchRes.data.data.filter(o => o.orderNumber === masterOrderNumber)
+            }
+        } catch (e) {
+            console.error('查询订单失败:', e)
+        }
+
+        // 为每个订单插入鞋数量记录
+        if (createdOrders && createdOrders.length > 0) {
+            const sizeIdToQtyQueue = {}
+            for (const p of products.value) {
+                const sId = selectedSizes.value[p.shoeId]
+                const qty = productQuantities.value[p.shoeId] || 0
+                if (!sId) continue
+                if (!sizeIdToQtyQueue[sId]) sizeIdToQtyQueue[sId] = []
+                sizeIdToQtyQueue[sId].push(qty)
+            }
+
+            const shoeNumPromises = createdOrders.map(async (ord) => {
+                const qList = sizeIdToQtyQueue[ord.sizeId] || []
+                const shoeNum = qList.length > 0 ? qList.shift() : 0
+                try {
+                    const res = await axios.post('/api/orderShoeNum/insertOrderShoeNum', {
+                        orderId: ord.orderId,
+                        shoeNum: shoeNum
+                    })
+                    return res.data && res.data.code === 200
+                } catch (e) {
+                    console.error('创建订单商品数量失败:', e)
+                    return false
+                }
+            })
+            await Promise.all(shoeNumPromises)
+        }
+
+        // 扣减库存
         const inventoryDecreasePromises = products.value.map(async (product) => {
             const quantity = productQuantities.value[product.shoeId] || 0
             const sizeId = selectedSizes.value[product.shoeId]
@@ -914,6 +1053,39 @@ const confirmPayment = async () => {
         const allInventoryDecreased = inventoryDecreaseResults.every(result => result === true)
 
         if (allInventoryDecreased) {
+            // 展示订单详情（使用同一订单号汇总）
+            const items = products.value
+                .filter(p => (productQuantities.value[p.shoeId] || 0) > 0 && selectedSizes.value[p.shoeId])
+                .map(p => {
+                    const sizeId = selectedSizes.value[p.shoeId]
+                    const sizeName = getSizeName(sizeId)
+                    const quantity = productQuantities.value[p.shoeId]
+                    const unitPrice = getProductPrice(p)
+                    const subtotal = Number((unitPrice * quantity).toFixed(2))
+                    return {
+                        shoeId: p.shoeId,
+                        name: p.name,
+                        image: p.images && p.images.length > 0 ? p.images[0].imagePath : null,
+                        sizeId,
+                        sizeName,
+                        quantity,
+                        unitPrice,
+                        subtotal
+                    }
+                })
+
+            orderDetails.value = {
+                orderNumber: masterOrderNumber,
+                createdAt: createdOrders && createdOrders.length > 0 ? createdOrders[0].createdAt : new Date(),
+                status: '1',
+                userId: 1,
+                address: selectedAddress.value ? { ...selectedAddress.value } : null,
+                items,
+                itemsTotal: Number(totalPrice.value.toFixed(2)),
+                shippingFee: Number(shippingFee.value.toFixed(2)),
+                orderTotal: Number(orderTotal.value.toFixed(2))
+            }
+
             clearInterval(paymentTimer.value)
             showPaymentModal.value = false
             showPaymentSuccessModal()
@@ -1009,7 +1181,7 @@ const showPaymentSuccessModal = () => {
 
     viewOrdersBtn.addEventListener('click', () => {
         document.body.removeChild(successModal)
-        router.push('/profile')
+        openOrderDetailsModal()
     })
 
     continueShoppingBtn.addEventListener('click', () => {
@@ -1026,6 +1198,14 @@ const showPaymentSuccessModal = () => {
     })
 }
 
+// 打开/关闭订单详情弹窗
+const openOrderDetailsModal = () => {
+    showOrderDetailsModal.value = true
+}
+const closeOrderDetailsModal = () => {
+    showOrderDetailsModal.value = false
+}
+
 // 获取尺码名称
 const getSizeName = (sizeId) => {
     const size = availableSizes.value.find(s => s.sizeId === sizeId)
@@ -1037,7 +1217,40 @@ const getProductPrice = (product) => {
     return (product.discountPrice && product.discountPrice < product.price) ? product.discountPrice : product.price
 }
 
- 
+// 生成订单号（前端生成）
+const generateOrderNumber = () => {
+    const timestamp = Date.now()
+    const random = Math.floor(Math.random() * 100000)
+    return `ORD${timestamp}${random}`
+}
+
+// 格式化日期时间
+const formatDateTime = (date) => {
+    const d = typeof date === 'string' ? new Date(date) : date
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    const hh = String(d.getHours()).padStart(2, '0')
+    const mm = String(d.getMinutes()).padStart(2, '0')
+    const ss = String(d.getSeconds()).padStart(2, '0')
+    return `${y}-${m}-${day} ${hh}:${mm}:${ss}`
+}
+
+// 格式化为后端可能映射的 LocalDate 字符串（YYYY-MM-DD）
+const formatDate = (date) => {
+    const d = typeof date === 'string' ? new Date(date) : date
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+}
+
+// 简单增加天数
+const addDays = (date, days) => {
+    const d = new Date(date)
+    d.setDate(d.getDate() + days)
+    return d
+}
 
 // 返回商品列表
 const goBack = () => {
@@ -2082,3 +2295,4 @@ onMounted(() => {
      }
  }
  </style>
+
