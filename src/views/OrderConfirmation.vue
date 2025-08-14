@@ -66,8 +66,9 @@
                             </div>
 
                             <div class="price-section">
-                                <span class="current-price">¥{{ product.price }}</span>
-                                <span v-if="product.discountPrice" class="discount-price">¥{{ product.discountPrice }}</span>
+                                <span v-if="product.discountPrice && product.discountPrice < product.price" class="current-price">¥{{ product.discountPrice }}</span>
+                                <span v-else class="current-price">¥{{ product.price }}</span>
+                                <span v-if="product.discountPrice && product.discountPrice < product.price" class="discount-price">¥{{ product.price }}</span>
                             </div>
 
                             <div class="product-meta">
@@ -352,7 +353,8 @@ const totalItems = computed(() => {
 const totalPrice = computed(() => {
     return products.value.reduce((sum, product) => {
         const quantity = productQuantities.value[product.shoeId] || 0
-        const price = product.discountPrice || product.price
+        // 如果有折扣价且折扣价更低，使用折扣价；否则使用原价
+        const price = (product.discountPrice && product.discountPrice < product.price) ? product.discountPrice : product.price
         return sum + (price * quantity)
     }, 0)
 })
@@ -443,7 +445,47 @@ const loadOrderData = async () => {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         })
         if (sizeResponse.data && sizeResponse.data.data) {
-            availableSizes.value = sizeResponse.data.data.filter(size => !size.sizeDisabled)
+            // 先获取所有启用的尺码
+            const allSizes = sizeResponse.data.data.filter(size => !size.sizeDisabled)
+            
+            // 如果是从产品详情页跳转过来，尝试获取该商品实际可用的尺码
+            if (productId && sizeId && quantity) {
+                try {
+                    // 使用正确的接口获取商品的库存信息
+                    const inventoryResponse = await axios.get(`/api/inventory/getInventoryByShoeId/${productId}`)
+                    
+                    if (inventoryResponse.data && inventoryResponse.data.code === 200 && inventoryResponse.data.data) {
+                        const inventoryData = inventoryResponse.data.data
+                        
+                        // 根据库存数据过滤尺码
+                        if (inventoryData.sizeInventories && inventoryData.sizeInventories.length > 0) {
+                            // 过滤出有库存的尺码
+                            const availableSizeIds = inventoryData.sizeInventories
+                                .filter(inv => inv.inventoryNumber > 0)
+                                .map(inv => inv.sizeId)
+                            
+                            availableSizes.value = allSizes.filter(size => availableSizeIds.includes(size.sizeId))
+                            
+                            // 如果没有找到有库存的尺码，显示所有尺码
+                            if (availableSizes.value.length === 0) {
+                                availableSizes.value = allSizes
+                            }
+                        } else {
+                            // 如果库存数据结构不完整，显示所有尺码
+                            availableSizes.value = allSizes
+                        }
+                    } else {
+                        // 如果无法获取库存信息，显示所有尺码
+                        availableSizes.value = allSizes
+                    }
+                } catch (inventoryError) {
+                    console.warn('无法获取商品库存信息，显示所有可用尺码:', inventoryError)
+                    availableSizes.value = allSizes
+                }
+            } else {
+                // 直接访问订单确认页面，显示所有可用尺码
+                availableSizes.value = allSizes
+            }
         }
 
         // 获取地址数据
