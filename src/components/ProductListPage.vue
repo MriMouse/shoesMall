@@ -77,6 +77,23 @@
                     </div>
                 </div>
 
+                <!-- 性别筛选 -->
+                <div class="filter-group">
+                    <label class="filter-label">性别:</label>
+                    <div class="filter-options">
+                        <button 
+                            v-for="sex in sexOptions" 
+                            :key="sex.value"
+                            @click="toggleSexFilter(sex.value)"
+                            class="filter-option"
+                            :class="{ 'active': selectedSexes.includes(sex.value) }"
+                            :title="`选择${sex.label}`"
+                        >
+                            {{ sex.label }}
+                        </button>
+                    </div>
+                </div>
+
                 <!-- 颜色筛选 -->
                 <div class="filter-group">
                     <label class="filter-label">颜色:</label>
@@ -133,6 +150,7 @@
                 <div 
                     v-for="product in paginatedProducts" 
                     :key="product.shoeId" 
+                    :data-product-id="product.shoeId"
                     class="product-card"
                 >
                     <!-- 产品图片 -->
@@ -143,6 +161,7 @@
                                     :src="`/api/shoeImg/getImage/${product.images[product.currentImageIndex || 0].imagePath}`"
                                     :alt="product.name" 
                                     class="main-product-image"
+                                    loading="lazy"
                                     @click="showImageGallery(product)"
                                 >
                                 <!-- 图片切换按钮 -->
@@ -171,6 +190,7 @@
                             <span class="brand-tag">{{ product.brand?.brandName || 'N/A' }}</span>
                             <span class="type-tag">{{ product.shoesType?.typeName || 'N/A' }}</span>
                             <span class="color-tag">{{ product.color?.colorName || 'N/A' }}</span>
+                            <span class="sex-tag">{{ getShoeSexText(product.shoeSex) }}</span>
                         </div>
 
                         <div class="price-section">
@@ -290,9 +310,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, reactive, nextTick } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, reactive, nextTick, watch } from 'vue'
 import axios from 'axios'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
 
@@ -314,6 +334,22 @@ const selectedBrands = ref([])
 const selectedTypes = ref([])
 const selectedColors = ref([])
 const selectedSizes = ref([])
+const selectedSexes = ref([])
+
+// 性别选项
+const sexOptions = [
+    { value: 1, label: '男鞋' },
+    { value: 2, label: '女鞋' },
+    { value: 3, label: '童鞋' },
+    { value: 4, label: '其他' }
+]
+
+// 资源缓存与并发控制
+const imageCache = new Map()
+const inventoryCache = new Map()
+const inFlightImages = new Set()
+const inFlightInventories = new Set()
+let productCardIo = null
 
 // 搜索功能
 const searchKeyword = ref('')
@@ -353,73 +389,30 @@ const paginatedProducts = computed(() => {
     return filteredProducts.value.slice(start, end)
 })
 
-// 修复后的 fetchProducts 函数 - 使用 ProductDetail 的库存调用方式
+// 优化后的 fetchProducts：仅获取产品基本信息，其它资源按需懒加载
 const fetchProducts = async () => {
     loading.value = true
     error.value = ''
     try {
-        // 获取产品数据
         const productResponse = await axios.post('/api/shoe/getAll', {}, {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         })
 
         if (productResponse.data && productResponse.data.data) {
-            const productList = productResponse.data.data
-
-            // 批量获取图片数据和库存数据，减少请求次数
-            const dataPromises = productList.map(async (product) => {
-                try {
-                    // 并行获取图片和库存数据
-                    const [imageResponse, inventoryResponse] = await Promise.all([
-                        axios.get(`/api/shoeImg/list/${product.shoeId}`),
-                        axios.get(`/api/inventory/getInventoryByShoeId/${product.shoeId}`)
-                    ])
-
-                    // 处理图片数据
-                    if (imageResponse.data && imageResponse.data.data) {
-                        product.images = imageResponse.data.data
-                        product.currentImageIndex = 0
-                    } else {
-                        product.images = []
-                        product.currentImageIndex = 0
-                    }
-
-                    // 处理库存数据 - 使用 ProductDetail 的方式
-                    if (inventoryResponse.data && inventoryResponse.data.code === 200 && inventoryResponse.data.data) {
-                        let inventoryArray = []
-                        
-                        if (Array.isArray(inventoryResponse.data.data)) {
-                            // 如果返回的是数组
-                            inventoryArray = inventoryResponse.data.data
-                        } else if (inventoryResponse.data.data.inventories) {
-                            // 如果返回的是包含 inventories 字段的对象
-                            inventoryArray = inventoryResponse.data.data.inventories
-                        } else if (inventoryResponse.data.data.sizeInventories) {
-                            // 如果返回的是包含 sizeInventories 字段的对象
-                            inventoryArray = inventoryResponse.data.data.sizeInventories
-                        } else {
-                            // 如果返回的是单个库存对象，转换为数组
-                            inventoryArray = [inventoryResponse.data.data]
-                        }
-                        
-                        // 将库存数据存储到产品对象中，方便后续使用
-                        product.inventoryData = inventoryArray
-                    } else {
-                        product.inventoryData = []
-                    }
-                } catch (error) {
-                    console.warn(`获取产品 ${product.shoeId} 数据失败:`, error)
-                    product.images = []
-                    product.currentImageIndex = 0
-                    product.inventoryData = []
-                }
+            const productList = productResponse.data.data.map(p => {
+                const item = reactive({ ...p })
+                // 占位字段，避免模板初次渲染抖动
+                item.images = Array.isArray(item.images) ? item.images : []
+                item.currentImageIndex = 0
+                item.inventoryData = Array.isArray(item.inventoryData) ? item.inventoryData : []
+                return item
             })
 
-            // 等待所有数据加载完成
-            await Promise.all(dataPromises)
-
-            products.value = productList.map(product => reactive(product))
+            products.value = productList
             applyFilters()
+
+            await nextTick()
+            observeCurrentPage()
         } else {
             products.value = []
             filteredProducts.value = []
@@ -431,6 +424,87 @@ const fetchProducts = async () => {
         filteredProducts.value = []
     } finally {
         loading.value = false
+    }
+}
+
+// 初始化并配置 IntersectionObserver
+function initIntersectionObserver() {
+    if (productCardIo) {
+        productCardIo.disconnect()
+    }
+    productCardIo = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const id = Number(entry.target.getAttribute('data-product-id'))
+                ensureProductResources(id)
+                productCardIo && productCardIo.unobserve(entry.target)
+            }
+        })
+    }, { root: null, rootMargin: '300px 0px', threshold: 0.01 })
+}
+
+// 观察当前分页中的卡片
+function observeCurrentPage() {
+    if (!productCardIo) initIntersectionObserver()
+    const container = document.querySelector('.products-grid')
+    if (!container) return
+    const cards = container.querySelectorAll('.product-card')
+    cards.forEach(card => productCardIo.observe(card))
+}
+
+// 按需加载指定产品的图片与库存
+async function ensureProductResources(shoeId) {
+    const product = products.value.find(p => p.shoeId === shoeId)
+    if (!product) return
+
+    // 加载图片（带缓存与并发保护）
+    if (!product.images || product.images.length === 0) {
+        if (imageCache.has(shoeId)) {
+            product.images = imageCache.get(shoeId)
+            product.currentImageIndex = 0
+        } else if (!inFlightImages.has(shoeId)) {
+            inFlightImages.add(shoeId)
+            try {
+                const imageResponse = await axios.get(`/api/shoeImg/list/${shoeId}`)
+                const imgs = (imageResponse.data && imageResponse.data.data) ? imageResponse.data.data : []
+                product.images = imgs
+                product.currentImageIndex = 0
+                imageCache.set(shoeId, imgs)
+            } catch (e) {
+                product.images = []
+            } finally {
+                inFlightImages.delete(shoeId)
+            }
+        }
+    }
+
+    // 加载库存（带缓存与并发保护）
+    if (!product.inventoryData || product.inventoryData.length === 0) {
+        if (inventoryCache.has(shoeId)) {
+            product.inventoryData = inventoryCache.get(shoeId)
+        } else if (!inFlightInventories.has(shoeId)) {
+            inFlightInventories.add(shoeId)
+            try {
+                const inventoryResponse = await axios.get(`/api/inventory/getInventoryByShoeId/${shoeId}`)
+                let inventoryArray = []
+                const data = inventoryResponse.data?.data
+                if (Array.isArray(data)) {
+                    inventoryArray = data
+                } else if (data?.inventories) {
+                    inventoryArray = data.inventories
+                } else if (data?.sizeInventories) {
+                    inventoryArray = data.sizeInventories
+                } else if (data) {
+                    inventoryArray = [data]
+                }
+                product.inventoryData = inventoryArray
+                inventoryCache.set(shoeId, inventoryArray)
+            } catch (e) {
+                product.inventoryData = []
+            } finally {
+                inFlightInventories.delete(shoeId)
+            }
+        }
     }
 }
 
@@ -507,6 +581,24 @@ const getProductAllSizes = (shoeId) => {
     return result
 }
 
+// 获取鞋子性别文本
+const getShoeSexText = (shoeSex) => {
+    if (!shoeSex) return 'N/A'
+    
+    switch (Number(shoeSex)) {
+        case 1:
+            return '男鞋'
+        case 2:
+            return '女鞋'
+        case 3:
+            return '童鞋'
+        case 4:
+            return '其他'
+        default:
+            return '未知'
+    }
+}
+
 // 搜索功能
 const handleSearch = () => {
     applyFilters()
@@ -579,11 +671,22 @@ const toggleSizeFilter = (sizeId) => {
     applyFilters()
 }
 
+const toggleSexFilter = (value) => {
+    const index = selectedSexes.value.indexOf(value)
+    if (index > -1) {
+        selectedSexes.value.splice(index, 1)
+    } else {
+        selectedSexes.value.push(value)
+    }
+    applyFilters()
+}
+
 const clearAllFilters = () => {
     selectedBrands.value = []
     selectedTypes.value = []
     selectedColors.value = []
     selectedSizes.value = []
+    selectedSexes.value = []
     searchKeyword.value = ''
     applyFilters()
 }
@@ -605,6 +708,13 @@ const applyFilters = () => {
     if (selectedTypes.value.length > 0) {
         filtered = filtered.filter(product => 
             selectedTypes.value.includes(product.shoesType?.typeId)
+        )
+    }
+
+    // 性别筛选
+    if (selectedSexes.value.length > 0) {
+        filtered = filtered.filter(product => 
+            selectedSexes.value.includes(product.shoeSex)
         )
     }
 
@@ -700,9 +810,34 @@ onMounted(async () => {
         console.log('筛选选项获取完成，开始获取产品数据...')
         await fetchProducts()
         console.log('产品数据获取完成')
+        initIntersectionObserver()
+        observeCurrentPage()
+        
+        // 从路由参数获取初始筛选值
+        const route = useRoute()
+        if (route.query.shoeSex) {
+            const shoeSex = parseInt(route.query.shoeSex)
+            if (!isNaN(shoeSex) && shoeSex >= 1 && shoeSex <= 4) {
+                selectedSexes.value = [shoeSex]
+                applyFilters()
+            }
+        }
     } catch (error) {
         console.error('初始化失败:', error)
         error.value = '初始化失败，请刷新页面重试'
+    }
+})
+
+// 在分页或筛选变更后重新观察
+watch([paginatedProducts, currentPage, pageSize], async () => {
+    await nextTick()
+    observeCurrentPage()
+})
+
+onBeforeUnmount(() => {
+    if (productCardIo) {
+        productCardIo.disconnect()
+        productCardIo = null
     }
 })
 </script>
@@ -1098,13 +1233,19 @@ onMounted(async () => {
     margin-bottom: 12px;
 }
 
-.brand-tag, .type-tag, .color-tag {
+.brand-tag, .type-tag, .color-tag, .sex-tag {
     padding: 4px 8px;
     border-radius: 12px;
     font-size: 0.7rem;
     font-weight: 500;
     background: rgba(211, 169, 101, 0.1);
     color: rgb(211, 169, 101);
+}
+
+/* 性别标签特殊样式 */
+.sex-tag {
+    background: rgba(231, 76, 60, 0.1);
+    color: #e74c3c;
 }
 
 .price-section {
