@@ -8,7 +8,7 @@ module.exports = defineConfig({
         target: "http://localhost:8081",
         changeOrigin: true,
         pathRewrite: {
-          "^/api": "",
+          "^/api": "/api",
         },
         logLevel: "debug", // 添加日志以便调试
       },

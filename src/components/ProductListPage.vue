@@ -6,7 +6,7 @@
                 <span class="icon">👟</span>
                 产品展示
             </h2>
-            <div class="product-count">总计: {{ totalCount }} 件商品</div>
+            <div class="product-count">总计: {{ totalCount }} 种商品</div>
         </div>
 
         <!-- 搜索区域 -->
