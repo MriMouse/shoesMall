@@ -211,7 +211,24 @@ export default {
 				});
 
 				if (response.data.code === 200 && response.data.data === true) {
-					localStorage.setItem('user', loginForm.value.username);
+					// 旧格式：只有布尔值，使用固定的用户ID
+					const userData = {
+						username: loginForm.value.username,
+						id: 1 // 使用固定的用户ID
+					};
+					localStorage.setItem('user', JSON.stringify(userData));
+					emit('login-success');
+					onClose();
+					// 登录成功后跳转到主页面
+					window.location.href = '/';
+				} else if (response.data.code === 200 && response.data.data && response.data.data.success) {
+					// 新的登录响应格式，包含用户信息
+					const userInfo = response.data.data;
+					const userData = {
+						username: userInfo.username,
+						id: userInfo.userId
+					};
+					localStorage.setItem('user', JSON.stringify(userData));
 					emit('login-success');
 					onClose();
 					// 登录成功后跳转到主页面

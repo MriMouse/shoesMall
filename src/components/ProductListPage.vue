@@ -674,10 +674,9 @@ const viewProductDetails = (product) => {
     router.push(`/product/${product.shoeId}`)
 }
 
-const addToCart = (product) => {
-    // 这里可以实现加入购物车的功能
-    console.log('加入购物车:', product)
-    alert(`已将 ${product.name} 加入购物车`)
+const addToCart = async (product) => {
+    // 跳转到商品详情页面，让用户在详情页面选择尺码后再加入购物车
+    router.push(`/product/${product.shoeId}`)
 }
 
 // 分页功能

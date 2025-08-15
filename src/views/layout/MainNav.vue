@@ -335,8 +335,13 @@ export default {
 		}
 
 		function goCart() {
-			// 目前没有购物袋页面，占位跳转到产品列表
-			router.push({ name: 'ProductListPage' });
+			// 检查是否已登录
+			if (isLoggedIn.value) {
+				router.push({ name: 'Cart' });
+			} else {
+				// 未登录时提示用户登录
+				alert('请先登录后再访问购物车');
+			}
 		}
 
 		function goBrand(groupKey, brandKey) {

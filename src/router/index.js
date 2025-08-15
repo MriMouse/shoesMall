@@ -7,6 +7,7 @@ import KidsShoes from "../views/KidsShoes.vue";
 import ProductListPage from "../components/ProductListPage.vue";
 import ProductDetail from "../components/ProductDetail.vue";
 import OrderConfirmation from "../views/OrderConfirmation.vue";
+import Cart from "../views/Cart.vue";
 
 const routes = [
   {
@@ -22,6 +23,12 @@ const routes = [
     path: "/profile",
     name: "Profile",
     component: Profile,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/cart",
+    name: "Cart",
+    component: Cart,
     meta: { requiresAuth: true },
   },
   {

@@ -446,6 +446,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
+import { OrderAPI, InventoryAPI } from '@/api'
 
 const router = useRouter()
 const route = useRoute()
@@ -523,9 +524,69 @@ const loadOrderData = async () => {
     
     try {
         // 检查是否有从产品详情页传递过来的商品信息
-        const { productId, sizeId, quantity } = route.query
+        const { productId, sizeId, quantity, orderIds, fromCart } = route.query
         
-        if (productId && sizeId && quantity) {
+        if (orderIds && fromCart === 'true') {
+            // 从购物车跳转过来，加载购物车中的订单
+            const orderIdArray = orderIds.split(',').map(id => parseInt(id.trim()))
+            
+            // 获取购物车订单详情
+            const orderPromises = orderIdArray.map(async (orderId) => {
+                try {
+                    const orderResponse = await axios.post('/api/order/getById', 
+                        `orderId=${orderId}`,
+                        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+                    )
+                    
+                    if (orderResponse.data && orderResponse.data.code === 200 && orderResponse.data.data) {
+                        const orderData = orderResponse.data.data
+                        
+                        // 获取商品详情
+                        const productResponse = await axios.post('/api/shoe/getById', 
+                            `shoeId=${orderData.shoeId}`,
+                            { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+                        )
+                        
+                        if (productResponse.data && productResponse.data.code === 200 && productResponse.data.data) {
+                            const productData = productResponse.data.data
+                            
+                            // 获取商品图片
+                            try {
+                                const imageResponse = await axios.get(`/api/shoeImg/list/${orderData.shoeId}`)
+                                if (imageResponse.data && imageResponse.data.data) {
+                                    productData.images = imageResponse.data.data
+                                } else {
+                                    productData.images = []
+                                }
+                            } catch (imgError) {
+                                productData.images = []
+                            }
+                            
+                            // 设置订单信息
+                            productData.orderId = orderId
+                            productData.orderQuantity = orderData.quantity || 1
+                            productData.orderSizeId = orderData.sizeId
+                            
+                            return productData
+                        }
+                    }
+                } catch (error) {
+                    console.error(`加载订单 ${orderId} 失败:`, error)
+                }
+            })
+            
+            const orderProducts = await Promise.all(orderPromises)
+            products.value = orderProducts.filter(product => product)
+            
+            // 设置订单中的尺码和数量
+            orderProducts.forEach(product => {
+                if (product) {
+                    selectedSizes.value[product.shoeId] = product.orderSizeId
+                    productQuantities.value[product.shoeId] = product.orderQuantity
+                }
+            })
+            
+        } else if (productId && sizeId && quantity) {
             // 从产品详情页跳转过来，只加载选中的商品
             const productResponse = await axios.post('/api/shoe/getById', 
                 `shoeId=${productId}`,
@@ -952,147 +1013,252 @@ const confirmPayment = async () => {
             return
         }
 
-        // 先创建订单（按商品逐个创建），使用同一订单号
-        const masterOrderNumber = generateOrderNumber()
-        const createOrderPromises = products.value.map(async (product) => {
-            const quantity = productQuantities.value[product.shoeId] || 0
-            const sizeId = selectedSizes.value[product.shoeId]
-            if (quantity > 0 && sizeId) {
-                try {
-                    const orderPayload = {
-                        userId: 1,
-                        sizeId: sizeId,
-                        orderNumber: masterOrderNumber,
-                        status: '1',
-                        addressId: selectedAddress.value.addressId,
-                        shippingFee: shippingFee.value / Math.max(products.value.length, 1),
-                        createdAt: formatDate(new Date()),
-                        updatedAt: formatDate(new Date()),
-                        deliveryTime: formatDate(addDays(new Date(), 3))
-                    }
-                    const res = await axios.post('/api/order/insertOrder', orderPayload)
-                    return res.data && res.data.code === 200 && res.data.data === true
-                } catch (e) {
-                    console.error('创建订单失败:', e)
-                    return false
-                }
-            }
-            return true
-        })
-
-        const createOrderResults = await Promise.all(createOrderPromises)
-        const allOrdersCreated = createOrderResults.every(v => v === true)
-        if (!allOrdersCreated) {
-            alert('创建订单失败，请重试或联系客服')
-            isProcessingPayment.value = false
-            return
-        }
-
-        // 拉取刚创建的订单（通过订单号匹配）
-        let createdOrders = []
-        try {
-            const fetchRes = await axios.post('/api/order/getAll')
-            if (fetchRes.data && fetchRes.data.code === 200 && Array.isArray(fetchRes.data.data)) {
-                createdOrders = fetchRes.data.data.filter(o => o.orderNumber === masterOrderNumber)
-            }
-        } catch (e) {
-            console.error('查询订单失败:', e)
-        }
-
-        // 为每个订单插入鞋数量记录（需要携带 shoeId 与 shoeNum）
-        if (createdOrders && createdOrders.length > 0) {
-            const sizeIdToItemQueue = {}
-            for (const p of products.value) {
-                const sId = selectedSizes.value[p.shoeId]
-                const qty = productQuantities.value[p.shoeId] || 0
-                if (!sId || qty <= 0) continue
-                if (!sizeIdToItemQueue[sId]) sizeIdToItemQueue[sId] = []
-                sizeIdToItemQueue[sId].push({ shoeId: p.shoeId, qty })
-            }
-
-            const shoeNumPromises = createdOrders.map(async (ord) => {
-                const list = sizeIdToItemQueue[ord.sizeId] || []
-                const item = list.length > 0 ? list.shift() : null
-                if (!item) return false
-                try {
-                    const res = await axios.post('/api/orderShoeNum/insertOrderShoeNum', {
-                        orderId: ord.orderId,
-                        shoeId: item.shoeId,
-                        shoeNum: item.qty
-                    })
-                    return res.data && res.data.code === 200
-                } catch (e) {
-                    console.error('创建订单商品数量失败:', e)
-                    return false
-                }
-            })
-            await Promise.all(shoeNumPromises)
-        }
-
-        // 扣减库存
-        const inventoryDecreasePromises = products.value.map(async (product) => {
-            const quantity = productQuantities.value[product.shoeId] || 0
-            const sizeId = selectedSizes.value[product.shoeId]
-            if (quantity > 0 && sizeId) {
-                try {
-                    await axios.post('/api/inventory/decreaseInventory', null, {
-                        params: {
-                            shoeId: product.shoeId,
-                            sizeId: sizeId,
-                            quantity: quantity
+        // 检查是否来自购物车
+        const { fromCart, orderIds } = route.query
+        
+        if (fromCart === 'true' && orderIds) {
+            // 来自购物车，直接更新现有订单状态
+            const orderIdArray = orderIds.split(',').map(id => parseInt(id.trim()))
+            
+            try {
+                // 使用新的批量更新API
+                const batchUpdateResponse = await OrderAPI.batchUpdateOrderStatus(orderIdArray, 1)
+                
+                if (batchUpdateResponse.data?.code === 200) {
+                    // 更新订单地址
+                    const addressUpdatePromises = orderIdArray.map(async (orderId) => {
+                        try {
+                            const addressUpdateResponse = await OrderAPI.updateOrder({
+                                orderId: orderId,
+                                addressId: selectedAddress.value.addressId,
+                                status: 1,
+                                updatedAt: formatDate(new Date())
+                            })
+                            return addressUpdateResponse.data?.code === 200
+                        } catch (e) {
+                            console.error(`更新订单 ${orderId} 地址失败:`, e)
+                            return false
                         }
                     })
-                    return true
-                } catch (err) {
-                    console.error('减少库存失败:', err)
-                    return false
+                    
+                    const addressUpdateResults = await Promise.all(addressUpdatePromises)
+                    const allAddressesUpdated = addressUpdateResults.every(result => result === true)
+                    
+                    if (!allAddressesUpdated) {
+                        alert('更新订单地址失败，请重试或联系客服')
+                        isProcessingPayment.value = false
+                        return
+                    }
+                    
+                    // 扣减库存
+                    const inventoryDecreasePromises = products.value.map(async (product) => {
+                        const quantity = productQuantities.value[product.shoeId] || 0
+                        const sizeId = selectedSizes.value[product.shoeId]
+                        if (quantity > 0 && sizeId) {
+                            try {
+                                await InventoryAPI.decrease(product.shoeId, sizeId, quantity)
+                                return true
+                            } catch (err) {
+                                console.error('减少库存失败:', err)
+                                return false
+                            }
+                        }
+                        return true
+                    })
+                    
+                    const inventoryDecreaseResults = await Promise.all(inventoryDecreasePromises)
+                    const allInventoryDecreased = inventoryDecreaseResults.every(result => result === true)
+                    
+                    if (allInventoryDecreased) {
+                        // 展示订单详情
+                        const items = products.value
+                            .filter(p => (productQuantities.value[p.shoeId] || 0) > 0 && selectedSizes.value[p.shoeId])
+                            .map(p => {
+                                const sizeId = selectedSizes.value[p.shoeId]
+                                const sizeName = getSizeName(sizeId)
+                                const quantity = productQuantities.value[p.shoeId]
+                                const unitPrice = getProductPrice(p)
+                                const subtotal = Number((unitPrice * quantity).toFixed(2))
+                                return {
+                                    shoeId: p.shoeId,
+                                    name: p.name,
+                                    image: p.images && p.images.length > 0 ? p.images[0].imagePath : null,
+                                    sizeId,
+                                    sizeName,
+                                    quantity,
+                                    unitPrice,
+                                    subtotal
+                                }
+                            })
+                        
+                        // 跳转到订单详情页面
+                        router.push({
+                            name: 'OrderDetail',
+                            query: {
+                                orderIds: orderIds,
+                                fromCart: 'true',
+                                items: JSON.stringify(items),
+                                totalAmount: orderTotal.value.toFixed(2),
+                                address: JSON.stringify(selectedAddress.value)
+                            }
+                        })
+                        
+                        // 触发购物车更新事件
+                        window.dispatchEvent(new CustomEvent('cart-updated'))
+                    } else {
+                        alert('库存扣减失败，请重试或联系客服')
+                        isProcessingPayment.value = false
+                    }
+                } else {
+                    alert('更新订单状态失败，请重试或联系客服')
+                    isProcessingPayment.value = false
                 }
+            } catch (error) {
+                console.error('购物车结算失败:', error)
+                alert('结算失败，请重试或联系客服')
+                isProcessingPayment.value = false
             }
-            return true
-        })
+        } else {
+            // 正常流程：先创建订单（按商品逐个创建），使用同一订单号
+            const masterOrderNumber = generateOrderNumber()
+            const createOrderPromises = products.value.map(async (product) => {
+                const quantity = productQuantities.value[product.shoeId] || 0
+                const sizeId = selectedSizes.value[product.shoeId]
+                if (quantity > 0 && sizeId) {
+                    try {
+                        const orderPayload = {
+                            userId: 1,
+                            sizeId: sizeId,
+                            orderNumber: masterOrderNumber,
+                            status: '1',
+                            addressId: selectedAddress.value.addressId,
+                            shippingFee: shippingFee.value / Math.max(products.value.length, 1),
+                            createdAt: formatDate(new Date()),
+                            updatedAt: formatDate(new Date()),
+                            deliveryTime: formatDate(addDays(new Date(), 3))
+                        }
+                        const res = await axios.post('/api/order/insertOrder', orderPayload)
+                        return res.data && res.data.code === 200 && res.data.data === true
+                    } catch (e) {
+                        console.error('创建订单失败:', e)
+                        return false
+                    }
+                }
+                return true
+            })
 
-        const inventoryDecreaseResults = await Promise.all(inventoryDecreasePromises)
-        const allInventoryDecreased = inventoryDecreaseResults.every(result => result === true)
+            const createOrderResults = await Promise.all(createOrderPromises)
+            const allOrdersCreated = createOrderResults.every(v => v === true)
+            if (!allOrdersCreated) {
+                alert('创建订单失败，请重试或联系客服')
+                isProcessingPayment.value = false
+                return
+            }
 
-        if (allInventoryDecreased) {
-            // 展示订单详情（使用同一订单号汇总）
-            const items = products.value
-                .filter(p => (productQuantities.value[p.shoeId] || 0) > 0 && selectedSizes.value[p.shoeId])
-                .map(p => {
-                    const sizeId = selectedSizes.value[p.shoeId]
-                    const sizeName = getSizeName(sizeId)
-                    const quantity = productQuantities.value[p.shoeId]
-                    const unitPrice = getProductPrice(p)
-                    const subtotal = Number((unitPrice * quantity).toFixed(2))
-                    return {
-                        shoeId: p.shoeId,
-                        name: p.name,
-                        image: p.images && p.images.length > 0 ? p.images[0].imagePath : null,
-                        sizeId,
-                        sizeName,
-                        quantity,
-                        unitPrice,
-                        subtotal
+            // 拉取刚创建的订单（通过订单号匹配）
+            let createdOrders = []
+            try {
+                const fetchRes = await axios.post('/api/order/getAll')
+                if (fetchRes.data && fetchRes.data.code === 200 && Array.isArray(fetchRes.data.data)) {
+                    createdOrders = fetchRes.data.data.filter(o => o.orderNumber === masterOrderNumber)
+                }
+            } catch (e) {
+                console.error('查询订单失败:', e)
+            }
+
+            // 为每个订单插入鞋数量记录
+            if (createdOrders && createdOrders.length > 0) {
+                const sizeIdToQtyQueue = {}
+                for (const p of products.value) {
+                    const sId = selectedSizes.value[p.shoeId]
+                    const qty = productQuantities.value[p.shoeId] || 0
+                    if (!sId) continue
+                    if (!sizeIdToQtyQueue[sId]) sizeIdToQtyQueue[sId] = []
+                    sizeIdToQtyQueue[sId].push(qty)
+                }
+
+                const shoeNumPromises = createdOrders.map(async (ord) => {
+                    const qList = sizeIdToQtyQueue[ord.sizeId] || []
+                    const shoeNum = qList.length > 0 ? qList.shift() : 0
+                    try {
+                        const res = await axios.post('/api/orderShoeNum/insertOrderShoeNum', {
+                            orderId: ord.orderId,
+                            shoeNum: shoeNum
+                        })
+                        return res.data && res.data.code === 200
+                    } catch (e) {
+                        console.error('创建订单商品数量失败:', e)
+                        return false
                     }
                 })
-
-            orderDetails.value = {
-                orderNumber: masterOrderNumber,
-                createdAt: createdOrders && createdOrders.length > 0 ? createdOrders[0].createdAt : new Date(),
-                status: '1',
-                userId: 1,
-                address: selectedAddress.value ? { ...selectedAddress.value } : null,
-                items,
-                itemsTotal: Number(totalPrice.value.toFixed(2)),
-                shippingFee: Number(shippingFee.value.toFixed(2)),
-                orderTotal: Number(orderTotal.value.toFixed(2))
+                await Promise.all(shoeNumPromises)
             }
 
-            clearInterval(paymentTimer.value)
-            showPaymentModal.value = false
-            showPaymentSuccessModal()
-        } else {
-            alert('库存更新失败，请联系客服处理')
+            // 扣减库存
+            const inventoryDecreasePromises = products.value.map(async (product) => {
+                const quantity = productQuantities.value[product.shoeId] || 0
+                const sizeId = selectedSizes.value[product.shoeId]
+                if (quantity > 0 && sizeId) {
+                    try {
+                        await axios.post('/api/inventory/decreaseInventory', null, {
+                            params: {
+                                shoeId: product.shoeId,
+                                sizeId: sizeId,
+                                quantity: quantity
+                            }
+                        })
+                        return true
+                    } catch (err) {
+                        console.error('减少库存失败:', err)
+                        return false
+                    }
+                }
+                return true
+            })
+
+            const inventoryDecreaseResults = await Promise.all(inventoryDecreasePromises)
+            const allInventoryDecreased = inventoryDecreaseResults.every(result => result === true)
+
+            if (allInventoryDecreased) {
+                // 展示订单详情（使用同一订单号汇总）
+                const items = products.value
+                    .filter(p => (productQuantities.value[p.shoeId] || 0) > 0 && selectedSizes.value[p.shoeId])
+                    .map(p => {
+                        const sizeId = selectedSizes.value[p.shoeId]
+                        const sizeName = getSizeName(sizeId)
+                        const quantity = productQuantities.value[p.shoeId]
+                        const unitPrice = getProductPrice(p)
+                        const subtotal = Number((unitPrice * quantity).toFixed(2))
+                        return {
+                            shoeId: p.shoeId,
+                            name: p.name,
+                            image: p.images && p.images.length > 0 ? p.images[0].imagePath : null,
+                            sizeId,
+                            sizeName,
+                            quantity,
+                            unitPrice,
+                            subtotal
+                        }
+                    })
+
+                orderDetails.value = {
+                    orderNumber: masterOrderNumber,
+                    createdAt: createdOrders && createdOrders.length > 0 ? createdOrders[0].createdAt : new Date(),
+                    status: '1',
+                    userId: 1,
+                    address: selectedAddress.value ? { ...selectedAddress.value } : null,
+                    items,
+                    itemsTotal: Number(totalPrice.value.toFixed(2)),
+                    shippingFee: Number(shippingFee.value.toFixed(2)),
+                    orderTotal: Number(orderTotal.value.toFixed(2))
+                }
+
+                clearInterval(paymentTimer.value)
+                showPaymentModal.value = false
+                showPaymentSuccessModal()
+            } else {
+                alert('库存更新失败，请联系客服处理')
+            }
         }
 
     } catch (err) {
