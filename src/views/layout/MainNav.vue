@@ -104,7 +104,7 @@
 										<span>明星同款</span>
 									</button>
 									<button class="search-tag" @click="selectHotSearch('百搭三条纹')">
-										<span>��💜</span>
+										<span>💜</span>
 										<span>百搭三条纹</span>
 									</button>
 									<button class="search-tag" @click="selectHotSearch('夏日blokecore')">
@@ -171,7 +171,7 @@
 					<h4 class="mega-title">类型详情</h4>
 					<ul class="mega-cat-list">
 						<li v-for="category in currentGroup.categories" :key="category.key" class="mega-cat-item"
-							@mouseenter="hoverCategory(category)" @click="goCategory(currentGroup.key, category.key)">
+							@mouseenter="hoverCategory(category)" @click="goCategory(currentGroup.key, category)">
 							<span>{{ category.label }}</span>
 						</li>
 					</ul>
@@ -189,7 +189,7 @@
 								<img v-if="product.images && product.images.length > 0"
 									:src="`/api/shoeImg/getImage/${product.images[0].imagePath}`" :alt="product.name"
 									class="preview-image">
-								<div v-else class="preview-placeholder">��</div>
+								<div v-else class="preview-placeholder"></div>
 							</div>
 							<div class="preview-meta">
 								<div class="preview-name">{{ product.name }}</div>
@@ -289,16 +289,27 @@ export default {
 		// 新增：从后端加载分类数据
 		const loadCategoriesFromBackend = async () => {
 			try {
-				// 加载品牌数据
-				const brandResponse = await axios.post('/api/brand/getAll', {}, {
-					headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-				});
+				console.log('开始加载分类数据...');
+				
+				// 并行请求所有数据，提高加载速度
+				const [brandResponse, typeResponse, shoeResponse] = await Promise.all([
+					// 加载品牌数据
+					axios.post('/api/brand/getAll', {}, {
+						headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+					}),
+					// 加载鞋子类型数据
+					axios.post('/api/shoesType/getAll', {}, {
+						headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+					}),
+					// 加载所有产品数据
+					axios.post('/api/shoe/getAll', {}, {
+						headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+					})
+				]);
 
+				// 处理品牌数据
 				if (brandResponse.data && brandResponse.data.data) {
-					// 过滤掉禁用的品牌
 					const activeBrands = brandResponse.data.data.filter(brand => !brand.brandDisabled);
-
-					// 更新品牌组的分类列表
 					const brandsGroup = navGroups.find(group => group.key === 'brands');
 					if (brandsGroup) {
 						brandsGroup.categories = activeBrands.map(brand => ({
@@ -308,85 +319,67 @@ export default {
 							brandName: brand.brandName
 						}));
 					}
+					console.log('品牌数据加载成功:', activeBrands.length, '个品牌');
 				}
 
-				// 加载鞋子类型数据
-				const typeResponse = await axios.post('/api/shoesType/getAll', {}, {
-					headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-				});
-
+				// 处理鞋子类型数据
 				if (typeResponse.data && typeResponse.data.data) {
-					// 过滤掉禁用的类型
 					const activeTypes = typeResponse.data.data.filter(type => !type.typeDisabled);
+					console.log('鞋子类型数据加载成功:', activeTypes.length, '个类型');
+					console.log('可用类型:', activeTypes.map(t => t.typeName));
 
-					// 为每个性别组分配类型
-					navGroups.forEach(group => {
-						if (group.key !== 'brands' && group.shoeSex) {
-							// 根据性别筛选类型（这里可以根据实际业务逻辑调整）
-							const filteredTypes = activeTypes.filter(type => {
-								const typeName = type.typeName?.toLowerCase();
-								if (group.shoeSex === 1) { // 男鞋
-									return typeName?.includes('男') || typeName?.includes('运动') || typeName?.includes('休闲');
-								} else if (group.shoeSex === 2) { // 女鞋
-									return typeName?.includes('女') || typeName?.includes('时尚') || typeName?.includes('休闲');
-								} else if (group.shoeSex === 3) { // 童鞋
-									return typeName?.includes('童') || typeName?.includes('儿童');
-								}
-								return false;
-							});
+					// 处理产品数据
+					if (shoeResponse.data && shoeResponse.data.data) {
+						const allShoes = shoeResponse.data.data;
+						console.log('产品数据加载成功:', allShoes.length, '个产品');
 
-							group.categories = filteredTypes.map(type => ({
-								key: type.typeId.toString(),
-								label: type.typeName,
-								typeId: type.typeId,
-								typeName: type.typeName
-							}));
-						}
-					});
+						// 为每个性别组分配类型
+						navGroups.forEach(group => {
+							if (group.key !== 'brands' && group.shoeSex) {
+								// 根据shoe_sex筛选产品
+								const shoesBySex = allShoes.filter(shoe => 
+									shoe.shoeSex === group.shoeSex
+								);
+								console.log(`${group.label} 性别产品数量:`, shoesBySex.length);
+
+								// 从筛选后的产品中提取shoe_type类型ID
+								const typeIdsBySex = [...new Set(
+									shoesBySex
+										.filter(shoe => shoe.shoesType?.typeId)
+										.map(shoe => shoe.shoesType.typeId)
+								)];
+								console.log(`${group.label} 对应的类型ID:`, typeIdsBySex);
+
+								// 根据提取的typeId筛选类型
+								const filteredTypes = activeTypes.filter(type => 
+									typeIdsBySex.includes(type.typeId)
+								);
+								console.log(`${group.label} 筛选后的类型:`, filteredTypes.map(t => t.typeName));
+
+								// 设置分类
+								group.categories = filteredTypes.map(type => ({
+									key: type.typeId.toString(),
+									label: type.typeName,
+									typeId: type.typeId,
+									typeName: type.typeName
+								}));
+							}
+						});
+					} else {
+						console.warn('产品数据为空，无法进行性别筛选');
+					}
+				} else {
+					console.warn('鞋子类型数据为空');
 				}
 
-				console.log('分类数据加载成功:', navGroups);
+				console.log('分类数据加载完成:', navGroups);
 			} catch (error) {
 				console.error('加载分类数据失败:', error);
-				// 如果加载失败，使用默认分类作为备选
-				setDefaultCategories();
+				// 如果加载失败，清空所有分类
+				navGroups.forEach(group => {
+					group.categories = [];
+				});
 			}
-		};
-
-		// 设置默认分类
-		const setDefaultCategories = () => {
-			navGroups.forEach(group => {
-				if (group.key === 'men') {
-					group.categories = [
-						{ key: 'running', label: '跑步' },
-						{ key: 'training', label: '训练' },
-						{ key: 'originals', label: 'Originals' },
-						{ key: 'basketball', label: '篮球' }
-					];
-				} else if (group.key === 'women') {
-					group.categories = [
-						{ key: 'running', label: '跑步' },
-						{ key: 'training', label: '训练' },
-						{ key: 'originals', label: 'Originals' },
-						{ key: 'lifestyle', label: '生活方式' }
-					];
-				} else if (group.key === 'kids') {
-					group.categories = [
-						{ key: 'little', label: '小童' },
-						{ key: 'junior', label: '大童' },
-						{ key: 'running', label: '跑步' }
-					];
-				} else if (group.key === 'brands') {
-					group.categories = [
-						{ key: 'nike', label: 'Nike' },
-						{ key: 'adidas', label: 'Adidas' },
-						{ key: 'puma', label: 'Puma' },
-						{ key: 'reebok', label: 'Reebok' },
-						{ key: 'converse', label: 'Converse' },
-						{ key: 'vans', label: 'Vans' }
-					];
-				}
-			});
 		};
 
 		function openMegaMenu(index) {
@@ -478,7 +471,7 @@ export default {
 			}
 		};
 
-		// 修改：根据分类加载产品预览
+		// 修改：根据分类加载产品预览 - 实现shoe_type筛选
 		const loadPreviewProductsByCategory = async (category) => {
 			if (!currentGroup.value) return;
 
@@ -506,20 +499,27 @@ export default {
 							});
 						}
 					} else {
-						// 性别分类：根据类型筛选
-						if (category.typeId) {
-							products = products.filter(product =>
-								product.shoesType?.typeId === category.typeId &&
-								product.shoeSex === currentGroup.value.shoeSex
-							);
-						} else {
-							products = products.filter(product => {
+						// 性别分类：根据shoe_type和shoe_sex双重筛选
+						products = products.filter(product => {
+							// 首先确保性别匹配
+							if (product.shoeSex !== currentGroup.value.shoeSex) {
+								return false;
+							}
+
+							// 然后根据shoe_type进行筛选
+							if (category.typeId) {
+								// 使用typeId进行精确筛选
+								return product.shoesType?.typeId === category.typeId;
+							} else {
+								// 使用typeName进行模糊筛选
 								const typeName = product.shoesType?.typeName?.toLowerCase();
 								const categoryKey = category.key.toLowerCase();
-								return typeName?.includes(categoryKey) &&
-									product.shoeSex === currentGroup.value.shoeSex;
-							});
-						}
+								const categoryLabel = category.label.toLowerCase();
+								
+								// 检查产品类型是否匹配当前分类
+								return typeName?.includes(categoryKey) || typeName?.includes(categoryLabel) || (product.shoesType?.typeId && product.shoesType.typeId.toString() === category.key);
+							}
+						});
 					}
 
 					// 限制显示数量
@@ -625,13 +625,13 @@ export default {
 		// 热门搜索词条循环展示
 		const hotSearchTerms = [
 			'竞速美学',
-			'Safari穿搭 ��',
+			'Safari穿搭',
 			'明星同款',
 			'百搭三条纹 💜💜',
 			'夏日blokecore ⚽',
-			'造型感包袋 ��',
-			'玛丽猫 ��',
-			'梅赛德斯AMG车队 ��',
+			'造型感包袋',
+			'玛丽猫',
+			'梅赛德斯AMG车队',
 			'当红爆款 🔥',
 			'入群有礼 🎁'
 		];
@@ -727,6 +727,7 @@ export default {
 			return text.replace(re, '<mark>$1</mark>');
 		}
 
+
 		return {
 			isSticky,
 			navGroups,
@@ -783,7 +784,8 @@ export default {
 	background: #fff;
 	color: #000;
 	border-bottom: 1px solid #eee;
-	position: relative; /* 为mega-menu提供定位上下文 */
+	position: relative;
+	/* 为mega-menu提供定位上下文 */
 }
 
 .main-nav.is-sticky {
@@ -1124,7 +1126,8 @@ mark {
 
 .mega-menu {
 	position: absolute;
-	top: 100%; /* 紧贴导航栏底部 */
+	top: 100%;
+	/* 紧贴导航栏底部 */
 	left: 0;
 	right: 0;
 	width: 100vw;
@@ -1143,13 +1146,14 @@ mark {
 }
 
 @keyframes fadeIn {
-	from { 
-		opacity: 0; 
-		transform: translateY(-20px); 
+	from {
+		opacity: 0;
+		transform: translateY(-20px);
 	}
-	to { 
-		opacity: 1; 
-		transform: translateY(0); 
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
 	}
 }
 
