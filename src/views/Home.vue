@@ -1,6 +1,6 @@
 <template>
 	<div class="home-page">
-		<MainNav @open-login="loginOpen = true" />
+		<MainNav @open-login="onOpenLogin" />
 		<main>
 			<HeroCarousel
 				@view-all="goAll"
@@ -9,7 +9,11 @@
 			/>
 			<ProductGrid @view-all="goAll" />
 		</main>
-		<LoginDrawer v-model="loginOpen" @login-success="onLoginSuccess" />
+		<LoginDrawer 
+			v-model="loginOpen" 
+			:show-profile-access-message="showProfileAccessMessage"
+			@login-success="onLoginSuccess" 
+		/>
 	</div>
 </template>
 
@@ -27,6 +31,12 @@ export default {
 	setup() {
 		const router = useRouter();
 		const loginOpen = ref(false);
+		const showProfileAccessMessage = ref(false);
+
+		function onOpenLogin(fromProfile = false) {
+			loginOpen.value = true;
+			showProfileAccessMessage.value = fromProfile;
+		}
 
 		function goAll() { router.push({ name: 'ProductListPage' }); }
 		function goMen() { router.push('/men-shoes'); }
@@ -34,9 +44,18 @@ export default {
 		function onLoginSuccess() {
 			// 登录成功后不再跳转到个人中心，保持在首页，避免闪烁
 			loginOpen.value = false;
+			showProfileAccessMessage.value = false;
 		}
 
-		return { loginOpen, goAll, goMen, goWomen, onLoginSuccess };
+		return { 
+			loginOpen, 
+			showProfileAccessMessage,
+			goAll, 
+			goMen, 
+			goWomen, 
+			onLoginSuccess,
+			onOpenLogin
+		};
 	}
 };
 </script>
