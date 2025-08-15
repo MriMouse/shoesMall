@@ -58,7 +58,7 @@ export default {
 .hero {
 	background: #000;
 	color: #fff;
-	min-height: 56vh;
+	min-height: 70vh;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -90,7 +90,7 @@ export default {
 }
 
 .slide-media { 
-	height: 48vh; 
+	height: 70vh; 
 	background: linear-gradient(135deg, #0f0f0f, #1a1a1a); 
 	width: 100%;
 }
@@ -177,11 +177,11 @@ export default {
 
 @media (max-width: 960px) {
 	.hero {
-		min-height: 50vh;
+		min-height: 60vh;
 	}
 	
 	.slide-media {
-		height: 50vh;
+		height: 60vh;
 	}
 	
 	.slide-content {
@@ -206,11 +206,11 @@ export default {
 
 @media (max-width: 768px) {
 	.hero {
-		min-height: 45vh;
+		min-height: 55vh;
 	}
 	
 	.slide-media {
-		height: 45vh;
+		height: 55vh;
 	}
 	
 	.slide-content {
@@ -246,11 +246,11 @@ export default {
 
 @media (max-width: 480px) {
 	.hero {
-		min-height: 40vh;
+		min-height: 50vh;
 	}
 	
 	.slide-media {
-		height: 40vh;
+		height: 50vh;
 	}
 	
 	.slide-content {

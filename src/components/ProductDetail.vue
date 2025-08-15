@@ -177,6 +177,7 @@
                         <span class="tag brand-tag">{{ product.brand?.brandName || 'N/A' }}</span>
                         <span class="tag type-tag">{{ product.shoesType?.typeName || 'N/A' }}</span>
                         <span class="tag color-tag">{{ product.color?.colorName || 'N/A' }}</span>
+                        <span class="tag sex-tag">{{ getShoeSexText(product.shoeSex) }}</span>
                     </div>
 
                     <!-- 操作按钮 -->
@@ -219,6 +220,11 @@
                     <div class="detail-item">
                         <span class="detail-label">颜色：</span>
                         <span class="detail-value">{{ product.color?.colorName || 'N/A' }}</span>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <span class="detail-label">适用性别：</span>
+                        <span class="detail-value">{{ getShoeSexText(product.shoeSex) }}</span>
                     </div>
                     
                     <div class="detail-item">
@@ -316,6 +322,28 @@ const maxQuantity = computed(() => {
     const selectedInventory = inventoryData.value.find(item => item.sizeId === selectedSize.value)
     return selectedInventory ? Math.min(selectedInventory.inventoryNumber, 99) : 99
 })
+
+// 获取鞋子性别文本
+const getShoeSexText = (shoeSex) => {
+    if (!shoeSex) return 'N/A'
+    
+    switch (Number(shoeSex)) {
+        case 1:
+            return '男鞋'
+        case 2:
+            return '女鞋'
+        case 3:
+            return '童鞋'
+        case 4:
+            return '其他'
+        default:
+            return '未知'
+    }
+}
+
+
+
+
 
 // 获取产品详情
 const loadProductDetail = async () => {
@@ -591,6 +619,11 @@ onMounted(() => {
     cursor: pointer;
     font-size: 1rem;
     margin-top: 20px;
+}
+
+.sex-tag {
+    background: rgba(231, 76, 60, 0.1);
+    color: #e74c3c;
 }
 
 .retry-btn:hover {

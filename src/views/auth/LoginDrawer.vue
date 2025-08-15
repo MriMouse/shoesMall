@@ -26,6 +26,8 @@
 						<button class="link-btn" @click="currentView = 'register'">注册新账号</button>
 						<button class="link-btn" @click="currentView = 'forgot'">忘记密码？</button>
 					</div>
+					<!-- 个人中心访问提示 -->
+					<p v-if="showProfileAccessMessage && !loginError" class="profile-access-message">请先登陆后查看个人中心</p>
 					<p v-if="loginError" class="error-message">{{ loginError }}</p>
 				</div>
 
@@ -121,7 +123,13 @@ import axios from 'axios';
 
 export default {
 	name: 'LoginDrawer',
-	props: { modelValue: Boolean },
+	props: { 
+		modelValue: Boolean,
+		showProfileAccessMessage: {
+			type: Boolean,
+			default: false
+		}
+	},
 	emits: ['update:modelValue', 'login-success'],
 	setup(props, { emit }) {
 		// 当前视图状态
@@ -722,6 +730,32 @@ export default {
 	left: 0;
 	top: 0;
 	color: #27ae60;
+	font-size: 14px;
+	font-weight: bold;
+}
+
+/* 个人中心访问提示样式 */
+.profile-access-message {
+	color: #e74c3c;
+	font-size: 13px;
+	margin-top: 12px;
+	text-align: left;
+	background: transparent;
+	padding: 0;
+	border: none;
+	font-family: 'Helvetica Neue', Arial, sans-serif;
+	font-weight: 500;
+	position: relative;
+	padding-left: 20px;
+	box-sizing: border-box;
+}
+
+.profile-access-message::before {
+	content: '⚠';
+	position: absolute;
+	left: 0;
+	top: 0;
+	color: #e74c3c;
 	font-size: 14px;
 	font-weight: bold;
 }

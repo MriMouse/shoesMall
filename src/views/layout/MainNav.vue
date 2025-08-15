@@ -257,7 +257,8 @@ export default {
 
         function onLoginStatusClick() {
             if (isLoggedIn.value) {
-                alert('欢迎使用平台！');
+                // 已登录时直接跳转到个人中心页面
+                router.push('/profile');
             } else {
                 emit('open-login');
             }
@@ -522,8 +523,8 @@ export default {
 			if (isLoggedIn.value) {
 				router.push('/profile');
 			} else {
-				// 未登录时提示用户登录
-				alert('请先登录后再访问个人中心');
+				// 未登录时打开登录抽屉，并标识来自个人中心
+				emit('open-login', true);
 			}
 		}
 
