@@ -735,6 +735,7 @@ export default {
 	background: #fff;
 	color: #000;
 	border-bottom: 1px solid #eee;
+	position: relative; /* 为mega-menu提供定位上下文 */
 }
 
 .main-nav.is-sticky {
@@ -1057,8 +1058,8 @@ mark {
 }
 
 .mega-menu {
-	position: fixed;
-	top: 120px; /* 与导航高度一致 (40px + 80px) */
+	position: absolute;
+	top: 100%; /* 紧贴导航栏底部 */
 	left: 0;
 	right: 0;
 	width: 100vw;
@@ -1071,14 +1072,20 @@ mark {
 	grid-template-columns: 280px 1fr;
 	gap: 0;
 	padding: 20px 32px;
-	animation: fadeIn .18s ease;
+	animation: fadeIn .25s cubic-bezier(0.4, 0, 0.2, 1);
 	z-index: 999;
 	box-sizing: border-box;
 }
 
 @keyframes fadeIn {
-	from { opacity: 0; transform: translateY(6px); }
-	to { opacity: 1; transform: translateY(0); }
+	from { 
+		opacity: 0; 
+		transform: translateY(-20px); 
+	}
+	to { 
+		opacity: 1; 
+		transform: translateY(0); 
+	}
 }
 
 .mega-left { 
