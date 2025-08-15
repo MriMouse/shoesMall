@@ -526,4 +526,168 @@ export default {
     background: linear-gradient(45deg, #7f8c8d, #6c7b7d);
     transform: translateY(-1px);
 }
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+	.women-shoes-page {
+		padding: 0 16px;
+	}
+	
+	.products-grid {
+		grid-template-columns: repeat(3, 1fr);
+		gap: 20px;
+	}
+}
+
+@media (max-width: 960px) {
+	.women-shoes-page {
+		padding: 0 12px;
+	}
+	
+	.page-header {
+		padding: 20px 0;
+	}
+	
+	.page-title {
+		font-size: 28px;
+	}
+	
+	.products-grid {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 16px;
+	}
+	
+	.product-card {
+		border-radius: 8px;
+	}
+	
+	.product-info {
+		padding: 1rem;
+	}
+	
+	.product-name {
+		font-size: 1rem;
+	}
+	
+	.current-price {
+		font-size: 1.2rem;
+	}
+	
+	.color-options {
+		gap: 6px;
+	}
+	
+	.color-dot {
+		width: 16px;
+		height: 16px;
+	}
+}
+
+@media (max-width: 768px) {
+	.women-shoes-page {
+		padding: 0 8px;
+	}
+	
+	.page-header {
+		padding: 16px 0;
+	}
+	
+	.page-title {
+		font-size: 24px;
+	}
+	
+	.products-grid {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 12px;
+	}
+	
+	.product-info {
+		padding: 0.8rem;
+	}
+	
+	.product-name {
+		font-size: 0.9rem;
+	}
+	
+	.product-category {
+		font-size: 0.8rem;
+	}
+	
+	.current-price {
+		font-size: 1.1rem;
+	}
+	
+	.original-price {
+		font-size: 0.9rem;
+	}
+	
+	.color-options {
+		gap: 4px;
+	}
+	
+	.color-dot {
+		width: 14px;
+		height: 14px;
+	}
+}
+
+@media (max-width: 480px) {
+	.women-shoes-page {
+		padding: 0 6px;
+	}
+	
+	.page-header {
+		padding: 12px 0;
+	}
+	
+	.page-title {
+		font-size: 20px;
+	}
+	
+	.products-grid {
+		grid-template-columns: 1fr;
+		gap: 10px;
+	}
+	
+	.product-card {
+		border-radius: 6px;
+	}
+	
+	.product-info {
+		padding: 0.6rem;
+	}
+	
+	.product-name {
+		font-size: 0.85rem;
+	}
+	
+	.product-category {
+		font-size: 0.75rem;
+	}
+	
+	.current-price {
+		font-size: 1rem;
+	}
+	
+	.original-price {
+		font-size: 0.8rem;
+	}
+	
+	.color-options {
+		gap: 3px;
+	}
+	
+	.color-dot {
+		width: 12px;
+		height: 12px;
+	}
+	
+	.empty-state {
+		padding: 2rem 0;
+	}
+	
+	.empty-state p {
+		font-size: 1rem;
+	}
+}
 </style>

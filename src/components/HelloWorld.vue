@@ -41,18 +41,94 @@ export default {
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
+.hello {
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 20px;
+}
+
+h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
 h3 {
   margin: 40px 0 0;
+  font-size: 1.5rem;
 }
+
+p {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
 ul {
   list-style-type: none;
   padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
+
 li {
   display: inline-block;
   margin: 0 10px;
 }
+
 a {
   color: #42b983;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: #3aa876;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .hello {
+    padding: 16px;
+  }
+  
+  h1 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.3rem;
+  }
+  
+  p {
+    font-size: 1rem;
+  }
+  
+  ul {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  li {
+    margin: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .hello {
+    padding: 12px;
+  }
+  
+  h1 {
+    font-size: 1.8rem;
+  }
+  
+  h3 {
+    font-size: 1.2rem;
+  }
+  
+  p {
+    font-size: 0.9rem;
+  }
 }
 </style>

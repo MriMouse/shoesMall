@@ -557,4 +557,188 @@ export default {
     background: linear-gradient(45deg, #0984e3, #0c5aa6);
     transform: translateY(-2px);
 }
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+	.kids-shoes-page {
+		padding: 0 16px;
+	}
+	
+	.products-grid {
+		grid-template-columns: repeat(3, 1fr);
+		gap: 20px;
+	}
+}
+
+@media (max-width: 960px) {
+	.kids-shoes-page {
+		padding: 0 12px;
+	}
+	
+	.page-header {
+		padding: 20px 0;
+	}
+	
+	.page-title {
+		font-size: 28px;
+	}
+	
+	.products-grid {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 16px;
+	}
+	
+	.product-card {
+		border-radius: 8px;
+	}
+	
+	.product-info {
+		padding: 1rem;
+	}
+	
+	.product-name {
+		font-size: 1rem;
+	}
+	
+	.current-price {
+		font-size: 1.2rem;
+	}
+	
+	.product-features {
+		gap: 0.4rem;
+	}
+	
+	.feature-tag {
+		font-size: 0.65rem;
+		padding: 0.15rem 0.5rem;
+	}
+}
+
+@media (max-width: 768px) {
+	.kids-shoes-page {
+		padding: 0 8px;
+	}
+	
+	.page-header {
+		padding: 16px 0;
+	}
+	
+	.page-title {
+		font-size: 24px;
+	}
+	
+	.products-grid {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 12px;
+	}
+	
+	.product-info {
+		padding: 0.8rem;
+	}
+	
+	.product-name {
+		font-size: 0.9rem;
+	}
+	
+	.product-category {
+		font-size: 0.8rem;
+	}
+	
+	.current-price {
+		font-size: 1.1rem;
+	}
+	
+	.original-price {
+		font-size: 0.9rem;
+	}
+	
+	.product-features {
+		gap: 0.3rem;
+	}
+	
+	.feature-tag {
+		font-size: 0.6rem;
+		padding: 0.1rem 0.4rem;
+	}
+	
+	.stars {
+		font-size: 1rem;
+	}
+	
+	.rating-text {
+		font-size: 0.8rem;
+	}
+}
+
+@media (max-width: 480px) {
+	.kids-shoes-page {
+		padding: 0 6px;
+	}
+	
+	.page-header {
+		padding: 12px 0;
+	}
+	
+	.page-title {
+		font-size: 20px;
+	}
+	
+	.products-grid {
+		grid-template-columns: 1fr;
+		gap: 10px;
+	}
+	
+	.product-card {
+		border-radius: 6px;
+	}
+	
+	.product-info {
+		padding: 0.6rem;
+	}
+	
+	.product-name {
+		font-size: 0.85rem;
+	}
+	
+	.product-category {
+		font-size: 0.75rem;
+	}
+	
+	.current-price {
+		font-size: 1rem;
+	}
+	
+	.original-price {
+		font-size: 0.8rem;
+	}
+	
+	.product-features {
+		gap: 0.25rem;
+	}
+	
+	.feature-tag {
+		font-size: 0.55rem;
+		padding: 0.1rem 0.3rem;
+	}
+	
+	.stars {
+		font-size: 0.9rem;
+	}
+	
+	.rating-text {
+		font-size: 0.75rem;
+	}
+	
+	.empty-state {
+		padding: 3rem 0;
+	}
+	
+	.empty-icon {
+		font-size: 3rem;
+	}
+	
+	.empty-state p {
+		font-size: 1rem;
+	}
+}
 </style>

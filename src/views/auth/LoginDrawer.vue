@@ -450,6 +450,7 @@ export default {
 	backdrop-filter: blur(8px);
 	z-index: 9998;
 	animation: fadeIn .3s ease-out;
+	box-sizing: border-box;
 }
 
 .drawer {
@@ -467,6 +468,7 @@ export default {
 	display: flex;
 	flex-direction: column;
 	border-left: 1px solid rgba(0,0,0,0.1);
+	box-sizing: border-box;
 }
 
 .drawer.open {
@@ -481,6 +483,7 @@ export default {
 	align-items: center;
 	background: #fff;
 	position: relative;
+	box-sizing: border-box;
 }
 
 .drawer-title {
@@ -509,6 +512,7 @@ export default {
 	align-items: center;
 	justify-content: center;
 	transition: all .2s ease;
+	box-sizing: border-box;
 }
 
 .close-btn:hover {
@@ -522,10 +526,12 @@ export default {
 	flex-grow: 1;
 	overflow-y: auto;
 	background: #fff;
+	box-sizing: border-box;
 }
 
 .input-group {
 	margin-bottom: 24px;
+	box-sizing: border-box;
 }
 
 .input-group label {
@@ -551,6 +557,7 @@ export default {
 	outline: none;
 	transition: all .2s ease;
 	font-family: 'Helvetica Neue', Arial, sans-serif;
+	box-sizing: border-box;
 }
 
 .input-group input::placeholder {
@@ -594,6 +601,7 @@ export default {
 	letter-spacing: 0.5px;
 	position: relative;
 	overflow: hidden;
+	box-sizing: border-box;
 }
 
 .submit-btn::before {
@@ -630,6 +638,7 @@ export default {
 	justify-content: space-between;
 	margin-bottom: 20px;
 	padding: 0 4px;
+	box-sizing: border-box;
 }
 
 .link-btn {
@@ -645,6 +654,7 @@ export default {
 	text-transform: uppercase;
 	letter-spacing: 0.3px;
 	position: relative;
+	white-space: nowrap;
 }
 
 .link-btn::after {
@@ -678,6 +688,7 @@ export default {
 	font-weight: 500;
 	position: relative;
 	padding-left: 20px;
+	box-sizing: border-box;
 }
 
 .error-message::before {
@@ -702,6 +713,7 @@ export default {
 	font-weight: 500;
 	position: relative;
 	padding-left: 20px;
+	box-sizing: border-box;
 }
 
 .success-message::before {
@@ -744,9 +756,10 @@ export default {
 }
 
 /* 响应式设计 */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
 	.drawer {
 		width: 100%;
+		max-width: 400px;
 	}
 	
 	.drawer-content {
@@ -767,6 +780,100 @@ export default {
 		width: 36px;
 		height: 36px;
 		font-size: 18px;
+	}
+	
+	.input-group input,
+	.input-group select {
+		padding: 14px 16px;
+		font-size: 15px;
+	}
+	
+	.submit-btn {
+		padding: 16px;
+		font-size: 15px;
+	}
+}
+
+@media (max-width: 480px) {
+	.drawer {
+		width: 100%;
+		max-width: none;
+	}
+	
+	.drawer-content {
+		padding: 20px;
+	}
+	
+	.drawer-header {
+		padding: 20px 20px 16px;
+	}
+	
+	.drawer-title {
+		font-size: 22px;
+	}
+	
+	.close-btn {
+		top: 16px;
+		right: 16px;
+		width: 32px;
+		height: 32px;
+		font-size: 16px;
+	}
+	
+	.input-group {
+		margin-bottom: 20px;
+	}
+	
+	.input-group input,
+	.input-group select {
+		padding: 12px 14px;
+		font-size: 14px;
+	}
+	
+	.submit-btn {
+		padding: 14px;
+		font-size: 14px;
+		margin-bottom: 16px;
+	}
+	
+	.form-links {
+		margin-bottom: 16px;
+		flex-direction: column;
+		gap: 8px;
+		align-items: flex-start;
+	}
+	
+	.link-btn {
+		font-size: 12px;
+	}
+}
+
+@media (max-width: 360px) {
+	.drawer-content {
+		padding: 16px;
+	}
+	
+	.drawer-header {
+		padding: 16px 16px 12px;
+	}
+	
+	.drawer-title {
+		font-size: 20px;
+	}
+	
+	.input-group {
+		margin-bottom: 16px;
+	}
+	
+	.input-group input,
+	.input-group select {
+		padding: 10px 12px;
+		font-size: 13px;
+	}
+	
+	.submit-btn {
+		padding: 12px;
+		font-size: 13px;
 	}
 }
 

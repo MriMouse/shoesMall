@@ -42,6 +42,43 @@ export default {
 </script>
 
 <style scoped>
-.home-page { min-height: 100vh; background: #fff; }
-main { display: grid; gap: 24px; }
+.home-page { 
+	min-height: 100vh; 
+	background: #fff; 
+	width: 100%;
+	box-sizing: border-box;
+	overflow-x: hidden;
+}
+
+main { 
+	display: grid; 
+	gap: 24px; 
+	width: 100%;
+	box-sizing: border-box;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+	main {
+		gap: 20px;
+	}
+}
+
+@media (max-width: 960px) {
+	main {
+		gap: 16px;
+	}
+}
+
+@media (max-width: 768px) {
+	main {
+		gap: 12px;
+	}
+}
+
+@media (max-width: 480px) {
+	main {
+		gap: 8px;
+	}
+}
 </style>
