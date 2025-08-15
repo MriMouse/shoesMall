@@ -51,7 +51,8 @@
 			<nav class="primary-nav" @mouseenter="cancelClose" @mouseleave="scheduleClose">
 				<ul class="nav-list">
 					<li v-for="(group, index) in navGroups" :key="group.key" class="nav-item"
-						@mouseenter="openMegaMenu(index)">
+						@mouseenter="openMegaMenu(index)"
+						@mouseover="preloadMegaMenu(index)">
 						<span class="nav-link" @click="goBrandAll(group.key)">{{ group.label }}</span>
 					</li>
 				</ul>
@@ -223,6 +224,12 @@ export default {
 		const currentGroup = ref(null);
 		const hoveredCategory = ref(null);
 		let closeTimer = null;
+		// 新增：防抖定时器
+		let debounceTimer = null;
+		// 新增：图片缓存
+		const imageCache = new Map();
+		// 新增：图片预加载队列
+		const imagePreloadQueue = new Set();
 
 		// 新增：产品预览相关
 		const previewProducts = ref([]);
@@ -279,11 +286,22 @@ export default {
 			window.addEventListener('scroll', handleScroll, { passive: true });
 			startHotSearchRotation(); // 启动热门搜索词条循环
 			loadCategoriesFromBackend(); // 加载分类数据
+			
+			// 预加载一些常用图片，提升用户体验
+			setTimeout(() => {
+				preloadCommonImages();
+			}, 1000); // 延迟1秒开始预加载，避免影响初始加载
 		});
 
 		onBeforeUnmount(() => {
 			window.removeEventListener('scroll', handleScroll);
 			stopHotSearchRotation(); // 停止热门搜索词条循环
+			// 清理定时器
+			if (debounceTimer) {
+				clearTimeout(debounceTimer);
+			}
+			// 清理图片缓存
+			imageCache.clear();
 		});
 
 		// 新增：从后端加载分类数据
@@ -386,8 +404,43 @@ export default {
 			activeMenuIndex.value = index;
 			currentGroup.value = navGroups[index];
 			cancelClose();
-			// 加载产品预览数据
+			// 立即加载产品预览数据，不等待悬停
 			loadPreviewProducts();
+		}
+
+		// 新增：预加载函数，在用户悬停导航项时就开始准备数据
+		function preloadMegaMenu(index) {
+			if (activeMenuIndex.value === index) return; // 如果已经打开，不需要预加载
+			
+			// 预加载分类数据
+			const group = navGroups[index];
+			if (group && group.categories && group.categories.length > 0) {
+				// 立即预加载第一个分类的产品，无延迟
+				loadPreviewProductsByCategory(group.categories[0]);
+			}
+		}
+
+		// 新增：图片预加载函数
+		async function preloadImages(productIds) {
+			const promises = productIds.map(async (productId) => {
+				if (imageCache.has(`product_${productId}`)) return; // 已缓存
+				if (imagePreloadQueue.has(productId)) return; // 已在队列中
+				
+				imagePreloadQueue.add(productId);
+				try {
+					const imageResponse = await axios.get(`/api/shoeImg/list/${productId}`);
+					if (imageResponse.data && imageResponse.data.data) {
+						imageCache.set(`product_${productId}`, imageResponse.data.data);
+					}
+				} catch (error) {
+					console.warn(`预加载图片失败: ${productId}`, error);
+				} finally {
+					imagePreloadQueue.delete(productId);
+				}
+			});
+			
+			// 并行预加载，不等待完成
+			Promise.allSettled(promises);
 		}
 
 		function keepMegaOpen(index) {
@@ -403,11 +456,12 @@ export default {
 
 		function scheduleClose() {
 			cancelClose();
+			// 完全消除延迟，立即关闭
 			closeTimer = setTimeout(() => {
 				activeMenuIndex.value = null;
 				currentGroup.value = null;
 				previewProducts.value = []; // 清空预览数据
-			}, 120);
+			}, 0);
 		}
 
 		function cancelClose() {
@@ -416,11 +470,15 @@ export default {
 
 		function hoverCategory(category) {
 			hoveredCategory.value = category;
-			// 当悬停在分类上时，加载该分类的产品
+			// 完全消除防抖延迟，立即加载
+			if (debounceTimer) {
+				clearTimeout(debounceTimer);
+			}
+			// 立即加载，无延迟
 			loadPreviewProductsByCategory(category);
 		}
 
-		// 修改：加载产品预览数据
+		// 修改：加载产品预览数据 - 添加缓存机制和图片预加载
 		const loadPreviewProducts = async () => {
 			if (!currentGroup.value) return;
 
@@ -444,13 +502,26 @@ export default {
 						).slice(0, 8);
 					}
 
-					// 获取产品图片
+					// 立即预加载所有产品的图片
+					const productIds = products.map(p => p.shoeId);
+					preloadImages(productIds);
+
+					// 优化图片加载：使用缓存和并行加载
 					const productsWithImages = await Promise.all(
 						products.map(async (product) => {
+							// 检查缓存
+							const cacheKey = `product_${product.shoeId}`;
+							if (imageCache.has(cacheKey)) {
+								product.images = imageCache.get(cacheKey);
+								return product;
+							}
+
 							try {
 								const imageResponse = await axios.get(`/api/shoeImg/list/${product.shoeId}`);
 								if (imageResponse.data && imageResponse.data.data) {
 									product.images = imageResponse.data.data;
+									// 存入缓存
+									imageCache.set(cacheKey, product.images);
 								} else {
 									product.images = [];
 								}
@@ -471,9 +542,16 @@ export default {
 			}
 		};
 
-		// 修改：根据分类加载产品预览 - 实现shoe_type筛选
+		// 修改：根据分类加载产品预览 - 优化性能和缓存，添加图片预加载
 		const loadPreviewProductsByCategory = async (category) => {
 			if (!currentGroup.value) return;
+
+			// 检查缓存
+			const cacheKey = `category_${currentGroup.value.key}_${category.key}`;
+			if (imageCache.has(cacheKey)) {
+				previewProducts.value = imageCache.get(cacheKey);
+				return;
+			}
 
 			previewLoading.value = true;
 			try {
@@ -525,13 +603,26 @@ export default {
 					// 限制显示数量
 					products = products.slice(0, 8);
 
-					// 获取产品图片
+					// 立即预加载所有产品的图片
+					const productIds = products.map(p => p.shoeId);
+					preloadImages(productIds);
+
+					// 优化图片加载：使用缓存和并行加载
 					const productsWithImages = await Promise.all(
 						products.map(async (product) => {
+							// 检查产品图片缓存
+							const productCacheKey = `product_${product.shoeId}`;
+							if (imageCache.has(productCacheKey)) {
+								product.images = imageCache.get(productCacheKey);
+								return product;
+							}
+
 							try {
 								const imageResponse = await axios.get(`/api/shoeImg/list/${product.shoeId}`);
 								if (imageResponse.data && imageResponse.data.data) {
 									product.images = imageResponse.data.data;
+									// 存入产品图片缓存
+									imageCache.set(productCacheKey, product.images);
 								} else {
 									product.images = [];
 								}
@@ -543,6 +634,8 @@ export default {
 					);
 
 					previewProducts.value = productsWithImages;
+					// 存入分类缓存
+					imageCache.set(cacheKey, productsWithImages);
 				}
 			} catch (error) {
 				console.error('加载分类产品预览失败:', error);
@@ -727,6 +820,24 @@ export default {
 			return text.replace(re, '<mark>$1</mark>');
 		}
 
+		// 新增：预加载常用图片
+		async function preloadCommonImages() {
+			try {
+				// 预加载一些热门产品的图片
+				const response = await axios.post('/api/shoe/getAll', {}, {
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+				});
+				
+				if (response.data && response.data.data) {
+					const popularProducts = response.data.data.slice(0, 16); // 预加载前16个产品
+					const productIds = popularProducts.map(p => p.shoeId);
+					preloadImages(productIds);
+				}
+			} catch (error) {
+				console.warn('预加载常用图片失败:', error);
+			}
+		}
+
 
 		return {
 			isSticky,
@@ -739,6 +850,9 @@ export default {
 			previewLoading,
 			dynamicCategories,
 			openMegaMenu,
+			preloadMegaMenu,
+			preloadImages,
+			preloadCommonImages,
 			keepMegaOpen,
 			scheduleClose,
 			cancelClose,
@@ -967,11 +1081,14 @@ export default {
 	font-size: 14px;
 	z-index: 1;
 	position: relative;
-	transition: border-color .15s ease, background .15s ease;
+	transition: border-color .1s ease, background .1s ease;
 	box-sizing: border-box;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	/* 添加硬件加速 */
+	transform: translateZ(0);
+	will-change: border-color, background;
 }
 
 .search-placeholder .search-icon {
@@ -997,8 +1114,11 @@ export default {
 	outline: none;
 	z-index: 1;
 	position: relative;
-	transition: border-color .15s ease, background .15s ease;
+	transition: border-color .1s ease, background .1s ease;
 	box-sizing: border-box;
+	/* 添加硬件加速 */
+	transform: translateZ(0);
+	will-change: border-color, background;
 }
 
 .search-box.focus .search-input {
@@ -1065,8 +1185,11 @@ mark {
 	color: #000;
 	cursor: pointer;
 	border-bottom: 2px solid transparent;
-	transition: border-color .2s ease;
+	transition: border-color .15s ease;
 	white-space: nowrap;
+	/* 添加硬件加速 */
+	transform: translateZ(0);
+	will-change: border-color;
 }
 
 .nav-item:hover .nav-link {
@@ -1094,8 +1217,11 @@ mark {
 	align-items: center;
 	justify-content: center;
 	cursor: pointer;
-	transition: background .15s ease, transform .15s ease, color .15s ease, border-color .15s ease;
+	transition: background .1s ease, transform .1s ease, color .1s ease, border-color .1s ease;
 	flex-shrink: 0;
+	/* 添加硬件加速 */
+	transform: translateZ(0);
+	will-change: background, transform, color, border-color;
 }
 
 .icon-btn:first-child {
@@ -1107,7 +1233,7 @@ mark {
 	background: #000;
 	color: #fff;
 	border-color: #000;
-	transform: translateY(-1px);
+	transform: translateY(-1px) translateZ(0);
 }
 
 .icon-btn.disabled {
@@ -1140,20 +1266,23 @@ mark {
 	grid-template-columns: 280px 1fr;
 	gap: 0;
 	padding: 20px 32px;
-	animation: fadeIn .25s cubic-bezier(0.4, 0, 0.2, 1);
+	animation: fadeIn .08s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 	z-index: 999;
 	box-sizing: border-box;
+	/* 添加硬件加速 */
+	transform: translateZ(0);
+	will-change: opacity, transform;
 }
 
 @keyframes fadeIn {
 	from {
 		opacity: 0;
-		transform: translateY(-20px);
+		transform: translateY(-5px) translateZ(0);
 	}
 
 	to {
 		opacity: 1;
-		transform: translateY(0);
+		transform: translateY(0) translateZ(0);
 	}
 }
 
@@ -1178,11 +1307,15 @@ mark {
 	padding: 8px 10px;
 	border-radius: 6px;
 	cursor: pointer;
-	transition: background .15s ease;
+	transition: background .1s ease, transform .1s ease;
+	/* 添加硬件加速 */
+	transform: translateZ(0);
+	will-change: background, transform;
 }
 
 .mega-cat-item:hover {
 	background: #f7f7f7;
+	transform: translateX(2px) translateZ(0);
 }
 
 .mega-right {
@@ -1222,11 +1355,14 @@ mark {
 	overflow: hidden;
 	background: #fff;
 	cursor: pointer;
-	transition: all 0.3s ease;
+	transition: all 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+	/* 添加硬件加速 */
+	transform: translateZ(0);
+	will-change: transform, box-shadow, border-color;
 }
 
 .preview-card:hover {
-	transform: translateY(-2px);
+	transform: translateY(-2px) translateZ(0);
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 	border-color: #c6ff00;
 }
@@ -1242,11 +1378,14 @@ mark {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
-	transition: transform 0.3s ease;
+	transition: transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+	/* 添加硬件加速 */
+	transform: translateZ(0);
+	will-change: transform;
 }
 
 .preview-card:hover .preview-image {
-	transform: scale(1.05);
+	transform: scale(1.05) translateZ(0);
 }
 
 .preview-placeholder {
@@ -1321,7 +1460,7 @@ mark {
 	background: #fff;
 	z-index: 1001;
 	/* 确保在遮罩层之上 */
-	animation: fadeIn .18s ease;
+	animation: fadeIn .08s ease;
 	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 	box-sizing: border-box;
 }
@@ -1504,7 +1643,7 @@ mark {
 	backdrop-filter: blur(4px);
 	z-index: 1000;
 	/* 提高z-index，使其覆盖导航栏 */
-	animation: fadeIn .18s ease;
+	animation: fadeIn .08s ease;
 }
 
 .search-placeholder span {
