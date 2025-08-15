@@ -166,13 +166,16 @@
 				</button>
 			</div>
 			<!-- 全局单实例 Mega Menu，避免切换时闪烁 -->
-			<div v-if="currentGroup && activeMenuIndex !== null" class="mega-menu" @mouseenter="cancelClose"
-				@mouseleave="scheduleClose">
+			<div v-if="currentGroup && activeMenuIndex !== null" class="mega-menu" 
+				@mouseenter="cancelClose"
+				@mouseleave="scheduleClose"
+				@mousemove="cancelClose">
 				<div class="mega-left">
 					<h4 class="mega-title">类型详情</h4>
 					<ul class="mega-cat-list">
 						<li v-for="category in currentGroup.categories" :key="category.key" class="mega-cat-item"
-							@mouseenter="hoverCategory(category)" @click="goCategory(currentGroup.key, category)">
+							@mouseenter="hoverCategory(category)" 
+							@click="goCategory(currentGroup.key, category)">
 							<span>{{ category.label }}</span>
 						</li>
 					</ul>
@@ -188,8 +191,12 @@
 							@click="goToProductDetail(product.shoeId)">
 							<div class="preview-media">
 								<img v-if="product.images && product.images.length > 0"
-									:src="`/api/shoeImg/getImage/${product.images[0].imagePath}`" :alt="product.name"
-									class="preview-image">
+									:src="`/api/shoeImg/getImage/${product.images[0].imagePath}`" 
+									:alt="product.name"
+									class="preview-image" 
+									loading="lazy"
+									@load="handleImageLoad" 
+									@error="handleImageError">
 								<div v-else class="preview-placeholder"></div>
 							</div>
 							<div class="preview-meta">
@@ -401,11 +408,19 @@ export default {
 		};
 
 		function openMegaMenu(index) {
+			// 如果已经是当前菜单，不需要重新打开
+			if (activeMenuIndex.value === index && currentGroup.value === navGroups[index]) {
+				return;
+			}
+			
 			activeMenuIndex.value = index;
 			currentGroup.value = navGroups[index];
 			cancelClose();
-			// 立即加载产品预览数据，不等待悬停
-			loadPreviewProducts();
+			
+			// 延迟加载产品预览数据，避免闪烁
+			setTimeout(() => {
+				loadPreviewProducts();
+			}, 50);
 		}
 
 		// 新增：预加载函数，在用户悬停导航项时就开始准备数据
@@ -415,8 +430,10 @@ export default {
 			// 预加载分类数据
 			const group = navGroups[index];
 			if (group && group.categories && group.categories.length > 0) {
-				// 立即预加载第一个分类的产品，无延迟
-				loadPreviewProductsByCategory(group.categories[0]);
+				// 延迟预加载，避免频繁切换
+				setTimeout(() => {
+					loadPreviewProductsByCategory(group.categories[0]);
+				}, 100);
 			}
 		}
 
@@ -443,6 +460,24 @@ export default {
 			Promise.allSettled(promises);
 		}
 
+		// 新增：图片加载完成处理函数
+		function handleImageLoad(event) {
+			const img = event.target;
+			img.classList.add('loaded');
+			img.removeAttribute('loading');
+		}
+
+		// 新增：图片加载错误处理函数
+		function handleImageError(event) {
+			const img = event.target;
+			img.style.display = 'none';
+			// 显示占位符
+			const placeholder = img.parentElement.querySelector('.preview-placeholder');
+			if (placeholder) {
+				placeholder.classList.add('show'); // 显示占位符
+			}
+		}
+
 		function keepMegaOpen(index) {
 			activeMenuIndex.value = index;
 			currentGroup.value = navGroups[index];
@@ -456,26 +491,36 @@ export default {
 
 		function scheduleClose() {
 			cancelClose();
-			// 完全消除延迟，立即关闭
+			// 增加延迟时间，避免闪烁
 			closeTimer = setTimeout(() => {
-				activeMenuIndex.value = null;
-				currentGroup.value = null;
-				previewProducts.value = []; // 清空预览数据
-			}, 0);
+				closeMegaMenu();
+			}, 150); // 从0改为150ms，给用户足够时间移动到下拉菜单
 		}
 
 		function cancelClose() {
-			if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+			if (closeTimer) { 
+				clearTimeout(closeTimer); 
+				closeTimer = null; 
+			}
 		}
 
 		function hoverCategory(category) {
+			// 如果已经是当前悬停的分类，不需要重新加载
+			if (hoveredCategory.value && hoveredCategory.value.key === category.key) {
+				return;
+			}
+			
 			hoveredCategory.value = category;
-			// 完全消除防抖延迟，立即加载
+			
+			// 增加防抖延迟，避免频繁切换
 			if (debounceTimer) {
 				clearTimeout(debounceTimer);
 			}
-			// 立即加载，无延迟
-			loadPreviewProductsByCategory(category);
+			
+			// 增加延迟，避免闪烁
+			debounceTimer = setTimeout(() => {
+				loadPreviewProductsByCategory(category);
+			}, 150); // 从100ms增加到150ms，进一步减少闪烁
 		}
 
 		// 修改：加载产品预览数据 - 添加缓存机制和图片预加载
@@ -865,6 +910,8 @@ export default {
 			goCart,
 			goToProductDetail,
 			loadCategoriesFromBackend,
+			handleImageLoad,
+			handleImageError,
 			searchQuery,
 			isSearchFocused,
 			suggestions,
@@ -1266,18 +1313,25 @@ mark {
 	grid-template-columns: 280px 1fr;
 	gap: 0;
 	padding: 20px 32px;
-	animation: fadeIn .08s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+	animation: fadeIn .2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 	z-index: 999;
 	box-sizing: border-box;
 	/* 添加硬件加速 */
 	transform: translateZ(0);
 	will-change: opacity, transform;
+	/* 添加过渡效果 */
+	transition: opacity 0.2s ease, transform 0.2s ease;
+	/* 防止闪烁的CSS属性 */
+	backface-visibility: hidden;
+	transform-style: preserve-3d;
+	/* 确保内容不会溢出 */
+	overflow: hidden;
 }
 
 @keyframes fadeIn {
 	from {
 		opacity: 0;
-		transform: translateY(-5px) translateZ(0);
+		transform: translateY(-8px) translateZ(0);
 	}
 
 	to {
@@ -1307,15 +1361,18 @@ mark {
 	padding: 8px 10px;
 	border-radius: 6px;
 	cursor: pointer;
-	transition: background .1s ease, transform .1s ease;
+	transition: background .15s ease, transform .15s ease;
 	/* 添加硬件加速 */
 	transform: translateZ(0);
 	will-change: background, transform;
+	/* 添加悬停状态的边框 */
+	border: 1px solid transparent;
 }
 
 .mega-cat-item:hover {
 	background: #f7f7f7;
 	transform: translateX(2px) translateZ(0);
+	border-color: #e0e0e0;
 }
 
 .mega-right {
@@ -1355,16 +1412,29 @@ mark {
 	overflow: hidden;
 	background: #fff;
 	cursor: pointer;
-	transition: all 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+	transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 	/* 添加硬件加速 */
 	transform: translateZ(0);
 	will-change: transform, box-shadow, border-color;
+	/* 添加悬停状态的优化 */
+	position: relative;
 }
 
 .preview-card:hover {
 	transform: translateY(-2px) translateZ(0);
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 	border-color: #c6ff00;
+}
+
+.preview-card:hover::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(198, 255, 0, 0.05);
+	pointer-events: none;
 }
 
 .preview-media {
@@ -1378,14 +1448,29 @@ mark {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
-	transition: transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+	transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 	/* 添加硬件加速 */
 	transform: translateZ(0);
 	will-change: transform;
+	/* 防止图片闪烁 */
+	backface-visibility: hidden;
+	transform-style: preserve-3d;
+	/* 添加图片加载优化 */
+	opacity: 1;
+	transition: transform 0.2s ease, opacity 0.15s ease;
 }
 
 .preview-card:hover .preview-image {
 	transform: scale(1.05) translateZ(0);
+}
+
+/* 图片加载状态 */
+.preview-image[loading] {
+	opacity: 0.7;
+}
+
+.preview-image.loaded {
+	opacity: 1;
 }
 
 .preview-placeholder {
@@ -1396,6 +1481,15 @@ mark {
 	justify-content: center;
 	font-size: 2rem;
 	color: #999;
+	/* 添加占位符样式优化 */
+	background: linear-gradient(135deg, #f5f5f5, #e8e8e8);
+	border: 1px dashed #ddd;
+	/* 默认隐藏，只在需要时显示 */
+	display: none;
+}
+
+.preview-placeholder.show {
+	display: flex;
 }
 
 .preview-meta {
