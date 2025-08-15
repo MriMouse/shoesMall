@@ -65,8 +65,8 @@ export default {
 
 .grid { 
 	display: grid; 
-	grid-template-columns: repeat(2, 1fr); 
-	gap: 12px; 
+	grid-template-columns: repeat(4, 1fr); 
+	gap: 16px; 
 	width: 100%;
 	box-sizing: border-box;
 }
