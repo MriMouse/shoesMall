@@ -318,7 +318,7 @@ export default {
 		// 新增：从后端加载品牌数据
 		const loadBrandsFromBackend = async () => {
 			try {
-				const response = await axios.post('/api/brand/getAll', {}, {
+				const response = await axios.post('/brand/getAll', {}, {
 					headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
 				});
 
@@ -403,7 +403,7 @@ export default {
 			
 			previewLoading.value = true;
 			try {
-				const response = await axios.post('/api/shoe/getAll', {}, {
+				const response = await axios.post('/shoe/getAll', {}, {
 					headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
 				});
 
@@ -431,7 +431,7 @@ export default {
 					const productsWithImages = await Promise.all(
 						products.map(async (product) => {
 							try {
-								const imageResponse = await axios.get(`/api/shoeImg/list/${product.shoeId}`);
+								const imageResponse = await axios.get(`/shoeImg/list/${product.shoeId}`);
 								if (imageResponse.data && imageResponse.data.data) {
 									product.images = imageResponse.data.data;
 								} else {
@@ -460,7 +460,7 @@ export default {
 			
 			previewLoading.value = true;
 			try {
-				const response = await axios.post('/api/shoe/getAll', {}, {
+				const response = await axios.post('/shoe/getAll', {}, {
 					headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
 				});
 
@@ -490,7 +490,7 @@ export default {
 					const productsWithImages = await Promise.all(
 						products.map(async (product) => {
 							try {
-								const imageResponse = await axios.get(`/api/shoeImg/list/${product.shoeId}`);
+								const imageResponse = await axios.get(`/shoeImg/list/${product.shoeId}`);
 								if (imageResponse.data && imageResponse.data.data) {
 									product.images = imageResponse.data.data;
 								} else {

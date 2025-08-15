@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: 'http://localhost:8081',
   headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
 })
 
@@ -117,8 +117,8 @@ export const OrderAPI = {
   // 购物车相关API
   CartAPI: {
     // 加入购物车
-    addToCart(userId, shoeId, sizeId, quantity) {
-      const params = new URLSearchParams({ userId, shoeId, sizeId, quantity })
+    addToCart(userId, sizeId, shoeId, quantity) {
+      const params = new URLSearchParams({ userId, sizeId, shoeId, quantity })
       return api.post('/cart/addToCart', params)
     },
     
@@ -128,32 +128,50 @@ export const OrderAPI = {
     },
     
     // 更新购物车商品数量
-    updateQuantity(orderId, quantity) {
-      const params = new URLSearchParams({ orderId, quantity })
-      return api.post('/cart/updateQuantity', params)
+    updateCartItemQuantity(orderId, shoeId, quantity) {
+      const params = new URLSearchParams({ orderId, shoeId, quantity })
+      return api.post('/cart/updateCartItemQuantity', params)
     },
     
     // 更新购物车商品尺码
-    updateSize(orderId, sizeId) {
+    updateOrderSize(orderId, sizeId) {
       const params = new URLSearchParams({ orderId, sizeId })
-      return api.post('/cart/updateSize', params)
+      return api.post('/cart/updateOrderSize', params)
     },
     
     // 从购物车删除商品
-    removeFromCart(orderId) {
-      const params = new URLSearchParams({ orderId })
+    removeFromCart(orderId, shoeId) {
+      const params = new URLSearchParams({ orderId, shoeId })
       return api.post('/cart/removeFromCart', params)
     },
     
     // 清空购物车
-    clearCart(userId) {
+    clearUserCart(userId) {
       const params = new URLSearchParams({ userId })
-      return api.post('/cart/clearCart', params)
+      return api.post('/cart/clearUserCart', params)
     },
     
     // 获取购物车商品数量
     getCartItemCount(userId) {
       return api.get(`/cart/getCartItemCount?userId=${userId}`)
+    },
+    
+    // 获取购物车订单
+    getCartOrders(userId) {
+      return api.get(`/cart/getCartOrders?userId=${userId}`)
+    },
+    
+    // 获取购物车订单详情
+    getCartOrdersWithDetails(userId) {
+      return api.get(`/cart/getCartOrdersWithDetails?userId=${userId}`)
+    },
+    
+    // 批量更新订单状态
+    batchUpdateOrderStatus(orderIds, status) {
+      const params = new URLSearchParams()
+      orderIds.forEach(id => params.append('orderIds', id))
+      params.append('status', status)
+      return api.post('/cart/batchUpdateOrderStatus', params)
     }
   },
   
@@ -228,6 +246,65 @@ export const AddressAPI = {
   },
   setDefault(addressId, userId) {
     return api.post('/address/setDefault', { addressId, userId })
+  }
+}
+
+// 购物车相关API
+export const CartAPI = {
+  // 获取用户的购物车订单
+  getCartOrders(userId) {
+    const params = new URLSearchParams({ userId })
+    return api.get('/cart/getCartOrders', { params })
+  },
+  
+  // 获取用户的购物车订单详情
+  getCartOrdersWithDetails(userId) {
+    const params = new URLSearchParams({ userId })
+    return api.get('/cart/getCartOrdersWithDetails', { params })
+  },
+  
+  // 获取购物车商品数量
+  getCartItemCount(userId) {
+    const params = new URLSearchParams({ userId })
+    return api.get('/cart/getCartItemCount', { params })
+  },
+  
+  // 添加商品到购物车
+  addToCart(userId, sizeId, shoeId, quantity) {
+    const params = new URLSearchParams({ userId, sizeId, shoeId, quantity })
+    return api.post('/cart/addToCart', params)
+  },
+  
+  // 更新购物车商品数量
+  updateCartItemQuantity(orderId, shoeId, quantity) {
+    const params = new URLSearchParams({ orderId, shoeId, quantity })
+    return api.post('/cart/updateCartItemQuantity', params)
+  },
+  
+  // 从购物车移除商品
+  removeFromCart(orderId, shoeId) {
+    const params = new URLSearchParams({ orderId, shoeId })
+    return api.post('/cart/removeFromCart', params)
+  },
+  
+  // 清空用户购物车
+  clearUserCart(userId) {
+    const params = new URLSearchParams({ userId })
+    return api.post('/cart/clearUserCart', params)
+  },
+  
+  // 批量更新订单状态
+  batchUpdateOrderStatus(orderIds, status) {
+    const params = new URLSearchParams()
+    orderIds.forEach(id => params.append('orderIds', id))
+    params.append('status', status)
+    return api.post('/cart/batchUpdateOrderStatus', params)
+  },
+  
+  // 更新订单尺码
+  updateOrderSize(orderId, sizeId) {
+    const params = new URLSearchParams({ orderId, sizeId })
+    return api.post('/cart/updateOrderSize', params)
   }
 }
 

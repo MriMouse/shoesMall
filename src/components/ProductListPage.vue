@@ -359,7 +359,7 @@ const fetchProducts = async () => {
     error.value = ''
     try {
         // 获取产品数据
-        const productResponse = await axios.post('/api/shoe/getAll', {}, {
+        const productResponse = await axios.post('/shoe/getAll', {}, {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         })
 
@@ -371,8 +371,8 @@ const fetchProducts = async () => {
                 try {
                     // 并行获取图片和库存数据
                     const [imageResponse, inventoryResponse] = await Promise.all([
-                        axios.get(`/api/shoeImg/list/${product.shoeId}`),
-                        axios.get(`/api/inventory/getInventoryByShoeId/${product.shoeId}`)
+                        axios.get(`/shoeImg/list/${product.shoeId}`),
+                        axios.get(`/inventory/getInventoryByShoeId/${product.shoeId}`)
                     ])
 
                     // 处理图片数据
@@ -439,16 +439,16 @@ const fetchOptions = async () => {
     try {
         // 并行请求所有筛选选项，提高加载速度
         const [brandResponse, typeResponse, colorResponse, sizeResponse] = await Promise.all([
-            axios.post('/api/brand/getAll', {}, {
+            axios.post('/brand/getAll', {}, {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
             }),
-            axios.post('/api/shoesType/getAll', {}, {
+            axios.post('/shoesType/getAll', {}, {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
             }),
-            axios.post('/api/color/getAll', {}, {
+            axios.post('/color/getAll', {}, {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
             }),
-            axios.post('/api/shoesSize/getAll', {}, {
+            axios.post('/shoesSize/getAll', {}, {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
             })
         ])

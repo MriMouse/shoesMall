@@ -66,6 +66,18 @@
             ⚡ 立即购买
           </button>
         </div>
+        
+        <!-- 购物车状态 -->
+        <div class="cart-status" v-if="cartItemCount > 0">
+          <span>购物车中有 {{ cartItemCount }} 件商品</span>
+          <router-link to="/cart" class="view-cart-link">查看购物车</router-link>
+        </div>
+        
+        <!-- 加入购物车成功提示 -->
+        <div class="cart-success" v-if="showCartSuccess">
+          <span>✅ 已成功加入购物车！</span>
+          <router-link to="/cart" class="view-cart-link">查看购物车</router-link>
+        </div>
       </div>
     </div>
   </div>
@@ -95,7 +107,8 @@ export default {
       selectedSize: null,
       quantity: 1,
       availableSizes: [],
-      loading: false
+      loading: false,
+      showCartSuccess: false // 新增：控制加入购物车成功提示的显示
     }
   },
   
@@ -108,11 +121,16 @@ export default {
     
     maxQuantity() {
       return this.selectedSizeStock
+    },
+
+    cartItemCount() {
+      return cartManager.getCartItemCount()
     }
   },
   
   mounted() {
     this.loadProductData()
+    this.initCartManager()
   },
   
   methods: {
@@ -129,6 +147,7 @@ export default {
             const shoe = shoeResponse.data.data
             this.product = {
               id: shoe.shoeId,
+              shoeId: shoe.shoeId, // 添加shoeId字段
               name: shoe.name || '',
               serialNumber: shoe.serialNumber || '',
               price: shoe.price || 0,
@@ -265,31 +284,65 @@ export default {
             return
         }
         
-        // 调用加入购物车API
+        // 设置购物车管理器的用户ID
+        cartManager.setUserId(user.id)
+        
+        // 调用购物车管理器加入购物车
         console.log('=== 加入购物车调试信息 ===')
         console.log('用户信息:', user)
         console.log('选择的尺码ID:', this.selectedSize)
         console.log('购买数量:', this.quantity)
         console.log('商品信息:', this.product)
+        console.log('商品ID:', this.product.id)
+        console.log('商品shoeId:', this.product.shoeId)
         
-        const res = await OrderAPI.addToCart(user.id, this.selectedSize, this.quantity)
+        // 确保参数完整性
+        if (!this.selectedSize || !this.quantity || !this.product.id) {
+          console.error('参数不完整:', {
+            selectedSize: this.selectedSize,
+            quantity: this.quantity,
+            productId: this.product.id
+          })
+          this.showMessage('商品信息不完整，请刷新页面重试', 'error')
+          return
+        }
         
-        console.log('加入购物车API响应:', res)
-        console.log('响应状态码:', res.status)
-        console.log('响应数据:', res.data)
+        const success = await cartManager.addToCart(this.selectedSize, this.quantity, this.product.id)
         
-        if (res.data?.code === 200) {
+        console.log('加入购物车结果:', success)
+        
+        if (success) {
           this.showMessage('成功加入购物车！', 'success')
           // 使用购物车管理器触发更新
           cartManager.triggerUpdate()
+          // 刷新购物车数量显示
+          await cartManager.refreshCartCount()
+          this.showCartSuccess = true // 显示成功提示
+          setTimeout(() => {
+            this.showCartSuccess = false
+          }, 3000) // 3秒后隐藏提示
         } else {
-          console.error('加入购物车失败，响应:', res.data)
-          this.showMessage('加入购物车失败：' + (res.data?.msg || '未知错误'), 'error')
+          this.showMessage('加入购物车失败，请重试', 'error')
+          console.error('加入购物车失败，API返回false')
         }
       } catch (error) {
         console.error('加入购物车异常:', error)
-        console.error('错误详情:', error.response?.data)
-        this.showMessage('加入购物车失败，请重试', 'error')
+        let errorMessage = '加入购物车失败，请重试'
+        
+        // 根据错误类型提供更具体的错误信息
+        if (error.response) {
+          if (error.response.status === 400) {
+            errorMessage = '请求参数错误，请检查商品信息'
+          } else if (error.response.status === 500) {
+            errorMessage = '服务器内部错误，请稍后重试'
+          } else if (error.response.data?.msg) {
+            errorMessage = error.response.data.msg
+          }
+        } else if (error.request) {
+          errorMessage = '网络连接失败，请检查网络设置'
+        }
+        
+        this.showMessage(errorMessage, 'error')
       } finally {
         this.loading = false
       }
@@ -399,6 +452,34 @@ export default {
           messageDiv.parentNode.removeChild(messageDiv)
         }
       }, 3000)
+    },
+
+    initCartManager() {
+      // 初始化购物车管理器，设置用户ID
+      const userStr = localStorage.getItem('user')
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr)
+          if (user.id) {
+            cartManager.setUserId(user.id)
+            // 加载购物车数量
+            this.loadCartCount()
+          }
+        } catch (e) {
+          console.error('解析用户信息失败:', e)
+        }
+      }
+    },
+    
+    async loadCartCount() {
+      try {
+        if (cartManager.userId) {
+          await cartManager.loadCartItemCount()
+          this.cartItemCount = cartManager.cartItemCount
+        }
+      } catch (error) {
+        console.error('加载购物车数量失败:', error)
+      }
     }
   }
 }
@@ -587,6 +668,36 @@ export default {
 
 .btn-buy-now:hover {
   background: #cf1322;
+}
+
+.cart-status {
+  margin-top: 20px;
+  font-size: 14px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.view-cart-link {
+  color: #1890ff;
+  text-decoration: none;
+}
+
+.view-cart-link:hover {
+  text-decoration: underline;
+}
+
+.cart-success {
+  margin-top: 20px;
+  font-size: 14px;
+  color: #52c41a;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #f0f9eb;
+  padding: 10px 20px;
+  border-radius: 4px;
 }
 
 @media (max-width: 768px) {

@@ -204,7 +204,7 @@ export default {
 				params.append('username', loginForm.value.username);
 				params.append('password', loginForm.value.password);
 				
-				const response = await axios.post('/api/usersLogin/userLogin', params, {
+				const response = await axios.post('/usersLogin/userLogin', params, {
 					headers: {
 						'Content-Type': 'application/x-www-form-urlencoded'
 					}
@@ -269,7 +269,7 @@ export default {
 				params.append('gender', registerForm.value.gender);
 				params.append('password', registerForm.value.password);
 				
-				const response = await axios.post('/api/usersLogin/userRegister', params, {
+				const response = await axios.post('/usersLogin/userRegister', params, {
 					headers: {
 						'Content-Type': 'application/x-www-form-urlencoded'
 					}
@@ -338,7 +338,7 @@ export default {
 			forgotSuccess.value = '';
 			
 			try {
-				const response = await axios.get('/api/usersLogin/getCode', {
+				const response = await axios.get('/usersLogin/getCode', {
 					params: {
 						username: forgotForm.value.username,
 						email: forgotForm.value.email
@@ -390,7 +390,7 @@ export default {
 				params.append('code', resetForm.value.code);
 				params.append('token', resetToken.value);
 				
-				const response = await axios.post('/api/usersLogin/resetPassword', params, {
+				const response = await axios.post('/usersLogin/resetPassword', params, {
 					headers: {
 						'Content-Type': 'application/x-www-form-urlencoded'
 					}
