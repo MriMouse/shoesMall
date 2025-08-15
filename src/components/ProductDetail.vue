@@ -508,13 +508,17 @@ const buyNow = () => {
         return
     }
     
+    // 检查是否从订单确认页面跳转过来
+    const fromOrderConfirmation = sessionStorage.getItem('fromOrderConfirmation')
+    
     // 跳转到订单确认页面，传递商品信息
     router.push({
         name: 'OrderConfirmation',
         query: {
             productId: product.value.shoeId,
             sizeId: selectedSize.value,
-            quantity: quantity.value
+            quantity: quantity.value,
+            fromOrderConfirmation: fromOrderConfirmation ? 'true' : 'false'
         }
     })
 }

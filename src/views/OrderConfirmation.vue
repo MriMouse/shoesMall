@@ -460,7 +460,7 @@
  </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 
@@ -546,7 +546,7 @@ const loadOrderData = async () => {
         const hasRestoredData = restoreOrderData()
         
         // 检查是否有从产品详情页传递过来的商品信息
-        const { productId, sizeId, quantity } = route.query
+        const { productId, sizeId, quantity, fromOrderConfirmation } = route.query
         
         if (productId && sizeId && quantity) {
             // 从产品详情页跳转过来，需要添加新商品到现有商品列表
@@ -570,15 +570,25 @@ const loadOrderData = async () => {
                     productData.images = []
                 }
 
-                // 检查商品是否已经存在
-                const existingProductIndex = products.value.findIndex(p => p.shoeId === productId)
-                
-                if (existingProductIndex >= 0) {
-                    // 商品已存在，更新数量
-                    const currentQuantity = productQuantities.value[productId] || 0
-                    productQuantities.value[productId] = currentQuantity + parseInt(quantity)
+                // 如果是从订单确认页面跳转过来的，检查是否会导致重复
+                if (fromOrderConfirmation === 'true') {
+                    // 检查商品是否已经存在（包括相同的尺码）
+                    const existingProductIndex = products.value.findIndex(p => 
+                        p.shoeId === productId && selectedSizes.value[p.shoeId] === parseInt(sizeId)
+                    )
+                    
+                    if (existingProductIndex >= 0) {
+                        // 商品已存在且尺码相同，更新数量
+                        const currentQuantity = productQuantities.value[productId] || 0
+                        productQuantities.value[productId] = currentQuantity + parseInt(quantity)
+                    } else {
+                        // 商品不存在或尺码不同，添加到列表
+                        products.value.push(productData)
+                        selectedSizes.value[productId] = parseInt(sizeId)
+                        productQuantities.value[productId] = parseInt(quantity)
+                    }
                 } else {
-                    // 商品不存在，添加到列表
+                    // 直接添加商品（新用户或从其他页面跳转）
                     products.value.push(productData)
                     selectedSizes.value[productId] = parseInt(sizeId)
                     productQuantities.value[productId] = parseInt(quantity)
@@ -586,6 +596,10 @@ const loadOrderData = async () => {
                 
                 // 保存更新后的数据
                 saveOrderData()
+                
+                // 清除URL参数和sessionStorage标记，避免重复添加
+                router.replace({ name: 'OrderConfirmation', query: {} })
+                sessionStorage.removeItem('fromOrderConfirmation')
             }
         } else if (!hasRestoredData) {
             // 没有恢复的数据，也没有新商品，加载所有商品
@@ -1549,6 +1563,8 @@ const clearOrderData = () => {
 const addMoreProducts = () => {
     // 保存当前订单数据
     saveOrderData()
+    // 设置标记，表示从订单确认页面跳转
+    sessionStorage.setItem('fromOrderConfirmation', 'true')
     // 跳转到产品展示页面
     router.push('/products')
 }
@@ -1557,12 +1573,19 @@ const addMoreProducts = () => {
 const goBack = () => {
     // 保存当前订单数据
     saveOrderData()
+    // 设置标记，表示从订单确认页面跳转
+    sessionStorage.setItem('fromOrderConfirmation', 'true')
     router.push('/products')
 }
 
 // 生命周期钩子
 onMounted(() => {
     loadOrderData()
+})
+
+// 组件卸载时清理sessionStorage
+onUnmounted(() => {
+    sessionStorage.removeItem('fromOrderConfirmation')
 })
 </script>
 

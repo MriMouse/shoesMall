@@ -87,3 +87,4 @@
 - `POST /api/orderShoeNum/insertOrderShoeNum` - 创建订单商品数量记录
 - `GET /api/inventory/checkInventorySufficient` - 检查库存
 - `POST /api/inventory/decreaseInventory` - 减少库存
+
