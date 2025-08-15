@@ -1,18 +1,17 @@
-const { defineConfig } = require('@vue/cli-service')
+const { defineConfig } = require("@vue/cli-service");
 module.exports = defineConfig({
   transpileDependencies: true,
   devServer: {
-    port: 8080, // 明确指定Vue开发服务器端口
+    port: 8082, // 修改为8082，和你的前端一致
     proxy: {
       "/api": {
-        target: "http://localhost:8081",
+        target: "http://localhost:8081", // 后端端口为8081
         changeOrigin: true,
         pathRewrite: {
-          "^/api": "",
+          "^/api": "/api", // 保持/api路径
         },
         logLevel: "debug", // 添加日志以便调试
       },
     },
   },
 });
-
