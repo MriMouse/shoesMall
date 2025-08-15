@@ -377,4 +377,128 @@ export default {
     background-color: #3498db;
     color: white;
 }
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+	.profile-page {
+		padding: 0 16px;
+	}
+	
+	.profile-content {
+		grid-template-columns: 1fr 2fr;
+		gap: 20px;
+	}
+}
+
+@media (max-width: 960px) {
+	.profile-page {
+		padding: 0 12px;
+	}
+	
+	.profile-content {
+		grid-template-columns: 1fr;
+		gap: 16px;
+	}
+	
+	.profile-sidebar {
+		order: 2;
+	}
+	
+	.profile-main {
+		order: 1;
+	}
+	
+	.profile-header {
+		padding: 20px 0;
+	}
+	
+	.profile-name {
+		font-size: 24px;
+	}
+	
+	.profile-email {
+		font-size: 14px;
+	}
+}
+
+@media (max-width: 768px) {
+	.profile-page {
+		padding: 0 8px;
+	}
+	
+	.profile-header {
+		padding: 16px 0;
+	}
+	
+	.profile-name {
+		font-size: 20px;
+	}
+	
+	.profile-email {
+		font-size: 13px;
+	}
+	
+	.section-title {
+		font-size: 18px;
+	}
+	
+	.order-item {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.5rem;
+	}
+	
+	.order-info {
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+	
+	.address-item,
+	.setting-item {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.5rem;
+	}
+}
+
+@media (max-width: 480px) {
+	.profile-page {
+		padding: 0 6px;
+	}
+	
+	.profile-header {
+		padding: 12px 0;
+	}
+	
+	.profile-name {
+		font-size: 18px;
+	}
+	
+	.profile-email {
+		font-size: 12px;
+	}
+	
+	.section-title {
+		font-size: 16px;
+	}
+	
+	.order-item,
+	.address-item,
+	.setting-item {
+		padding: 0.8rem;
+	}
+	
+	.btn {
+		padding: 0.4rem 0.8rem;
+		font-size: 14px;
+	}
+	
+	.empty-state {
+		padding: 2rem 0;
+	}
+	
+	.empty-state p {
+		font-size: 1rem;
+	}
+}
 </style>

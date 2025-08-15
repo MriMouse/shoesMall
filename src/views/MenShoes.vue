@@ -378,4 +378,141 @@ export default {
 .btn-secondary:hover {
     background-color: #7f8c8d;
 }
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+	.men-shoes-page {
+		padding: 0 16px;
+	}
+	
+	.products-grid {
+		grid-template-columns: repeat(3, 1fr);
+		gap: 20px;
+	}
+}
+
+@media (max-width: 960px) {
+	.men-shoes-page {
+		padding: 0 12px;
+	}
+	
+	.page-header {
+		padding: 20px 0;
+	}
+	
+	.page-title {
+		font-size: 28px;
+	}
+	
+	.products-grid {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 16px;
+	}
+	
+	.product-card {
+		border-radius: 8px;
+	}
+	
+	.product-info {
+		padding: 1rem;
+	}
+	
+	.product-name {
+		font-size: 1rem;
+	}
+	
+	.current-price {
+		font-size: 1.2rem;
+	}
+}
+
+@media (max-width: 768px) {
+	.men-shoes-page {
+		padding: 0 8px;
+	}
+	
+	.page-header {
+		padding: 16px 0;
+	}
+	
+	.page-title {
+		font-size: 24px;
+	}
+	
+	.products-grid {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 12px;
+	}
+	
+	.product-info {
+		padding: 0.8rem;
+	}
+	
+	.product-name {
+		font-size: 0.9rem;
+	}
+	
+	.product-category {
+		font-size: 0.8rem;
+	}
+	
+	.current-price {
+		font-size: 1.1rem;
+	}
+	
+	.original-price {
+		font-size: 0.9rem;
+	}
+}
+
+@media (max-width: 480px) {
+	.men-shoes-page {
+		padding: 0 6px;
+	}
+	
+	.page-header {
+		padding: 12px 0;
+	}
+	
+	.page-title {
+		font-size: 20px;
+	}
+	
+	.products-grid {
+		grid-template-columns: 1fr;
+		gap: 10px;
+	}
+	
+	.product-card {
+		border-radius: 6px;
+	}
+	
+	.product-info {
+		padding: 0.6rem;
+	}
+	
+	.product-name {
+		font-size: 0.85rem;
+	}
+	
+	.product-category {
+		font-size: 0.75rem;
+	}
+	
+	.current-price {
+		font-size: 1rem;
+	}
+	
+	.original-price {
+		font-size: 0.8rem;
+	}
+	
+	.empty-state {
+		padding: 2rem 0;
+	}
+	
+	.empty-state p {
+		font-size: 1rem;
+	}
+}
 </style>

@@ -105,7 +105,7 @@
 										<span>明星同款</span>
 									</button>
 									<button class="search-tag" @click="selectHotSearch('百搭三条纹')">
-										<span>💜💜</span>
+										<span>��💜</span>
 										<span>百搭三条纹</span>
 									</button>
 									<button class="search-tag" @click="selectHotSearch('夏日blokecore')">
@@ -175,7 +175,7 @@
 				@mouseleave="scheduleClose"
 			>
 				<div class="mega-left">
-					<h4 class="mega-title">品牌分类</h4>
+					<h4 class="mega-title">类型详情</h4>
 					<ul class="mega-cat-list">
 						<li
 							v-for="brand in currentGroup.brands"
@@ -194,12 +194,31 @@
 						<button class="view-all" @click="goBrandAll(currentGroup.key)">查看全部</button>
 					</div>
 					<div class="preview-grid">
-						<div class="preview-card" v-for="i in 8" :key="i">
-							<div class="preview-media"></div>
-							<div class="preview-meta">
-								<div class="preview-line"></div>
-								<div class="preview-line short"></div>
+						<!-- 动态加载产品预览 -->
+						<div 
+							v-for="product in previewProducts" 
+							:key="product.shoeId" 
+							class="preview-card"
+							@click="goToProductDetail(product.shoeId)"
+						>
+							<div class="preview-media">
+								<img 
+									v-if="product.images && product.images.length > 0"
+									:src="`/api/shoeImg/getImage/${product.images[0].imagePath}`"
+									:alt="product.name"
+									class="preview-image"
+								>
+								<div v-else class="preview-placeholder">��</div>
 							</div>
+							<div class="preview-meta">
+								<div class="preview-name">{{ product.name }}</div>
+								<div class="preview-price">¥{{ product.discountPrice || product.price }}</div>
+							</div>
+						</div>
+						<!-- 加载状态 -->
+						<div v-if="previewLoading" class="preview-loading">
+							<div class="loading-spinner"></div>
+							<p>加载中...</p>
 						</div>
 					</div>
 				</div>
@@ -211,6 +230,7 @@
 <script>
 import { reactive, ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import axios from 'axios';
 
 export default {
     name: 'MainNav',
@@ -222,6 +242,13 @@ export default {
 		const currentGroup = ref(null);
 		const hoveredBrand = ref(null);
 		let closeTimer = null;
+
+		// 新增：产品预览相关
+		const previewProducts = ref([]);
+		const previewLoading = ref(false);
+
+		// 新增：动态品牌数据
+		const dynamicBrands = ref([]);
 
 		// 检查登录状态
         const isLoggedIn = computed(() => {
@@ -269,14 +296,7 @@ export default {
 			{
 				key: 'brands',
 				label: '品牌',
-				brands: [
-					{ key: 'nike', label: 'Nike' },
-					{ key: 'adidas', label: 'Adidas' },
-					{ key: 'puma', label: 'Puma' },
-					{ key: 'reebok', label: 'Reebok' },
-					{ key: 'converse', label: 'Converse' },
-					{ key: 'vans', label: 'Vans' }
-				]
+				brands: [] // 初始为空，将从后端动态加载
 			}
 		]);
 
@@ -287,6 +307,7 @@ export default {
 		onMounted(() => {
 			window.addEventListener('scroll', handleScroll, { passive: true });
 			startHotSearchRotation(); // 启动热门搜索词条循环
+			loadBrandsFromBackend(); // 加载品牌数据
 		});
 
 		onBeforeUnmount(() => {
@@ -294,10 +315,56 @@ export default {
 			stopHotSearchRotation(); // 停止热门搜索词条循环
 		});
 
+		// 新增：从后端加载品牌数据
+		const loadBrandsFromBackend = async () => {
+			try {
+				const response = await axios.post('/api/brand/getAll', {}, {
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+				});
+
+				if (response.data && response.data.data) {
+					// 过滤掉禁用的品牌
+					const activeBrands = response.data.data.filter(brand => !brand.brandDisabled);
+					
+					// 更新品牌组的品牌列表
+					const brandsGroup = navGroups.find(group => group.key === 'brands');
+					if (brandsGroup) {
+						brandsGroup.brands = activeBrands.map(brand => ({
+							key: brand.brandId.toString(),
+							label: brand.brandName,
+							brandId: brand.brandId,
+							brandName: brand.brandName
+						}));
+					}
+
+					// 保存到动态品牌数据中，方便其他地方使用
+					dynamicBrands.value = activeBrands;
+					
+					console.log('品牌数据加载成功:', brandsGroup.brands);
+				}
+			} catch (error) {
+				console.error('加载品牌数据失败:', error);
+				// 如果加载失败，使用默认品牌作为备选
+				const brandsGroup = navGroups.find(group => group.key === 'brands');
+				if (brandsGroup) {
+					brandsGroup.brands = [
+						{ key: 'nike', label: 'Nike' },
+						{ key: 'adidas', label: 'Adidas' },
+						{ key: 'puma', label: 'Puma' },
+						{ key: 'reebok', label: 'Reebok' },
+						{ key: 'converse', label: 'Converse' },
+						{ key: 'vans', label: 'Vans' }
+					];
+				}
+			}
+		};
+
 		function openMegaMenu(index) {
 			activeMenuIndex.value = index;
 			currentGroup.value = navGroups[index];
 			cancelClose();
+			// 加载产品预览数据
+			loadPreviewProducts();
 		}
 
 		function keepMegaOpen(index) {
@@ -305,11 +372,19 @@ export default {
 			currentGroup.value = navGroups[index];
 		}
 
-		function closeMegaMenu() { activeMenuIndex.value = null; currentGroup.value = null; }
+		function closeMegaMenu() { 
+			activeMenuIndex.value = null; 
+			currentGroup.value = null; 
+			previewProducts.value = []; // 清空预览数据
+		}
 
 		function scheduleClose() {
 			cancelClose();
-			closeTimer = setTimeout(() => { activeMenuIndex.value = null; currentGroup.value = null; }, 120);
+			closeTimer = setTimeout(() => { 
+				activeMenuIndex.value = null; 
+				currentGroup.value = null; 
+				previewProducts.value = []; // 清空预览数据
+			}, 120);
 		}
 
 		function cancelClose() {
@@ -318,7 +393,125 @@ export default {
 
 		function hoverBrand(brand) {
 			hoveredBrand.value = brand;
+			// 当悬停在品牌上时，加载该品牌的产品
+			loadPreviewProductsByBrand(brand);
 		}
+
+		// 修改：加载产品预览数据
+		const loadPreviewProducts = async () => {
+			if (!currentGroup.value) return;
+			
+			previewLoading.value = true;
+			try {
+				const response = await axios.post('/api/shoe/getAll', {}, {
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+				});
+
+				if (response.data && response.data.data) {
+					let products = response.data.data;
+					
+					// 根据当前组类型筛选产品
+					if (currentGroup.value.key === 'brands') {
+						// 品牌分类：显示所有品牌的产品
+						products = products.slice(0, 8); // 限制显示8个产品
+					} else {
+						// 其他分类：根据类型筛选
+						products = products.filter(product => {
+							const typeName = product.shoesType?.typeName?.toLowerCase();
+							const groupKey = currentGroup.value.key;
+							
+							if (groupKey === 'men' && typeName?.includes('男')) return true;
+							if (groupKey === 'women' && typeName?.includes('女')) return true;
+							if (groupKey === 'kids' && typeName?.includes('童')) return true;
+							return false;
+						}).slice(0, 8);
+					}
+
+					// 获取产品图片
+					const productsWithImages = await Promise.all(
+						products.map(async (product) => {
+							try {
+								const imageResponse = await axios.get(`/api/shoeImg/list/${product.shoeId}`);
+								if (imageResponse.data && imageResponse.data.data) {
+									product.images = imageResponse.data.data;
+								} else {
+									product.images = [];
+								}
+							} catch (error) {
+								product.images = [];
+							}
+							return product;
+						})
+					);
+
+					previewProducts.value = productsWithImages;
+				}
+			} catch (error) {
+				console.error('加载产品预览失败:', error);
+				previewProducts.value = [];
+			} finally {
+				previewLoading.value = false;
+			}
+		};
+
+		// 修改：根据品牌加载产品预览
+		const loadPreviewProductsByBrand = async (brand) => {
+			if (!currentGroup.value || currentGroup.value.key !== 'brands') return;
+			
+			previewLoading.value = true;
+			try {
+				const response = await axios.post('/api/shoe/getAll', {}, {
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+				});
+
+				if (response.data && response.data.data) {
+					let products = response.data.data;
+					
+					// 根据品牌筛选产品
+					if (brand.brandId) {
+						// 使用品牌ID筛选
+						products = products.filter(product => 
+							product.brand?.brandId === brand.brandId
+						);
+					} else {
+						// 使用品牌名称筛选（兼容性处理）
+						products = products.filter(product => {
+							const brandName = product.brand?.brandName?.toLowerCase();
+							const brandKey = brand.key.toLowerCase();
+							
+							return brandName?.includes(brandKey) || brandName?.includes(brand.label.toLowerCase());
+						});
+					}
+
+					// 限制显示数量
+					products = products.slice(0, 8);
+
+					// 获取产品图片
+					const productsWithImages = await Promise.all(
+						products.map(async (product) => {
+							try {
+								const imageResponse = await axios.get(`/api/shoeImg/list/${product.shoeId}`);
+								if (imageResponse.data && imageResponse.data.data) {
+									product.images = imageResponse.data.data;
+								} else {
+									product.images = [];
+								}
+							} catch (error) {
+								product.images = [];
+							}
+							return product;
+						})
+					);
+
+					previewProducts.value = productsWithImages;
+				}
+			} catch (error) {
+				console.error('加载品牌产品预览失败:', error);
+				previewProducts.value = [];
+			} finally {
+				previewLoading.value = false;
+			}
+		};
 
 		function goHome() {
 			router.push('/');
@@ -344,12 +537,37 @@ export default {
 			}
 		}
 
-		function goBrand(groupKey, brandKey) {
-			router.push({ name: 'ProductListPage', query: { group: groupKey, brand: brandKey } });
+		function goBrand(groupKey, brand) {
+			// 修改：传递品牌信息
+			if (groupKey === 'brands' && brand.brandId) {
+				// 品牌分类：传递品牌ID
+				router.push({ 
+					name: 'ProductListPage', 
+					query: { 
+						group: groupKey, 
+						brandId: brand.brandId,
+						brandName: brand.brandName 
+					} 
+				});
+			} else {
+				// 其他分类：传递品牌key
+				router.push({ 
+					name: 'ProductListPage', 
+					query: { 
+						group: groupKey, 
+						brand: brand.key 
+					} 
+				});
+			}
 		}
 
 		function goBrandAll(groupKey) {
 			router.push({ name: 'ProductListPage', query: { group: groupKey } });
+		}
+
+		// 新增：跳转到产品详情页面
+		function goToProductDetail(shoeId) {
+			router.push(`/product/${shoeId}`);
 		}
 
 		// 搜索框逻辑
@@ -362,13 +580,13 @@ export default {
 		// 热门搜索词条循环展示
 		const hotSearchTerms = [
 			'竞速美学',
-			'Safari穿搭 🦒',
+			'Safari穿搭 ��',
 			'明星同款',
 			'百搭三条纹 💜💜',
 			'夏日blokecore ⚽',
-			'造型感包袋 👜',
-			'玛丽猫 🐱',
-			'梅赛德斯AMG车队 🏁',
+			'造型感包袋 ��',
+			'玛丽猫 ��',
+			'梅赛德斯AMG车队 ��',
 			'当红爆款 🔥',
 			'入群有礼 🎁'
 		];
@@ -471,6 +689,9 @@ export default {
 			currentGroup,
 			hoveredBrand,
 			isLoggedIn,
+			previewProducts,
+			previewLoading,
+			dynamicBrands,
 			openMegaMenu,
 			keepMegaOpen,
 			scheduleClose,
@@ -482,6 +703,8 @@ export default {
 			goHome,
 			goProfile,
 			goCart,
+			goToProductDetail,
+			loadBrandsFromBackend,
 			searchQuery,
 			isSearchFocused,
 			suggestions,
@@ -505,6 +728,7 @@ export default {
 };
 </script>
 
+
 <style scoped>
 .main-nav {
 	position: sticky;
@@ -527,6 +751,8 @@ export default {
 	color: #fff;
 	height: 40px;
 	border-bottom: 1px solid rgba(255,255,255,0.08);
+	width: 100%;
+	box-sizing: border-box;
 }
 
 .top-bar-inner {
@@ -537,6 +763,7 @@ export default {
 	justify-content: space-between;
 	height: 100%;
 	padding: 0 16px;
+	box-sizing: border-box;
 }
 
 .top-bar-left {
@@ -563,6 +790,7 @@ export default {
 	align-items: center;
 	gap: 8px; /* 增加图标和文字的间距 */
 	letter-spacing: 0.5px; /* 增加字间距 */
+	white-space: nowrap;
 }
 
 .login-status:hover {
@@ -585,6 +813,8 @@ export default {
 	height: 80px;
 	padding: 0 16px;
 	background: #fff;
+	box-sizing: border-box;
+	width: 100%;
 }
 
 .brand {
@@ -592,22 +822,53 @@ export default {
 	align-items: center;
 	cursor: pointer;
 	margin-left: -42px; /* 左移logo (从-32px改为-42px) */
+	flex-shrink: 0;
 }
 
-.brand-logo { padding: 2px 0; }
-.brand-logo svg { display: block; filter: drop-shadow(0 1px 0 rgba(0,0,0,0.08)); }
+.brand-logo { 
+	padding: 2px 0; 
+	flex-shrink: 0;
+}
+.brand-logo svg { 
+	display: block; 
+	filter: drop-shadow(0 1px 0 rgba(0,0,0,0.08)); 
+	max-width: 100%;
+	height: auto;
+}
+
+.primary-nav { 
+	margin-left: 40px; 
+	flex-shrink: 0;
+} /* 减少左边距，与logo一起左移 */
 
 .primary-nav .nav-list {
 	list-style: none;
 	display: flex;
 	gap: 24px;
 	align-items: center;
+	flex-wrap: nowrap;
 }
 
-.primary-nav { margin-left: 40px; } /* 减少左边距，与logo一起左移 */
+.nav-search { 
+	flex: 1; 
+	display: flex; 
+	justify-content: flex-end; 
+	padding: 0 24px 0 8px; 
+	position: relative; 
+	margin-right: 64px; 
+	min-width: 0;
+} /* 左移搜索栏 (从32px改为64px) */
 
-.nav-search { flex: 1; display: flex; justify-content: flex-end; padding: 0 24px 0 8px; position: relative; margin-right: 64px; } /* 左移搜索栏 (从32px改为64px) */
-.search-box { width: 36%; max-width: 380px; min-width: 220px; position: relative; margin-right: 16px; cursor: pointer; } /* 缩小搜索框宽度 */
+.search-box { 
+	width: 36%; 
+	max-width: 380px; 
+	min-width: 220px; 
+	position: relative; 
+	margin-right: 16px; 
+	cursor: pointer; 
+	flex-shrink: 0;
+} /* 缩小搜索框宽度 */
+
 .search-box .search-icon {
 	position: absolute;
 	left: 10px;
@@ -618,7 +879,20 @@ export default {
 	z-index: 3;
 	pointer-events: none;
 }
-.search-icon-mask { position: absolute; left: 0; top: 0; bottom: 0; width: 36px; border-top-left-radius: 999px; border-bottom-left-radius: 999px; background: transparent; z-index: 2; pointer-events: none; }
+
+.search-icon-mask { 
+	position: absolute; 
+	left: 0; 
+	top: 0; 
+	bottom: 0; 
+	width: 36px; 
+	border-top-left-radius: 999px; 
+	border-bottom-left-radius: 999px; 
+	background: transparent; 
+	z-index: 2; 
+	pointer-events: none; 
+}
+
 .search-placeholder {
 	width: 100%; 
 	height: 36px; 
@@ -633,35 +907,93 @@ export default {
 	z-index: 1; 
 	position: relative;
 	transition: border-color .15s ease, background .15s ease;
+	box-sizing: border-box;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
+
 .search-placeholder .search-icon {
 	position: static;
 	transform: none;
 	margin-right: 8px;
+	flex-shrink: 0;
 }
+
 .search-box:hover .search-placeholder {
 	border-color: #000;
 	background: #fff;
 }
+
 .search-input {
-	width: 100%; height: 36px; border-radius: 999px; border: 1px solid #ddd; background: #f8f8f8; color: #333; padding: 0 14px 0 36px; outline: none;
-	z-index: 1; position: relative;
+	width: 100%; 
+	height: 36px; 
+	border-radius: 999px; 
+	border: 1px solid #ddd; 
+	background: #f8f8f8; 
+	color: #333; 
+	padding: 0 14px 0 36px; 
+	outline: none;
+	z-index: 1; 
+	position: relative;
 	transition: border-color .15s ease, background .15s ease;
+	box-sizing: border-box;
 }
-.search-box.focus .search-input { border-color: #000; background: #fff; }
+
+.search-box.focus .search-input { 
+	border-color: #000; 
+	background: #fff; 
+}
+
 .suggest-panel {
-	position: absolute; top: 42px; left: 0; width: 100%; background: rgba(255,255,255,0.98);
-	backdrop-filter: blur(8px); border: 1px solid #eee; border-radius: 12px; padding: 8px; z-index: 1001;
+	position: absolute; 
+	top: 42px; 
+	left: 0; 
+	width: 100%; 
+	background: rgba(255,255,255,0.98);
+	backdrop-filter: blur(8px); 
+	border: 1px solid #eee; 
+	border-radius: 12px; 
+	padding: 8px; 
+	z-index: 1001;
 	box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+	box-sizing: border-box;
 }
-.suggest-item { padding: 8px 10px; border-radius: 8px; color: #333; cursor: pointer; }
-.suggest-item:hover { background: #f5f5f5; }
-.suggest-footer { padding: 10px; border-top: 1px dashed #eee; color: #666; cursor: pointer; border-radius: 0 0 12px 12px; }
-.suggest-footer:hover { background: #f5f5f5; color: #333; }
-mark { background: #c6ff00; color: #111; border-radius: 4px; padding: 0 2px; }
+
+.suggest-item { 
+	padding: 8px 10px; 
+	border-radius: 8px; 
+	color: #333; 
+	cursor: pointer; 
+}
+
+.suggest-item:hover { 
+	background: #f5f5f5; 
+}
+
+.suggest-footer { 
+	padding: 10px; 
+	border-top: 1px dashed #eee; 
+	color: #666; 
+	cursor: pointer; 
+	border-radius: 0 0 12px 12px; 
+}
+
+.suggest-footer:hover { 
+	background: #f5f5f5; 
+	color: #333; 
+}
+
+mark { 
+	background: #c6ff00; 
+	color: #111; 
+	border-radius: 4px; 
+	padding: 0 2px; 
+}
 
 .nav-item {
 	position: relative;
+	flex-shrink: 0;
 }
 
 .nav-link {
@@ -673,6 +1005,7 @@ mark { background: #c6ff00; color: #111; border-radius: 4px; padding: 0 2px; }
 	cursor: pointer;
 	border-bottom: 2px solid transparent;
 	transition: border-color .2s ease;
+	white-space: nowrap;
 }
 
 .nav-item:hover .nav-link {
@@ -684,6 +1017,7 @@ mark { background: #c6ff00; color: #111; border-radius: 4px; padding: 0 2px; }
 	align-items: center;
 	gap: 24px; /* 增加两个UI按钮之间的距离 (从12px改为24px) */
 	margin-right: -42px; /* 右移UI按钮 (从-32px改为-42px) */
+	flex-shrink: 0;
 }
 
 .icon-btn {
@@ -698,13 +1032,19 @@ mark { background: #c6ff00; color: #111; border-radius: 4px; padding: 0 2px; }
 	justify-content: center;
 	cursor: pointer;
 	transition: background .15s ease, transform .15s ease, color .15s ease, border-color .15s ease;
+	flex-shrink: 0;
 }
 
 .icon-btn:first-child {
 	margin-left: -32px; /* 左移第一个UI按钮（购物袋） */
 }
 
-.icon-btn:hover { background: #000; color: #fff; border-color: #000; transform: translateY(-1px); }
+.icon-btn:hover { 
+	background: #000; 
+	color: #fff; 
+	border-color: #000; 
+	transform: translateY(-1px); 
+}
 
 .icon-btn.disabled {
 	opacity: 0.5;
@@ -737,6 +1077,7 @@ mark { background: #c6ff00; color: #111; border-radius: 4px; padding: 0 2px; }
 	padding: 20px 32px;
 	animation: fadeIn .18s ease;
 	z-index: 999;
+	box-sizing: border-box;
 }
 
 @keyframes fadeIn {
@@ -744,33 +1085,45 @@ mark { background: #c6ff00; color: #111; border-radius: 4px; padding: 0 2px; }
 	to { opacity: 1; transform: translateY(0); }
 }
 
-.mega-left { border-right: 1px solid #f0f0f0; padding-right: 16px; }
+.mega-left { 
+	border-right: 1px solid #f0f0f0; 
+	padding-right: 16px; 
+}
+
 .mega-title {
 	font-size: 12px;
 	color: #666;
 	margin-bottom: 8px;
 }
+
 .mega-cat-list {
 	list-style: none;
 	display: grid;
 	gap: 6px;
 }
+
 .mega-cat-item {
 	padding: 8px 10px;
 	border-radius: 6px;
 	cursor: pointer;
 	transition: background .15s ease;
 }
+
 .mega-cat-item:hover {
 	background: #f7f7f7;
 }
-.mega-right { padding-left: 24px; }
+
+.mega-right { 
+	padding-left: 24px; 
+}
+
 .mega-right-header {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
 	margin-bottom: 8px;
 }
+
 .view-all {
 	background: transparent;
 	border: none;
@@ -780,27 +1133,106 @@ mark { background: #c6ff00; color: #111; border-radius: 4px; padding: 0 2px; }
 	padding: 6px 8px;
 	border-radius: 4px;
 }
+
 .view-all:hover {
 	background: #f5f5f5;
 }
-.preview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+.preview-grid { 
+	display: grid; 
+	grid-template-columns: repeat(4, 1fr); 
+	gap: 16px; 
+}
+
 .preview-card {
 	border: 1px solid #eee;
 	border-radius: 8px;
 	overflow: hidden;
 	background: #fff;
+	cursor: pointer;
+	transition: all 0.3s ease;
 }
-.preview-media { height: 140px; background: linear-gradient(135deg, #121212, #2b2b2b); }
+
+.preview-card:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+	border-color: #c6ff00;
+}
+
+.preview-media { 
+	height: 140px; 
+	background: linear-gradient(135deg, #121212, #2b2b2b); 
+	position: relative;
+	overflow: hidden;
+}
+
+.preview-image {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	transition: transform 0.3s ease;
+}
+
+.preview-card:hover .preview-image {
+	transform: scale(1.05);
+}
+
+.preview-placeholder {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 2rem;
+	color: #999;
+}
+
 .preview-meta {
 	padding: 8px;
 }
-.preview-line {
-	height: 8px;
-	background: #eaeaea;
-	border-radius: 4px;
-	margin-bottom: 6px;
+
+.preview-name {
+	font-size: 12px;
+	font-weight: 500;
+	color: #333;
+	margin-bottom: 4px;
+	line-height: 1.3;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
-.preview-line.short { width: 60%; }
+
+.preview-price {
+	font-size: 11px;
+	color: #e74c3c;
+	font-weight: 600;
+}
+
+/* 新增：加载状态样式 */
+.preview-loading {
+	grid-column: span 4;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 40px;
+	color: #666;
+}
+
+.loading-spinner {
+	width: 30px;
+	height: 30px;
+	border: 3px solid #f3f3f3;
+	border-top: 3px solid #c6ff00;
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+	margin-bottom: 16px;
+}
+
+@keyframes spin {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}
 
 .search-panel {
 	position: fixed;
@@ -812,6 +1244,7 @@ mark { background: #c6ff00; color: #111; border-radius: 4px; padding: 0 2px; }
 	z-index: 1001; /* 确保在遮罩层之上 */
 	animation: fadeIn .18s ease;
 	box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+	box-sizing: border-box;
 }
 
 .search-panel-header {
@@ -822,6 +1255,7 @@ mark { background: #c6ff00; color: #111; border-radius: 4px; padding: 0 2px; }
 	max-width: 1200px;
 	margin: 0 auto;
 	position: relative;
+	box-sizing: border-box;
 }
 
 .search-panel-header::after {
@@ -861,6 +1295,7 @@ mark { background: #c6ff00; color: #111; border-radius: 4px; padding: 0 2px; }
 	outline: none;
 	font-size: 16px;
 	transition: border-color .15s ease, background .15s ease;
+	box-sizing: border-box;
 }
 
 .search-input:focus {
@@ -891,6 +1326,7 @@ mark { background: #c6ff00; color: #111; border-radius: 4px; padding: 0 2px; }
 	max-width: 1200px;
 	margin: 0 auto;
 	padding: 24px;
+	box-sizing: border-box;
 }
 
 .hot-searches {
@@ -933,6 +1369,7 @@ mark { background: #c6ff00; color: #111; border-radius: 4px; padding: 0 2px; }
 	align-items: center;
 	gap: 6px;
 	transition: background .15s ease, border-color .15s ease, transform .15s ease;
+	white-space: nowrap;
 }
 
 .search-tag:hover {
@@ -1004,11 +1441,215 @@ mark { background: #c6ff00; color: #111; border-radius: 4px; padding: 0 2px; }
 	opacity: 0;
 }
 
+/* 响应式设计 */
+@media (max-width: 1200px) {
+	.top-bar-inner,
+	.nav-inner,
+	.search-panel-header,
+	.search-panel-content {
+		max-width: 100%;
+		padding-left: 16px;
+		padding-right: 16px;
+	}
+	
+	.search-box {
+		width: 40%;
+		min-width: 200px;
+	}
+}
+
 @media (max-width: 960px) {
-	.mega-menu { top: 112px; min-height: 360px; padding: 16px; grid-template-columns: 1fr; }
-	.mega-left { border: none; padding-right: 0; }
-	.mega-right { padding-left: 0; margin-top: 12px; }
-	.preview-grid { grid-template-columns: repeat(2, 1fr); }
+	.nav-inner {
+		height: 70px;
+		padding: 0 12px;
+	}
+	
+	.brand {
+		margin-left: -20px;
+	}
+	
+	.brand-logo svg {
+		width: 90px;
+		height: 32px;
+	}
+	
+	.primary-nav {
+		margin-left: 20px;
+	}
+	
+	.primary-nav .nav-list {
+		gap: 16px;
+	}
+	
+	.nav-link {
+		font-size: 14px;
+		padding: 6px 3px;
+	}
+	
+	.nav-search {
+		margin-right: 40px;
+		padding: 0 16px 0 6px;
+	}
+	
+	.search-box {
+		width: 45%;
+		min-width: 180px;
+		margin-right: 12px;
+	}
+	
+	.actions {
+		margin-right: -20px;
+		gap: 16px;
+	}
+	
+	.icon-btn:first-child {
+		margin-left: -16px;
+	}
+	
+	.mega-menu { 
+		top: 110px; 
+		min-height: 360px; 
+		padding: 16px; 
+		grid-template-columns: 1fr; 
+	}
+	
+	.mega-left { 
+		border: none; 
+		padding-right: 0; 
+	}
+	
+	.mega-right { 
+		padding-left: 0; 
+		margin-top: 12px; 
+	}
+	
+	.preview-grid { 
+		grid-template-columns: repeat(2, 1fr); 
+	}
+}
+
+@media (max-width: 768px) {
+	.top-bar {
+		height: 36px;
+	}
+	
+	.top-bar-inner {
+		padding: 0 12px;
+	}
+	
+	.login-status {
+		font-size: 12px;
+		padding: 4px 8px;
+		gap: 6px;
+	}
+	
+	.nav-inner {
+		height: 60px;
+		padding: 0 8px;
+		flex-wrap: wrap;
+	}
+	
+	.brand {
+		margin-left: -8px;
+	}
+	
+	.brand-logo svg {
+		width: 80px;
+		height: 28px;
+	}
+	
+	.primary-nav {
+		margin-left: 12px;
+		order: 3;
+		width: 100%;
+		margin-top: 8px;
+	}
+	
+	.primary-nav .nav-list {
+		gap: 12px;
+		justify-content: center;
+	}
+	
+	.nav-link {
+		font-size: 13px;
+		padding: 4px 2px;
+	}
+	
+	.nav-search {
+		margin-right: 20px;
+		padding: 0 8px 0 4px;
+		flex: 1;
+	}
+	
+	.search-box {
+		width: 100%;
+		max-width: none;
+		min-width: 0;
+		margin-right: 8px;
+	}
+	
+	.actions {
+		margin-right: -8px;
+		gap: 12px;
+	}
+	
+	.icon-btn {
+		width: 36px;
+		height: 36px;
+	}
+	
+	.icon-btn:first-child {
+		margin-left: -8px;
+	}
+	
+	.mega-menu {
+		top: 96px;
+		min-height: 320px;
+		padding: 12px;
+	}
+}
+
+@media (max-width: 480px) {
+	.top-bar-inner,
+	.nav-inner,
+	.search-panel-header,
+	.search-panel-content {
+		padding-left: 8px;
+		padding-right: 8px;
+	}
+	
+	.brand-logo svg {
+		width: 70px;
+		height: 24px;
+	}
+	
+	.primary-nav .nav-list {
+		gap: 8px;
+	}
+	
+	.nav-link {
+		font-size: 12px;
+		padding: 3px 1px;
+	}
+	
+	.search-box {
+		margin-right: 6px;
+	}
+	
+	.search-placeholder {
+		font-size: 12px;
+		height: 32px;
+		padding: 0 12px 0 32px;
+	}
+	
+	.actions {
+		gap: 8px;
+	}
+	
+	.icon-btn {
+		width: 32px;
+		height: 32px;
+	}
 }
 </style>
 
