@@ -68,6 +68,7 @@
 import LoginDrawer from '../../views/auth/LoginDrawer.vue'
 import { OrderAPI } from '../../api'
 import cartManager from '../../utils/cart'
+import userManager from '../../utils/userManager'
 
 export default {
     name: 'MainNav',
@@ -124,44 +125,27 @@ export default {
         
         async loadCartItemCount() {
             try {
-                const userStr = localStorage.getItem('user')
-                if (!userStr) return
+                const userId = await userManager.getUserId()
+                if (!userId) return
                 
-                let user
-                try {
-                    user = JSON.parse(userStr)
-                    const userId = user.id || 1
-                    
-                    // 使用购物车管理器
-                    cartManager.setUserId(userId)
-                    this.cartItemCount = await cartManager.getCartItemCount()
-                } catch (e) {
-                    // 如果解析失败，使用默认用户ID
-                    cartManager.setUserId(1)
-                    this.cartItemCount = await cartManager.getCartItemCount()
-                }
+                // 使用购物车管理器
+                cartManager.setUserId(userId)
+                this.cartItemCount = await cartManager.getCartItemCount()
             } catch (error) {
                 console.error('加载购物车数量失败:', error)
             }
         },
         
-        checkLoginStatus() {
-            const userStr = localStorage.getItem('user')
-            if (userStr) {
-                try {
-                    const user = JSON.parse(userStr)
-                    this.isLoggedIn = true
-                    this.username = user.username || userStr
-                    
-                    // 设置购物车管理器的用户ID
-                    const userId = user.id || 1
+        async checkLoginStatus() {
+            const user = userManager.getCurrentUser()
+            if (user) {
+                this.isLoggedIn = true
+                this.username = typeof user === 'string' ? user : (user.username || '')
+                
+                // 设置购物车管理器的用户ID
+                const userId = await userManager.getUserId()
+                if (userId) {
                     cartManager.setUserId(userId)
-                } catch (e) {
-                    this.isLoggedIn = true
-                    this.username = userStr
-                    
-                    // 设置购物车管理器的用户ID
-                    cartManager.setUserId(1)
                 }
                 this.loadCartItemCount()
             }

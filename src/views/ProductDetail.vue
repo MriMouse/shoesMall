@@ -278,14 +278,15 @@ export default {
             }
         }
         
-        // 检查是否有用户ID
-        if (!user.id) {
+        // 兼容 user.id 或 user.userId 两种格式
+        const resolvedUserId = Number(user.id || user.userId)
+        if (!resolvedUserId) {
             this.showMessage('用户信息不完整，请重新登录', 'error')
             return
         }
         
         // 设置购物车管理器的用户ID
-        cartManager.setUserId(user.id)
+        cartManager.setUserId(resolvedUserId)
         
         // 调用购物车管理器加入购物车
         console.log('=== 加入购物车调试信息 ===')

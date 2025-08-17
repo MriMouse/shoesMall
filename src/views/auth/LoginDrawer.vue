@@ -212,31 +212,14 @@ export default {
 				params.append('username', loginForm.value.username);
 				params.append('password', loginForm.value.password);
 				
-				const response = await axios.post('/usersLogin/userLogin', params, {
+				const response = await axios.post('http://localhost:8081/usersLogin/userLogin', params, {
 					headers: {
 						'Content-Type': 'application/x-www-form-urlencoded'
 					}
 				});
 
 				if (response.data.code === 200 && response.data.data === true) {
-					// 旧格式：只有布尔值，使用固定的用户ID
-					const userData = {
-						username: loginForm.value.username,
-						id: 1 // 使用固定的用户ID
-					};
-					localStorage.setItem('user', JSON.stringify(userData));
-					emit('login-success');
-					onClose();
-					// 登录成功后跳转到主页面
-					window.location.href = '/';
-				} else if (response.data.code === 200 && response.data.data && response.data.data.success) {
-					// 新的登录响应格式，包含用户信息
-					const userInfo = response.data.data;
-					const userData = {
-						username: userInfo.username,
-						id: userInfo.userId
-					};
-					localStorage.setItem('user', JSON.stringify(userData));
+					localStorage.setItem('user', loginForm.value.username);
 					emit('login-success');
 					onClose();
 					// 登录成功后跳转到主页面
@@ -277,7 +260,7 @@ export default {
 				params.append('gender', registerForm.value.gender);
 				params.append('password', registerForm.value.password);
 				
-				const response = await axios.post('/usersLogin/userRegister', params, {
+				const response = await axios.post('http://localhost:8081/usersLogin/userRegister', params, {
 					headers: {
 						'Content-Type': 'application/x-www-form-urlencoded'
 					}
@@ -346,7 +329,7 @@ export default {
 			forgotSuccess.value = '';
 			
 			try {
-				const response = await axios.get('/usersLogin/getCode', {
+				const response = await axios.get('/api/usersLogin/getCode', {
 					params: {
 						username: forgotForm.value.username,
 						email: forgotForm.value.email
@@ -398,7 +381,7 @@ export default {
 				params.append('code', resetForm.value.code);
 				params.append('token', resetToken.value);
 				
-				const response = await axios.post('/usersLogin/resetPassword', params, {
+				const response = await axios.post('/api/usersLogin/resetPassword', params, {
 					headers: {
 						'Content-Type': 'application/x-www-form-urlencoded'
 					}

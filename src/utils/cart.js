@@ -1,10 +1,25 @@
 import { CartAPI } from '../api'
+import userManager from './userManager'
 
 class CartManager {
     constructor() {
         this.cartItemCount = 0
         this.userId = null
         this.listeners = []
+    }
+
+    // 尝试从本地用户名解析真实的用户ID，并回写localStorage
+    async ensureUserIdFromLocalStorage() {
+        if (this.userId && this.userId !== 1) return this.userId
+        
+        // 使用用户管理工具获取用户ID（会调用后端API）
+        const userId = await userManager.getUserId()
+        if (userId) {
+            this.setUserId(userId)
+            return userId
+        }
+        
+        return null
     }
 
     // 设置用户ID
@@ -15,7 +30,10 @@ class CartManager {
 
     // 获取购物车商品数量
     async getCartItemCount() {
-        if (!this.userId) return 0
+        if (!this.userId) {
+            await this.ensureUserIdFromLocalStorage()
+            if (!this.userId) return 0
+        }
         
         try {
             const response = await CartAPI.getCartItemCount(this.userId)
@@ -70,7 +88,10 @@ class CartManager {
 
     // 清空购物车
     async clearCart() {
-        if (!this.userId) return false
+        if (!this.userId) {
+            await this.ensureUserIdFromLocalStorage()
+            if (!this.userId) return false
+        }
         
         try {
             const response = await CartAPI.clearUserCart(this.userId)
@@ -101,13 +122,32 @@ class CartManager {
 
     // 加入购物车 - 核心功能
     async addToCart(sizeId, quantity, shoeId = null) {
+        // 检查用户是否已登录
+        if (!userManager.isLoggedIn()) {
+            console.error('用户未登录，无法加入购物车')
+            alert('请先登录后再添加商品到购物车')
+            return false
+        }
+        
+        // 确保已解析到用户ID
+        if (!this.userId || this.userId === 1) {
+            await this.ensureUserIdFromLocalStorage()
+        }
         if (!this.userId) {
-            console.error('用户ID未设置，无法加入购物车')
+            console.error('无法获取用户ID，请重新登录')
+            alert('无法获取用户信息，请重新登录')
             return false
         }
         
         if (!sizeId || !quantity || !shoeId) {
             console.error('参数不完整:', { sizeId, quantity, shoeId })
+            alert('商品信息不完整，请重新选择')
+            return false
+        }
+        
+        if (quantity <= 0) {
+            console.error('商品数量必须大于0')
+            alert('商品数量必须大于0')
             return false
         }
         
@@ -143,7 +183,10 @@ class CartManager {
 
     // 获取购物车详情
     async getCartDetails() {
-        if (!this.userId) return []
+        if (!this.userId) {
+            await this.ensureUserIdFromLocalStorage()
+            if (!this.userId) return []
+        }
         
         try {
             const response = await CartAPI.getCartOrdersWithDetails(this.userId)

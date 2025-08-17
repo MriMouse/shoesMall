@@ -273,6 +273,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import cartManager from '@/utils/cart'
+import userManager from '@/utils/userManager'
 
 // 路由相关
 const route = useRoute()
@@ -528,22 +529,12 @@ const addToCart = async () => {
 
     try {
         // 获取并设置用户ID
-        const userStr = localStorage.getItem('user')
-        if (!userStr) {
+        const userId = await userManager.getUserId()
+        if (!userId) {
             alert('请先登录')
             return
         }
-        let user
-        try {
-            user = JSON.parse(userStr)
-        } catch (e) {
-            user = { id: null }
-        }
-        if (!user?.id) {
-            alert('用户信息不完整，请重新登录')
-            return
-        }
-        cartManager.setUserId(user.id)
+        cartManager.setUserId(userId)
 
         // 调用购物车管理器（参数顺序：sizeId, quantity, shoeId）
         const ok = await cartManager.addToCart(selectedSize.value, quantity.value, product.value.shoeId)

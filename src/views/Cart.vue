@@ -143,6 +143,7 @@
 <script>
 import { ShoeAPI, ShoesSizeAPI } from '@/api'
 import cartManager from '@/utils/cart'
+import userManager from '@/utils/userManager'
 
 export default {
     name: 'CartPage',
@@ -716,23 +717,17 @@ export default {
     
     async mounted() {
         // 获取用户信息
-        const userStr = localStorage.getItem('user')
-        if (userStr) {
-            try {
-                const user = JSON.parse(userStr)
-                this.username = user.username || userStr
-                this.userId = user.id || 1
-            } catch (e) {
-                this.username = userStr
-                this.userId = 1
-            }
+        const user = userManager.getCurrentUser()
+        if (user) {
+            this.username = typeof user === 'string' ? user : (user.username || '')
+            this.userId = await userManager.getUserId()
         } else {
             this.username = '未登录用户'
             this.userId = null
         }
-        
-        // 设置购物车管理器的用户ID
-        if (this.userId) {
+
+        // 设置购物车管理器的用户ID（如果全局未设置）
+        if (this.userId && cartManager.userId !== this.userId) {
             cartManager.setUserId(this.userId)
         }
         

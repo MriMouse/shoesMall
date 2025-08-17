@@ -9,6 +9,7 @@ import ProductDetail from "../components/ProductDetail.vue";
 import OrderConfirmation from "../views/OrderConfirmation.vue";
 import Cart from "../views/Cart.vue";
 import TestCart from "../views/TestCart.vue";
+import TestUserCart from "../views/TestUserCart.vue";
 
 const routes = [
   {
@@ -66,6 +67,11 @@ const routes = [
     path: "/test-cart",
     name: "TestCart",
     component: TestCart,
+  },
+  {
+    path: "/test-user-cart",
+    name: "TestUserCart",
+    component: TestUserCart,
   },
   // 添加一个重定向，兼容旧的路由
   {

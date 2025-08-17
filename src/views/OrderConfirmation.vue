@@ -462,10 +462,12 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { OrderAPI, InventoryAPI } from '@/api'
-import cartManager from '@/utils/cart'
-import { ShoeAPI, ShoeImgAPI, ShoesSizeAPI } from '@/api'
+import { OrderAPI, InventoryAPI, CartAPI } from '@/api'
+import { ShoeAPI, ShoesSizeAPI } from '@/api'
 import { AddressAPI } from '@/api'
+import userManager from '../utils/userManager'
+import cartManager from '../utils/cart'
+import axios from 'axios'
 
 const router = useRouter()
 const route = useRoute()
@@ -545,18 +547,55 @@ const loadOrderData = async () => {
     error.value = ''
     
     try {
+        // 检查用户登录状态
+        if (!userManager.isLoggedIn()) {
+            error.value = '请先登录后再确认订单'
+            loading.value = false
+            return
+        }
+        
         // 首先尝试恢复保存的订单数据
         const hasRestoredData = restoreOrderData()
         
-        // 检查是否有从产品详情页传递过来的商品信息
-        const { productId, sizeId, quantity, fromOrderConfirmation } = route.query
-        
-        if (productId && sizeId && quantity) {
+        // 优先处理来自购物车的跳转
+        const { productId, sizeId, quantity, fromOrderConfirmation, fromCart, items } = route.query
+
+        if (fromCart === 'true' && items) {
+            try {
+                const cartItems = JSON.parse(items)
+                // 将购物车条目转为本页商品结构
+                products.value = cartItems.map(it => ({
+                    shoeId: it.shoeId,
+                    name: it.shoeName,
+                    price: it.price || 0,
+                    discountPrice: it.discountPrice || it.price || 0,
+                    brand: { brandName: it.brandName },
+                    shoesType: { typeName: it.typeName },
+                    images: []
+                }))
+                // 设置尺码与数量
+                cartItems.forEach(it => {
+                    if (it.shoeId) {
+                        selectedSizes.value[it.shoeId] = it.sizeId
+                        productQuantities.value[it.shoeId] = it.quantity || 1
+                    }
+                })
+                // 可选：异步加载图片（不阻塞）
+                products.value.forEach(async p => {
+                    try {
+                        const imgRes = await ShoeAPI.getImages(p.shoeId)
+                        if (imgRes.data?.code === 200 && imgRes.data.data) p.images = imgRes.data.data
+                    } catch (err) {
+                        console.warn('加载商品图片失败:', err)
+                    }
+                })
+            } catch (e) {
+                console.error('解析购物车参数 items 失败:', e)
+                throw e
+            }
+        } else if (productId && sizeId && quantity) {
             // 从产品详情页跳转过来，需要添加新商品到现有商品列表
-            const productResponse = await axios.post('/api/shoe/getById', 
-                `shoeId=${productId}`,
-                { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-            )
+            const productResponse = await ShoeAPI.getById(productId)
 
             if (productResponse.data && productResponse.data.code === 200 && productResponse.data.data) {
                 const productData = productResponse.data.data
@@ -587,10 +626,10 @@ const loadOrderData = async () => {
                     } else {
                         // 商品不存在或尺码不同，添加到列表
                         products.value.push(productData)
-                        selectedSizes.value[productId] = parseInt(sizeId)
-                        productQuantities.value[productId] = parseInt(quantity)
-                    }
-                } else {
+                selectedSizes.value[productId] = parseInt(sizeId)
+                productQuantities.value[productId] = parseInt(quantity)
+            }
+        } else {
                     // 直接添加商品（新用户或从其他页面跳转）
                     products.value.push(productData)
                     selectedSizes.value[productId] = parseInt(sizeId)
@@ -605,83 +644,56 @@ const loadOrderData = async () => {
                 sessionStorage.removeItem('fromOrderConfirmation')
             }
         } else if (!hasRestoredData) {
-            // 没有恢复的数据，也没有新商品，加载所有商品
-            const productResponse = await axios.post('/api/shoe/getAll', {}, {
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-            })
-
-            if (productResponse.data && productResponse.data.data) {
-                const productList = productResponse.data.data
-
-                    // 获取每个商品的图片
-                    for (let product of productList) {
-                        try {
-                            const imageResponse = await ShoeImgAPI.getByShoeId(product.shoeId)
-                            if (imageResponse.data && imageResponse.data.data) {
-                                product.images = imageResponse.data.data
-                            } else {
-                                product.images = []
-                            }
-                        } catch (imgError) {
-                            product.images = []
-                        }
-
-                        // 初始化商品数量
-                        productQuantities.value[product.shoeId] = 1
-                    }
-
-                    products.value = productList
-                }
-            } catch (error) {
-                console.error('获取商品列表失败:', error)
-            }
+            // 没有任何入参且没有本地恢复数据，不再请求“全部商品”，直接提示并保持空列表
+            error.value = '未找到需要确认的商品，请从购物车或商品详情页进入此页面。'
+            products.value = []
         }
 
         // 获取尺码数据
         try {
             const sizeResponse = await ShoesSizeAPI.getAll()
-            if (sizeResponse.data && sizeResponse.data.data) {
-                // 先获取所有启用的尺码
-                const allSizes = sizeResponse.data.data.filter(size => !size.sizeDisabled)
-                
-                // 如果是从产品详情页跳转过来，尝试获取该商品实际可用的尺码
-                if (productId && sizeId && quantity) {
-                    try {
-                        // 使用正确的接口获取商品的库存信息
+        if (sizeResponse.data && sizeResponse.data.data) {
+            // 先获取所有启用的尺码
+            const allSizes = sizeResponse.data.data.filter(size => !size.sizeDisabled)
+            
+            // 如果是从产品详情页跳转过来，尝试获取该商品实际可用的尺码
+            if (productId && sizeId && quantity) {
+                try {
+                    // 使用正确的接口获取商品的库存信息
                         const inventoryResponse = await InventoryAPI.getInventoryByShoeId(productId)
+                    
+                    if (inventoryResponse.data && inventoryResponse.data.code === 200 && inventoryResponse.data.data) {
+                        const inventoryData = inventoryResponse.data.data
                         
-                        if (inventoryResponse.data && inventoryResponse.data.code === 200 && inventoryResponse.data.data) {
-                            const inventoryData = inventoryResponse.data.data
+                        // 根据库存数据过滤尺码
+                        if (inventoryData.sizeInventories && inventoryData.sizeInventories.length > 0) {
+                            // 过滤出有库存的尺码
+                            const availableSizeIds = inventoryData.sizeInventories
+                                .filter(inv => inv.inventoryNumber > 0)
+                                .map(inv => inv.sizeId)
                             
-                            // 根据库存数据过滤尺码
-                            if (inventoryData.sizeInventories && inventoryData.sizeInventories.length > 0) {
-                                // 过滤出有库存的尺码
-                                const availableSizeIds = inventoryData.sizeInventories
-                                    .filter(inv => inv.inventoryNumber > 0)
-                                    .map(inv => inv.sizeId)
-                                
-                                availableSizes.value = allSizes.filter(size => availableSizeIds.includes(size.sizeId))
-                                
-                                // 如果没有找到有库存的尺码，显示所有尺码
-                                if (availableSizes.value.length === 0) {
-                                    availableSizes.value = allSizes
-                                }
-                            } else {
-                                // 如果库存数据结构不完整，显示所有尺码
+                            availableSizes.value = allSizes.filter(size => availableSizeIds.includes(size.sizeId))
+                            
+                            // 如果没有找到有库存的尺码，显示所有尺码
+                            if (availableSizes.value.length === 0) {
                                 availableSizes.value = allSizes
                             }
                         } else {
-                            // 如果无法获取库存信息，显示所有尺码
+                            // 如果库存数据结构不完整，显示所有尺码
                             availableSizes.value = allSizes
                         }
-                    } catch (inventoryError) {
-                        console.warn('无法获取商品库存信息，显示所有可用尺码:', inventoryError)
+                    } else {
+                        // 如果无法获取库存信息，显示所有尺码
                         availableSizes.value = allSizes
                     }
-                } else {
-                    // 直接访问订单确认页面，显示所有可用尺码
+                } catch (inventoryError) {
+                    console.warn('无法获取商品库存信息，显示所有可用尺码:', inventoryError)
                     availableSizes.value = allSizes
                 }
+            } else {
+                // 直接访问订单确认页面，显示所有可用尺码
+                availableSizes.value = allSizes
+            }
             }
         } catch (err) {
             console.error('加载尺码数据失败:', err)
@@ -699,78 +711,48 @@ const loadOrderData = async () => {
     }
 }
 
-// 从API加载购物车商品数据（备用方法）
-const loadCartItemsFromAPI = async (orderIdArray) => {
-    // 获取购物车订单详情
-    const orderPromises = orderIdArray.map(async (orderId) => {
-        try {
-            const orderResponse = await OrderAPI.getById(orderId)
-            
-            if (orderResponse.data && orderResponse.data.code === 200 && orderResponse.data.data) {
-                const orderData = orderResponse.data.data
-                
-                // 获取商品详情
-                const productResponse = await ShoeAPI.getById(orderData.shoeId)
-                
-                if (productResponse.data && productResponse.data.code === 200 && productResponse.data.data) {
-                    const productData = productResponse.data.data
-                    
-                    // 获取商品图片
-                    try {
-                        const imageResponse = await ShoeImgAPI.getByShoeId(orderData.shoeId)
-                        if (imageResponse.data && imageResponse.data.data) {
-                            productData.images = imageResponse.data.data
-                        } else {
-                            productData.images = []
-                        }
-                    } catch (imgError) {
-                        productData.images = []
-                    }
-                    
-                    // 设置订单信息
-                    productData.orderId = orderId
-                    productData.orderQuantity = orderData.quantity || 1
-                    productData.orderSizeId = orderData.sizeId
-                    
-                    return productData
-                }
-            }
-        } catch (error) {
-            console.error(`加载订单 ${orderId} 失败:`, error)
-        }
-    })
-    
-    const orderProducts = await Promise.all(orderPromises)
-    products.value = orderProducts.filter(product => product)
-    
-    // 设置订单中的尺码和数量
-    orderProducts.forEach(product => {
-        if (product) {
-            selectedSizes.value[product.shoeId] = product.orderSizeId
-            productQuantities.value[product.shoeId] = product.orderQuantity
-        }
-    })
-}
+// （已弃用）从API加载购物车商品数据函数移除，避免未使用警告
 
 // 加载地址数据
 const loadAddresses = async () => {
     try {
-        // 使用AddressController的list接口，需要传递userId
-        const userId = 1 // 这里应该从用户登录状态获取
-        const response = await AddressAPI.getByUserId(userId)
+        // 获取当前登录用户的ID
+        const userId = await userManager.getUserId()
+        if (!userId) {
+            console.error('无法获取用户ID，请先登录')
+            error.value = '请先登录后再确认订单'
+            return
+        }
+        
+        console.log('正在加载用户ID为', userId, '的地址列表')
+        
+        // 使用AddressController的list接口，传递当前用户ID
+        const response = await AddressAPI.getList(userId)
         
         if (response.data && response.data.code === 200 && response.data.data) {
             addresses.value = response.data.data
+            console.log('成功加载地址列表:', addresses.value.length, '个地址')
+            
             // 默认选择第一个地址或默认地址
             if (addresses.value.length > 0) {
                 const defaultAddress = addresses.value.find(addr => addr.isDefault)
                 selectedAddress.value = defaultAddress || addresses.value[0]
+                console.log('已选择地址:', selectedAddress.value)
+            } else {
+                console.log('用户没有保存的地址')
+                selectedAddress.value = null
             }
+        } else {
+            console.warn('地址接口返回异常:', response.data)
+            addresses.value = []
+            selectedAddress.value = null
         }
     } catch (err) {
         console.error('加载地址数据失败:', err)
-        // 如果接口不存在，尝试使用getAll接口
+        
+        // 如果接口不存在，尝试使用getAll接口作为备用方案
         try {
+            console.log('尝试使用备用地址接口...')
             const response = await AddressAPI.getAll()
             if (response.data && response.data.data) {
                 addresses.value = response.data.data
@@ -781,6 +763,8 @@ const loadAddresses = async () => {
             }
         } catch (fallbackErr) {
             console.error('备用地址接口也失败:', fallbackErr)
+            addresses.value = []
+            selectedAddress.value = null
         }
     }
 }
@@ -935,19 +919,29 @@ const saveAddress = async () => {
     }
     
     try {
-        const userId = 1 // 这里应该从用户登录状态获取
+        // 获取当前登录用户的ID
+        const userId = await userManager.getUserId()
+        if (!userId) {
+            alert('请先登录后再添加地址')
+            return
+        }
+        
+        console.log('正在保存地址，用户ID:', userId)
+        
         const addressData = {
             ...addressForm.value,
-            user: { id: userId }
+            user: { id: userId } // 使用user对象结构，与后端Address实体类匹配
         }
 
         let response
         if (isEditingAddress.value) {
             // 更新地址
-                            response = await AddressAPI.update(addressData)
+            console.log('更新地址:', addressData)
+            response = await AddressAPI.update(addressData)
         } else {
             // 添加地址
-                            response = await AddressAPI.add(addressData)
+            console.log('添加地址:', addressData)
+            response = await AddressAPI.add(addressData)
         }
 
         if (response.data && response.data.code === 200) {
@@ -989,8 +983,16 @@ const deleteAddress = async (addressId) => {
 // 设置默认地址
 const setDefaultAddress = async (addressId) => {
     try {
-        const userId = 1 // 这里应该从用户登录状态获取
-                    const response = await AddressAPI.setDefault(addressId, userId)
+        // 获取当前登录用户的ID
+        const userId = await userManager.getUserId()
+        if (!userId) {
+            alert('请先登录后再设置默认地址')
+            return
+        }
+        
+        console.log('正在设置默认地址，用户ID:', userId, '地址ID:', addressId)
+        
+        const response = await AddressAPI.setDefault(addressId, userId)
         
         if (response.data && response.data.code === 200) {
             alert('默认地址设置成功')
@@ -1023,8 +1025,8 @@ const submitOrder = async () => {
         } else {
             // 用户选择创建新订单，清除标志
             window.shouldUpdateExistingOrder = false
-            showPaymentModal.value = true
-            startPaymentCountdown()
+    showPaymentModal.value = true
+    startPaymentCountdown()
         }
     } else {
         // 没有待支付订单，清除标志
@@ -1081,13 +1083,7 @@ const createOrderWithStatus = async (status) => {
             
             if (quantity > 0 && sizeId) {
                 try {
-                    const response = await axios.get('/api/inventory/checkInventorySufficient', {
-                        params: {
-                            shoeId: product.shoeId,
-                            sizeId: sizeId,
-                            quantity: quantity
-                        }
-                    })
+                    const response = await InventoryAPI.checkSufficient(product.shoeId, sizeId, quantity)
                     return response.data && response.data.code === 200 && response.data.data
                 } catch (err) {
                     console.error('检查库存失败:', err)
@@ -1105,80 +1101,87 @@ const createOrderWithStatus = async (status) => {
         }
 
         // 创建订单（按商品逐个创建），使用同一订单号
-        const masterOrderNumber = generateOrderNumber()
-        const createOrderPromises = products.value.map(async (product) => {
-            const quantity = productQuantities.value[product.shoeId] || 0
-            const sizeId = selectedSizes.value[product.shoeId]
-            if (quantity > 0 && sizeId) {
-                try {
-                    const orderPayload = {
-                        userId: 1,
-                        sizeId: sizeId,
-                        orderNumber: masterOrderNumber,
-                        status: status,
-                        addressId: selectedAddress.value.addressId,
-                        shippingFee: shippingFee.value / Math.max(products.value.length, 1),
-                        createdAt: formatDate(new Date()),
-                        updatedAt: formatDate(new Date()),
-                        deliveryTime: formatDate(addDays(new Date(), 3))
+            const masterOrderNumber = generateOrderNumber()
+            const createOrderPromises = products.value.map(async (product) => {
+                const quantity = productQuantities.value[product.shoeId] || 0
+                const sizeId = selectedSizes.value[product.shoeId]
+                if (quantity > 0 && sizeId) {
+                    try {
+                        // 获取用户ID
+                        const userId = await userManager.getUserId()
+                        if (!userId) {
+                            console.error('无法获取用户ID，创建订单失败')
+                            return false
+                        }
+                        
+                        const orderPayload = {
+                            userId: userId,
+                            sizeId: sizeId,
+                            orderNumber: masterOrderNumber,
+                            status: status,
+                            addressId: selectedAddress.value.addressId,
+                            shippingFee: shippingFee.value / Math.max(products.value.length, 1),
+                            createdAt: formatDate(new Date()),
+                            updatedAt: formatDate(new Date()),
+                            deliveryTime: formatDate(addDays(new Date(), 3))
+                        }
+                    const res = await OrderAPI.insertOrder(orderPayload)
+                        return res.data && res.data.code === 200 && res.data.data === true
+                    } catch (e) {
+                        console.error('创建订单失败:', e)
+                        return false
                     }
-                    const res = await axios.post('/api/order/insertOrder', orderPayload)
-                    return res.data && res.data.code === 200 && res.data.data === true
-                } catch (e) {
-                    console.error('创建订单失败:', e)
-                    return false
                 }
-            }
-            return true
-        })
+                return true
+            })
 
-        const createOrderResults = await Promise.all(createOrderPromises)
-        const allOrdersCreated = createOrderResults.every(v => v === true)
-        if (!allOrdersCreated) {
+            const createOrderResults = await Promise.all(createOrderPromises)
+            const allOrdersCreated = createOrderResults.every(v => v === true)
+            if (!allOrdersCreated) {
             console.error('创建订单失败')
             return false
-        }
-
-        // 拉取刚创建的订单（通过订单号匹配）
-        let createdOrders = []
-        try {
-            const fetchRes = await axios.post('/api/order/getAll')
-            if (fetchRes.data && fetchRes.data.code === 200 && Array.isArray(fetchRes.data.data)) {
-                createdOrders = fetchRes.data.data.filter(o => o.orderNumber === masterOrderNumber)
             }
-        } catch (e) {
-            console.error('查询订单失败:', e)
-        }
 
-        // 为每个订单插入鞋数量记录
-        if (createdOrders && createdOrders.length > 0) {
+            // 拉取刚创建的订单（通过订单号匹配）
+            let createdOrders = []
+            try {
+            const fetchRes = await OrderAPI.getAll()
+                if (fetchRes.data && fetchRes.data.code === 200 && Array.isArray(fetchRes.data.data)) {
+                    createdOrders = fetchRes.data.data.filter(o => o.orderNumber === masterOrderNumber)
+                }
+            } catch (e) {
+                console.error('查询订单失败:', e)
+            }
+
+            // 为每个订单插入鞋数量记录
+            if (createdOrders && createdOrders.length > 0) {
             const sizeIdToItemQueue = {}
-            for (const p of products.value) {
-                const sId = selectedSizes.value[p.shoeId]
-                const qty = productQuantities.value[p.shoeId] || 0
+                for (const p of products.value) {
+                    const sId = selectedSizes.value[p.shoeId]
+                    const qty = productQuantities.value[p.shoeId] || 0
                 if (!sId || qty <= 0) continue
                 if (!sizeIdToItemQueue[sId]) sizeIdToItemQueue[sId] = []
                 sizeIdToItemQueue[sId].push({ shoeId: p.shoeId, qty })
-            }
+                }
 
-            const shoeNumPromises = createdOrders.map(async (ord) => {
+                const shoeNumPromises = createdOrders.map(async (ord) => {
                 const list = sizeIdToItemQueue[ord.sizeId] || []
                 const item = list.length > 0 ? list.shift() : null
                 if (!item) return false
-                try {
-                    const res = await axios.post('/api/orderShoeNum/insertOrderShoeNum', {
-                        orderId: ord.orderId,
+                    try {
+                        const res = await axios.post('/orderShoeNum/insertOrderShoeNum', {
+                            orderId: ord.orderId,
                         shoeId: item.shoeId,
                         shoeNum: item.qty
-                    })
-                    return res.data && res.data.code === 200
-                } catch (e) {
-                    console.error('创建订单商品数量失败:', e)
-                    return false
-                }
-            })
-            await Promise.all(shoeNumPromises)
-        }
+                        })
+                        return res.data && res.data.code === 200
+                    } catch (e) {
+                        console.error('创建订单商品数量失败:', e)
+                        return false
+                    }
+                })
+                await Promise.all(shoeNumPromises)
+            }
 
         return true
     } catch (err) {
@@ -1190,11 +1193,12 @@ const createOrderWithStatus = async (status) => {
 // 查找状态为0的订单
 const findPendingOrders = async () => {
     try {
-        const response = await axios.post('/api/order/getAll')
+        const response = await OrderAPI.getAll()
         if (response.data && response.data.code === 200 && Array.isArray(response.data.data)) {
             // 查找当前用户的状态为0的订单
+            const userId = await userManager.getUserId()
             return response.data.data.filter(order => 
-                order.userId === 1 && order.status === '0'
+                order.userId === userId && order.status === '0'
             )
         }
         return []
@@ -1208,10 +1212,11 @@ const findPendingOrders = async () => {
 const updateOrderStatus = async (orderNumber, newStatus) => {
     try {
         // 首先获取需要更新的订单
-        const response = await axios.post('/api/order/getAll')
+        const response = await OrderAPI.getAll()
         if (response.data && response.data.code === 200 && Array.isArray(response.data.data)) {
+            const userId = await userManager.getUserId()
             const ordersToUpdate = response.data.data.filter(order => 
-                order.orderNumber === orderNumber && order.userId === 1
+                order.orderNumber === orderNumber && order.userId === userId
             )
             
             // 更新每个订单的状态
@@ -1221,7 +1226,7 @@ const updateOrderStatus = async (orderNumber, newStatus) => {
                     status: newStatus,
                     updatedAt: formatDate(new Date())
                 }
-                return axios.post('/api/order/updateOrder', updatedOrder)
+                return OrderAPI.updateOrder(updatedOrder)
             })
             
             const updateResults = await Promise.all(updatePromises)
@@ -1243,18 +1248,12 @@ const confirmPayment = async () => {
     try {
         // 首先检查库存是否充足
         const inventoryCheckPromises = products.value.map(async (product) => {
-            const quantity = productQuantities.value[product.shoeId] || 0
-            const sizeId = selectedSizes.value[product.shoeId]
+                const quantity = productQuantities.value[product.shoeId] || 0
+                const sizeId = selectedSizes.value[product.shoeId]
             
-            if (quantity > 0 && sizeId) {
-                try {
-                    const response = await axios.get('/api/inventory/checkInventorySufficient', {
-                        params: {
-                            shoeId: product.shoeId,
-                            sizeId: sizeId,
-                            quantity: quantity
-                        }
-                    })
+                if (quantity > 0 && sizeId) {
+                    try {
+                    const response = await InventoryAPI.checkSufficient(product.shoeId, sizeId, quantity)
                     return response.data && response.data.code === 200 && response.data.data
                 } catch (err) {
                     console.error('检查库存失败:', err)
@@ -1300,11 +1299,12 @@ const confirmPayment = async () => {
                 const result = await createOrderWithStatus('1')
                 if (result) {
                     // 获取刚创建的订单
-                    const fetchRes = await axios.post('/api/order/getAll')
+                    const fetchRes = await OrderAPI.getAll()
                     if (fetchRes.data && fetchRes.data.code === 200 && Array.isArray(fetchRes.data.data)) {
                         // 获取最新的订单号
+                        const userId = await userManager.getUserId()
                         const latestOrders = fetchRes.data.data
-                            .filter(o => o.userId === 1 && o.status === '1')
+                            .filter(o => o.userId === userId && o.status === '1')
                             .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
                         
                         if (latestOrders.length > 0) {
@@ -1319,11 +1319,12 @@ const confirmPayment = async () => {
             const result = await createOrderWithStatus('1')
             if (result) {
                 // 获取刚创建的订单
-                const fetchRes = await axios.post('/api/order/getAll')
+                const fetchRes = await OrderAPI.getAll()
                 if (fetchRes.data && fetchRes.data.code === 200 && Array.isArray(fetchRes.data.data)) {
                     // 获取最新的订单号
+                    const userId = await userManager.getUserId()
                     const latestOrders = fetchRes.data.data
-                        .filter(o => o.userId === 1 && o.status === '1')
+                        .filter(o => o.userId === userId && o.status === '1')
                         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
                     
                     if (latestOrders.length > 0) {
@@ -1346,68 +1347,65 @@ const confirmPayment = async () => {
             const sizeId = selectedSizes.value[product.shoeId]
             if (quantity > 0 && sizeId) {
                 try {
-                    await axios.post('/api/inventory/decreaseInventory', null, {
-                        params: {
-                            shoeId: product.shoeId,
-                            sizeId: sizeId,
-                            quantity: quantity
+                    await InventoryAPI.decrease(product.shoeId, sizeId, quantity)
+                        return true
+                    } catch (err) {
+                        console.error('减少库存失败:', err)
+                        return false
+                    }
+                }
+                return true
+            })
+
+            const inventoryDecreaseResults = await Promise.all(inventoryDecreasePromises)
+            const allInventoryDecreased = inventoryDecreaseResults.every(result => result === true)
+
+            if (allInventoryDecreased) {
+                // 删除购物车中的商品
+                await removeItemsFromCart()
+                
+                // 展示订单详情（使用同一订单号汇总）
+                const items = products.value
+                    .filter(p => (productQuantities.value[p.shoeId] || 0) > 0 && selectedSizes.value[p.shoeId])
+                    .map(p => {
+                        const sizeId = selectedSizes.value[p.shoeId]
+                        const sizeName = getSizeName(sizeId)
+                        const quantity = productQuantities.value[p.shoeId]
+                        const unitPrice = getProductPrice(p)
+                        const subtotal = Number((unitPrice * quantity).toFixed(2))
+                        return {
+                            shoeId: p.shoeId,
+                            name: p.name,
+                            image: p.images && p.images.length > 0 ? p.images[0].imagePath : null,
+                            sizeId,
+                            sizeName,
+                            quantity,
+                            unitPrice,
+                            subtotal
                         }
                     })
-                    return true
-                } catch (err) {
-                    console.error('减少库存失败:', err)
-                    return false
+
+                orderDetails.value = {
+                    orderNumber: masterOrderNumber,
+                    createdAt: createdOrders && createdOrders.length > 0 ? createdOrders[0].createdAt : new Date(),
+                    status: '1',
+                    userId: await userManager.getUserId(),
+                    address: selectedAddress.value ? { ...selectedAddress.value } : null,
+                    items,
+                    itemsTotal: Number(totalPrice.value.toFixed(2)),
+                    shippingFee: Number(shippingFee.value.toFixed(2)),
+                    orderTotal: Number(orderTotal.value.toFixed(2))
                 }
-            }
-            return true
-        })
 
-        const inventoryDecreaseResults = await Promise.all(inventoryDecreasePromises)
-        const allInventoryDecreased = inventoryDecreaseResults.every(result => result === true)
-
-        if (allInventoryDecreased) {
-            // 展示订单详情（使用同一订单号汇总）
-            const items = products.value
-                .filter(p => (productQuantities.value[p.shoeId] || 0) > 0 && selectedSizes.value[p.shoeId])
-                .map(p => {
-                    const sizeId = selectedSizes.value[p.shoeId]
-                    const sizeName = getSizeName(sizeId)
-                    const quantity = productQuantities.value[p.shoeId]
-                    const unitPrice = getProductPrice(p)
-                    const subtotal = Number((unitPrice * quantity).toFixed(2))
-                    return {
-                        shoeId: p.shoeId,
-                        name: p.name,
-                        image: p.images && p.images.length > 0 ? p.images[0].imagePath : null,
-                        sizeId,
-                        sizeName,
-                        quantity,
-                        unitPrice,
-                        subtotal
-                    }
-                })
-
-            orderDetails.value = {
-                orderNumber: masterOrderNumber,
-                createdAt: createdOrders && createdOrders.length > 0 ? createdOrders[0].createdAt : new Date(),
-                status: '1',
-                userId: 1,
-                address: selectedAddress.value ? { ...selectedAddress.value } : null,
-                items,
-                itemsTotal: Number(totalPrice.value.toFixed(2)),
-                shippingFee: Number(shippingFee.value.toFixed(2)),
-                orderTotal: Number(orderTotal.value.toFixed(2))
-            }
-
-            clearInterval(paymentTimer.value)
-            showPaymentModal.value = false
-            // 清除用户选择标志
-            window.shouldUpdateExistingOrder = false
-            // 清除保存的订单数据
-            clearOrderData()
-            showPaymentSuccessModal()
-        } else {
-            alert('库存更新失败，请联系客服处理')
+                clearInterval(paymentTimer.value)
+                showPaymentModal.value = false
+                // 清除用户选择标志
+                window.shouldUpdateExistingOrder = false
+                // 清除保存的订单数据
+                clearOrderData()
+                showPaymentSuccessModal()
+            } else {
+                alert('库存更新失败，请联系客服处理')
         }
 
     } catch (err) {
@@ -1512,11 +1510,7 @@ const showPaymentSuccessModal = () => {
             document.body.removeChild(successModal)
             router.push('/products')
         }
-    } catch (error) {
-        console.error('支付确认失败:', error)
-        alert('支付确认失败，请重试')
-        isProcessingPayment.value = false
-    }
+    })
 }
 
 
@@ -1524,6 +1518,11 @@ const showPaymentSuccessModal = () => {
 // 关闭订单详情弹窗
 const closeOrderDetailsModal = () => {
     showOrderDetailsModal.value = false
+}
+
+// 打开订单详情弹窗
+const openOrderDetailsModal = () => {
+    showOrderDetailsModal.value = true
 }
 
 // 获取尺码名称
@@ -1542,6 +1541,76 @@ const generateOrderNumber = () => {
     const timestamp = Date.now()
     const random = Math.floor(Math.random() * 100000)
     return `ORD${timestamp}${random}`
+}
+
+// 从购物车中删除已购买的商品
+const removeItemsFromCart = async () => {
+    try {
+        const userId = await userManager.getUserId()
+        if (!userId) {
+            console.error('无法获取用户ID，无法删除购物车商品')
+            return
+        }
+
+        console.log('开始删除购物车商品，用户ID:', userId)
+        console.log('当前购买的商品:', products.value)
+        console.log('购买数量:', productQuantities.value)
+        console.log('选择的尺码:', selectedSizes.value)
+
+        // 获取用户的购物车订单
+        const cartResponse = await CartAPI.getCartOrdersWithDetails(userId)
+        console.log('购物车响应:', cartResponse)
+        
+        if (cartResponse.data?.code === 200 && cartResponse.data.data) {
+            const cartOrders = cartResponse.data.data
+            console.log('购物车订单:', cartOrders)
+            
+            // 遍历购物车中的商品，删除已购买的商品
+            for (const cartOrder of cartOrders) {
+                const orderId = cartOrder.orderId
+                const shoeId = cartOrder.orderShoeNum?.shoeId
+                const cartQuantity = cartOrder.orderShoeNum?.shoeNum || 0
+                const cartSizeId = cartOrder.sizeId
+                
+                console.log(`检查购物车商品: orderId=${orderId}, shoeId=${shoeId}, cartQuantity=${cartQuantity}, cartSizeId=${cartSizeId}`)
+                
+                // 检查当前商品是否在购买列表中
+                const productToBuy = products.value.find(p => p.shoeId === shoeId)
+                if (productToBuy && shoeId) {
+                    const buyQuantity = productQuantities.value[shoeId] || 0
+                    const sizeId = selectedSizes.value[shoeId]
+                    
+                    console.log(`找到匹配商品: shoeId=${shoeId}, buyQuantity=${buyQuantity}, sizeId=${sizeId}`)
+                    
+                    // 如果尺码匹配且购买数量大于等于购物车数量，删除整个购物车项
+                    if (cartSizeId === sizeId && buyQuantity >= cartQuantity) {
+                        console.log(`删除购物车商品: orderId=${orderId}, shoeId=${shoeId}`)
+                        const deleteResponse = await CartAPI.removeFromCart(orderId, shoeId)
+                        console.log('删除响应:', deleteResponse)
+                    }
+                    // 如果购买数量小于购物车数量，更新购物车数量
+                    else if (cartSizeId === sizeId && buyQuantity > 0 && buyQuantity < cartQuantity) {
+                        console.log(`更新购物车商品数量: orderId=${orderId}, shoeId=${shoeId}, 新数量=${cartQuantity - buyQuantity}`)
+                        const updateResponse = await CartAPI.updateCartItemQuantity(orderId, shoeId, cartQuantity - buyQuantity)
+                        console.log('更新响应:', updateResponse)
+                    }
+                    else {
+                        console.log(`不匹配: cartSizeId=${cartSizeId}, sizeId=${sizeId}, buyQuantity=${buyQuantity}, cartQuantity=${cartQuantity}`)
+                    }
+                } else {
+                    console.log(`商品不在购买列表中或shoeId为空: shoeId=${shoeId}`)
+                }
+            }
+            
+            // 刷新购物车数量
+            await cartManager.refreshCartCount()
+            console.log('购物车商品删除完成')
+        } else {
+            console.log('购物车为空或获取失败:', cartResponse)
+        }
+    } catch (error) {
+        console.error('删除购物车商品失败:', error)
+    }
 }
 
 // 格式化日期时间

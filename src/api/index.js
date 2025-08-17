@@ -6,6 +6,13 @@ const api = axios.create({
 })
 
 export const UserAPI = {
+  getAllUsers() {
+    return api.post('/users/getAllUsers')
+  },
+  getUserIdByUsername(username) {
+    const params = new URLSearchParams({ username })
+    return api.post('/users/getUserIdByUsername', params)
+  },
   getPersonalInfo(username) {
     const params = new URLSearchParams({ username })
     return api.post('/personal/info', params)
