@@ -37,12 +37,12 @@
                 <div class="products-grid">
                     <div 
                         v-for="product in products" 
-                        :key="product.shoeId" 
+                        :key="product.uniqueId || product.shoeId" 
                         class="product-card"
                     >
                         <!-- 删除按钮 -->
                         <button 
-                            @click="removeProduct(product.shoeId)" 
+                            @click="removeProduct(product)" 
                             class="remove-product-btn"
                             title="删除此商品"
                         >
@@ -93,9 +93,9 @@
                                         <button 
                                             v-for="size in availableSizes" 
                                             :key="size.sizeId"
-                                            @click="selectSize(product.shoeId, size.sizeId)"
+                                            @click="selectSize(product, size.sizeId)"
                                             class="size-option"
-                                            :class="{ 'active': selectedSizes[product.shoeId] === size.sizeId }"
+                                            :class="{ 'active': product.selectedSize === size.sizeId }"
                                         >
                                             {{ size.size }}
                                         </button>
@@ -106,21 +106,21 @@
                                     <label class="quantity-label">购买数量:</label>
                                     <div class="quantity-controls">
                                         <button 
-                                            @click="decreaseQuantity(product.shoeId)" 
+                                            @click="decreaseQuantity(product)" 
                                             class="quantity-btn"
-                                            :disabled="productQuantities[product.shoeId] <= 1"
+                                            :disabled="product.quantity <= 1"
                                         >
                                             -
                                         </button>
                                         <input 
                                             type="number" 
-                                            v-model.number="productQuantities[product.shoeId]" 
+                                            v-model.number="product.quantity" 
                                             min="1" 
                                             class="quantity-input"
-                                            @change="updateQuantity(product.shoeId)"
+                                            @change="updateQuantity(product)"
                                         >
                                         <button 
-                                            @click="increaseQuantity(product.shoeId)" 
+                                            @click="increaseQuantity(product)" 
                                             class="quantity-btn"
                                         >
                                             +
@@ -341,7 +341,7 @@
                  <div class="payment-order-summary">
                      <h4>订单信息</h4>
                      <div class="order-items">
-                         <div v-for="product in products" :key="product.shoeId" class="order-item">
+                         <div v-for="product in products" :key="product.uniqueId || product.shoeId" class="order-item">
                              <div class="item-image">
                                  <img v-if="product.images && product.images.length > 0" 
                                       :src="`/api/shoeImg/getImage/${product.images[0].imagePath}`" 
@@ -350,12 +350,12 @@
                              </div>
                              <div class="item-details">
                                  <h5>{{ product.name }}</h5>
-                                 <p class="item-size">尺码: {{ getSizeName(selectedSizes[product.shoeId]) }}</p>
-                                 <p class="item-quantity">数量: {{ productQuantities[product.shoeId] }} 件</p>
+                                 <p class="item-size">尺码: {{ getSizeName(product.selectedSize) }}</p>
+                                 <p class="item-quantity">数量: {{ product.quantity || 1 }} 件</p>
                                  <p class="item-price">单价: ¥{{ getProductPrice(product) }}</p>
                              </div>
                              <div class="item-total">
-                                 ¥{{ (getProductPrice(product) * productQuantities[product.shoeId]).toFixed(2) }}
+                                 ¥{{ (getProductPrice(product) * (product.quantity || 1)).toFixed(2) }}
                              </div>
                          </div>
                      </div>
@@ -506,8 +506,6 @@ const addressForm = ref({
 const postalCodeError = ref('')
 
 // 商品相关数据
-const selectedSizes = ref({})
-const productQuantities = ref({})
 const availableSizes = ref([])
 
 // 数据持久化相关
@@ -515,12 +513,15 @@ const STORAGE_KEY = 'orderConfirmationData'
 
 // 计算属性
 const totalItems = computed(() => {
-    return Object.values(productQuantities.value).reduce((sum, qty) => sum + (qty || 0), 0)
+    return products.value.reduce((sum, product) => {
+        const quantity = product.quantity || 1
+        return sum + quantity
+    }, 0)
 })
 
 const totalPrice = computed(() => {
     return products.value.reduce((sum, product) => {
-        const quantity = productQuantities.value[product.shoeId] || 0
+        const quantity = product.quantity || 1
         // 如果有折扣价且折扣价更低，使用折扣价；否则使用原价
         const price = (product.discountPrice && product.discountPrice < product.price) ? product.discountPrice : product.price
         return sum + (price * quantity)
@@ -537,8 +538,9 @@ const orderTotal = computed(() => {
 
 const canSubmitOrder = computed(() => {
     return selectedAddress.value && 
-           Object.keys(selectedSizes.value).length > 0 && 
-           totalItems.value > 0
+           products.value.length > 0 && 
+           totalItems.value > 0 &&
+           products.value.every(product => product.selectedSize)
 })
 
 // 获取商品数据
@@ -614,26 +616,34 @@ const loadOrderData = async () => {
 
                 // 如果是从订单确认页面跳转过来的，检查是否会导致重复
                 if (fromOrderConfirmation === 'true') {
-                    // 检查商品是否已经存在（包括相同的尺码）
+                    // 检查商品是否已经存在且尺码相同
                     const existingProductIndex = products.value.findIndex(p => 
-                        p.shoeId === productId && selectedSizes.value[p.shoeId] === parseInt(sizeId)
+                        p.shoeId === productId && p.selectedSize === parseInt(sizeId)
                     )
                     
                     if (existingProductIndex >= 0) {
                         // 商品已存在且尺码相同，更新数量
-                        const currentQuantity = productQuantities.value[productId] || 0
-                        productQuantities.value[productId] = currentQuantity + parseInt(quantity)
+                        const existingProduct = products.value[existingProductIndex]
+                        existingProduct.quantity = (existingProduct.quantity || 1) + parseInt(quantity)
                     } else {
                         // 商品不存在或尺码不同，添加到列表
-                        products.value.push(productData)
-                selectedSizes.value[productId] = parseInt(sizeId)
-                productQuantities.value[productId] = parseInt(quantity)
-            }
-        } else {
+                        const newProduct = {
+                            ...productData,
+                            selectedSize: parseInt(sizeId),
+                            quantity: parseInt(quantity),
+                            uniqueId: Date.now() + Math.random() // 创建唯一标识
+                        }
+                        products.value.push(newProduct)
+                    }
+                } else {
                     // 直接添加商品（新用户或从其他页面跳转）
-                    products.value.push(productData)
-                    selectedSizes.value[productId] = parseInt(sizeId)
-                    productQuantities.value[productId] = parseInt(quantity)
+                    const newProduct = {
+                        ...productData,
+                        selectedSize: parseInt(sizeId),
+                        quantity: parseInt(quantity),
+                        uniqueId: Date.now() + Math.random() // 创建唯一标识
+                    }
+                    products.value.push(newProduct)
                 }
                 
                 // 保存更新后的数据
@@ -644,9 +654,33 @@ const loadOrderData = async () => {
                 sessionStorage.removeItem('fromOrderConfirmation')
             }
         } else if (!hasRestoredData) {
-            // 没有任何入参且没有本地恢复数据，不再请求“全部商品”，直接提示并保持空列表
-            error.value = '未找到需要确认的商品，请从购物车或商品详情页进入此页面。'
-            products.value = []
+            // 没有恢复的数据，也没有新商品，加载所有商品
+            const productResponse = await axios.post('/api/shoe/getAll', {}, {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            })
+
+            if (productResponse.data && productResponse.data.data) {
+                const productList = productResponse.data.data
+
+                // 获取每个商品的图片
+                for (let product of productList) {
+                    try {
+                        const imageResponse = await axios.get(`/api/shoeImg/list/${product.shoeId}`)
+                        if (imageResponse.data && imageResponse.data.data) {
+                            product.images = imageResponse.data.data
+                        } else {
+                            product.images = []
+                        }
+                    } catch (imgError) {
+                        product.images = []
+                    }
+
+                    // 初始化商品数量 - 使用新的数据结构
+                    // 这里暂时不设置，等用户选择尺码时再设置
+                }
+
+                products.value = productList
+            }
         }
 
         // 获取尺码数据
@@ -770,39 +804,44 @@ const loadAddresses = async () => {
 }
 
 // 尺码选择
-const selectSize = (productId, sizeId) => {
-    selectedSizes.value[productId] = sizeId
-}
-
-// 数量控制
-const increaseQuantity = (productId) => {
-    productQuantities.value[productId] = (productQuantities.value[productId] || 1) + 1
-}
-
-const decreaseQuantity = (productId) => {
-    if (productQuantities.value[productId] > 1) {
-        productQuantities.value[productId]--
+const selectSize = (product, sizeId) => {
+    product.selectedSize = sizeId
+    
+    // 如果该商品还没有数量设置，设置默认数量为1
+    if (!product.quantity) {
+        product.quantity = 1
     }
 }
 
-const updateQuantity = (productId) => {
-    if (productQuantities.value[productId] < 1) {
-        productQuantities.value[productId] = 1
+// 数量控制
+const increaseQuantity = (product) => {
+    if (product.quantity) {
+        product.quantity++
+    }
+}
+
+const decreaseQuantity = (product) => {
+    if (product.quantity && product.quantity > 1) {
+        product.quantity--
+    }
+}
+
+const updateQuantity = (product) => {
+    if (product.quantity && product.quantity < 1) {
+        product.quantity = 1
     }
 }
 
 // 删除商品
-const removeProduct = (productId) => {
+const removeProduct = (product) => {
     if (confirm('确定要删除这个商品吗？')) {
-        // 从商品列表中移除
-        const index = products.value.findIndex(p => p.shoeId === productId)
-        if (index > -1) {
-            products.value.splice(index, 1)
-        }
+        // 找到要删除的商品索引
+        const indexToRemove = products.value.findIndex(p => p.uniqueId === product.uniqueId)
         
-        // 清除相关的尺码和数量数据
-        delete selectedSizes.value[productId]
-        delete productQuantities.value[productId]
+        if (indexToRemove > -1) {
+            // 从商品列表中移除
+            products.value.splice(indexToRemove, 1)
+        }
         
         // 保存更新后的数据
         saveOrderData()
@@ -1078,8 +1117,8 @@ const createOrderWithStatus = async (status) => {
     try {
         // 首先检查库存是否充足
         const inventoryCheckPromises = products.value.map(async (product) => {
-            const quantity = productQuantities.value[product.shoeId] || 0
-            const sizeId = selectedSizes.value[product.shoeId]
+            const quantity = product.quantity || 1
+            const sizeId = product.selectedSize
             
             if (quantity > 0 && sizeId) {
                 try {
@@ -1101,39 +1140,32 @@ const createOrderWithStatus = async (status) => {
         }
 
         // 创建订单（按商品逐个创建），使用同一订单号
-            const masterOrderNumber = generateOrderNumber()
-            const createOrderPromises = products.value.map(async (product) => {
-                const quantity = productQuantities.value[product.shoeId] || 0
-                const sizeId = selectedSizes.value[product.shoeId]
-                if (quantity > 0 && sizeId) {
-                    try {
-                        // 获取用户ID
-                        const userId = await userManager.getUserId()
-                        if (!userId) {
-                            console.error('无法获取用户ID，创建订单失败')
-                            return false
-                        }
-                        
-                        const orderPayload = {
-                            userId: userId,
-                            sizeId: sizeId,
-                            orderNumber: masterOrderNumber,
-                            status: status,
-                            addressId: selectedAddress.value.addressId,
-                            shippingFee: shippingFee.value / Math.max(products.value.length, 1),
-                            createdAt: formatDate(new Date()),
-                            updatedAt: formatDate(new Date()),
-                            deliveryTime: formatDate(addDays(new Date(), 3))
-                        }
-                    const res = await OrderAPI.insertOrder(orderPayload)
-                        return res.data && res.data.code === 200 && res.data.data === true
-                    } catch (e) {
-                        console.error('创建订单失败:', e)
-                        return false
+        const masterOrderNumber = generateOrderNumber()
+        const createOrderPromises = products.value.map(async (product) => {
+            const quantity = product.quantity || 1
+            const sizeId = product.selectedSize
+            if (quantity > 0 && sizeId) {
+                try {
+                    const orderPayload = {
+                        userId: 1,
+                        sizeId: sizeId,
+                        orderNumber: masterOrderNumber,
+                        status: status,
+                        addressId: selectedAddress.value.addressId,
+                        shippingFee: shippingFee.value / Math.max(products.value.length, 1),
+                        createdAt: formatDate(new Date()),
+                        updatedAt: formatDate(new Date()),
+                        deliveryTime: formatDate(addDays(new Date(), 3))
                     }
+                    const res = await axios.post('/api/order/insertOrder', orderPayload)
+                    return res.data && res.data.code === 200 && res.data.data === true
+                } catch (e) {
+                    console.error('创建订单失败:', e)
+                    return false
                 }
-                return true
-            })
+            }
+            return true
+        })
 
             const createOrderResults = await Promise.all(createOrderPromises)
             const allOrdersCreated = createOrderResults.every(v => v === true)
@@ -1156,9 +1188,9 @@ const createOrderWithStatus = async (status) => {
             // 为每个订单插入鞋数量记录
             if (createdOrders && createdOrders.length > 0) {
             const sizeIdToItemQueue = {}
-                for (const p of products.value) {
-                    const sId = selectedSizes.value[p.shoeId]
-                    const qty = productQuantities.value[p.shoeId] || 0
+            for (const p of products.value) {
+                const sId = p.selectedSize
+                const qty = p.quantity || 1
                 if (!sId || qty <= 0) continue
                 if (!sizeIdToItemQueue[sId]) sizeIdToItemQueue[sId] = []
                 sizeIdToItemQueue[sId].push({ shoeId: p.shoeId, qty })
@@ -1248,8 +1280,8 @@ const confirmPayment = async () => {
     try {
         // 首先检查库存是否充足
         const inventoryCheckPromises = products.value.map(async (product) => {
-                const quantity = productQuantities.value[product.shoeId] || 0
-                const sizeId = selectedSizes.value[product.shoeId]
+            const quantity = product.quantity || 1
+            const sizeId = product.selectedSize
             
                 if (quantity > 0 && sizeId) {
                     try {
@@ -1343,8 +1375,8 @@ const confirmPayment = async () => {
 
         // 扣减库存
         const inventoryDecreasePromises = products.value.map(async (product) => {
-            const quantity = productQuantities.value[product.shoeId] || 0
-            const sizeId = selectedSizes.value[product.shoeId]
+            const quantity = product.quantity || 1
+            const sizeId = product.selectedSize
             if (quantity > 0 && sizeId) {
                 try {
                     await InventoryAPI.decrease(product.shoeId, sizeId, quantity)
@@ -1360,30 +1392,27 @@ const confirmPayment = async () => {
             const inventoryDecreaseResults = await Promise.all(inventoryDecreasePromises)
             const allInventoryDecreased = inventoryDecreaseResults.every(result => result === true)
 
-            if (allInventoryDecreased) {
-                // 删除购物车中的商品
-                await removeItemsFromCart()
-                
-                // 展示订单详情（使用同一订单号汇总）
-                const items = products.value
-                    .filter(p => (productQuantities.value[p.shoeId] || 0) > 0 && selectedSizes.value[p.shoeId])
-                    .map(p => {
-                        const sizeId = selectedSizes.value[p.shoeId]
-                        const sizeName = getSizeName(sizeId)
-                        const quantity = productQuantities.value[p.shoeId]
-                        const unitPrice = getProductPrice(p)
-                        const subtotal = Number((unitPrice * quantity).toFixed(2))
-                        return {
-                            shoeId: p.shoeId,
-                            name: p.name,
-                            image: p.images && p.images.length > 0 ? p.images[0].imagePath : null,
-                            sizeId,
-                            sizeName,
-                            quantity,
-                            unitPrice,
-                            subtotal
-                        }
-                    })
+        if (allInventoryDecreased) {
+            // 展示订单详情（使用同一订单号汇总）
+            const items = products.value
+                .filter(p => (p.quantity || 1) > 0 && p.selectedSize)
+                .map(p => {
+                    const sizeId = p.selectedSize
+                    const sizeName = getSizeName(sizeId)
+                    const quantity = p.quantity || 1
+                    const unitPrice = getProductPrice(p)
+                    const subtotal = Number((unitPrice * quantity).toFixed(2))
+                    return {
+                        shoeId: p.shoeId,
+                        name: p.name,
+                        image: p.images && p.images.length > 0 ? p.images[0].imagePath : null,
+                        sizeId,
+                        sizeName,
+                        quantity,
+                        unitPrice,
+                        subtotal
+                    }
+                })
 
                 orderDetails.value = {
                     orderNumber: masterOrderNumber,
@@ -1645,8 +1674,6 @@ const addDays = (date, days) => {
 const saveOrderData = () => {
     const orderData = {
         products: products.value,
-        selectedSizes: selectedSizes.value,
-        productQuantities: productQuantities.value,
         selectedAddress: selectedAddress.value,
         timestamp: Date.now()
     }
@@ -1666,8 +1693,6 @@ const restoreOrderData = () => {
             
             if (dataAge < maxAge) {
                 products.value = orderData.products || []
-                selectedSizes.value = orderData.selectedSizes || {}
-                productQuantities.value = orderData.productQuantities || {}
                 selectedAddress.value = orderData.selectedAddress || null
                 return true
             } else {
