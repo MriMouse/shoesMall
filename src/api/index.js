@@ -227,6 +227,9 @@ export const InventoryAPI = {
   decrease(shoeId, sizeId, quantity) {
     const params = new URLSearchParams({ shoeId, sizeId, quantity })
     return api.post('/inventory/decreaseInventory', params)
+  },
+  getInventoryByShoeId(shoeId) {
+    return api.get(`/inventory/getInventoryByShoeId/${shoeId}`)
   }
 }
 

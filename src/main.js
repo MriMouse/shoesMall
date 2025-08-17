@@ -5,8 +5,22 @@ import axios from 'axios'
 import cartManager from './utils/cart'
 import { UserAPI } from './api'
 
-// 设置axios基础URL（根据您的后端服务地址调整）
-axios.defaults.baseURL = 'http://localhost:8081' // 请根据您的后端服务地址修改
+// 移除axios基础URL设置，让vue.config.js中的代理配置正常工作
+// axios.defaults.baseURL = 'http://localhost:8081' // 请根据您的后端服务地址修改
+
+// 添加axios请求拦截器，确保所有POST请求都包含正确的Content-Type
+axios.interceptors.request.use(
+  (config) => {
+    // 如果是POST请求且没有设置Content-Type，则设置默认值
+    if (config.method === 'post' && !config.headers['Content-Type']) {
+      config.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 const app = createApp(App);
 

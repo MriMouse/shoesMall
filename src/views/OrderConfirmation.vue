@@ -565,23 +565,21 @@ const loadOrderData = async () => {
         if (fromCart === 'true' && items) {
             try {
                 const cartItems = JSON.parse(items)
-                // 将购物车条目转为本页商品结构
-                products.value = cartItems.map(it => ({
-                    shoeId: it.shoeId,
-                    name: it.shoeName,
-                    price: it.price || 0,
-                    discountPrice: it.discountPrice || it.price || 0,
-                    brand: { brandName: it.brandName },
-                    shoesType: { typeName: it.typeName },
-                    images: []
-                }))
-                // 设置尺码与数量
-                cartItems.forEach(it => {
-                    if (it.shoeId) {
-                        selectedSizes.value[it.shoeId] = it.sizeId
-                        productQuantities.value[it.shoeId] = it.quantity || 1
-                    }
-                })
+                                 // 将购物车条目转为本页商品结构
+                 products.value = cartItems.map(it => ({
+                     shoeId: it.shoeId,
+                     name: it.shoeName,
+                     price: it.price || 0,
+                     discountPrice: it.discountPrice || it.price || 0,
+                     brand: { brandName: it.brandName },
+                     shoesType: { typeName: it.typeName },
+                     images: [],
+                     selectedSize: it.sizeId, // 直接设置尺码
+                     quantity: it.quantity || 1, // 直接设置数量
+                     uniqueId: Date.now() + Math.random() + it.shoeId // 创建唯一标识
+                 }))
+                 
+                 console.log('从购物车加载的商品:', products.value)
                 // 可选：异步加载图片（不阻塞）
                 products.value.forEach(async p => {
                     try {
@@ -614,37 +612,39 @@ const loadOrderData = async () => {
                     productData.images = []
                 }
 
-                // 如果是从订单确认页面跳转过来的，检查是否会导致重复
-                if (fromOrderConfirmation === 'true') {
-                    // 检查商品是否已经存在且尺码相同
-                    const existingProductIndex = products.value.findIndex(p => 
-                        p.shoeId === productId && p.selectedSize === parseInt(sizeId)
-                    )
-                    
-                    if (existingProductIndex >= 0) {
-                        // 商品已存在且尺码相同，更新数量
-                        const existingProduct = products.value[existingProductIndex]
-                        existingProduct.quantity = (existingProduct.quantity || 1) + parseInt(quantity)
-                    } else {
-                        // 商品不存在或尺码不同，添加到列表
-                        const newProduct = {
-                            ...productData,
-                            selectedSize: parseInt(sizeId),
-                            quantity: parseInt(quantity),
-                            uniqueId: Date.now() + Math.random() // 创建唯一标识
-                        }
-                        products.value.push(newProduct)
-                    }
-                } else {
-                    // 直接添加商品（新用户或从其他页面跳转）
-                    const newProduct = {
-                        ...productData,
-                        selectedSize: parseInt(sizeId),
-                        quantity: parseInt(quantity),
-                        uniqueId: Date.now() + Math.random() // 创建唯一标识
-                    }
-                    products.value.push(newProduct)
-                }
+                                 // 如果是从订单确认页面跳转过来的，检查是否会导致重复
+                 if (fromOrderConfirmation === 'true') {
+                     // 检查商品是否已经存在且尺码相同
+                     const existingProductIndex = products.value.findIndex(p => 
+                         p.shoeId === productId && p.selectedSize === parseInt(sizeId)
+                     )
+                     
+                     if (existingProductIndex >= 0) {
+                         // 商品已存在且尺码相同，更新数量
+                         const existingProduct = products.value[existingProductIndex]
+                         existingProduct.quantity = (existingProduct.quantity || 1) + parseInt(quantity)
+                     } else {
+                         // 商品不存在或尺码不同，添加到列表
+                         const newProduct = {
+                             ...productData,
+                             selectedSize: parseInt(sizeId),
+                             quantity: parseInt(quantity),
+                             uniqueId: Date.now() + Math.random() // 创建唯一标识
+                         }
+                         products.value.push(newProduct)
+                     }
+                 } else {
+                     // 直接添加商品（新用户或从其他页面跳转）
+                     const newProduct = {
+                         ...productData,
+                         selectedSize: parseInt(sizeId),
+                         quantity: parseInt(quantity),
+                         uniqueId: Date.now() + Math.random() // 创建唯一标识
+                     }
+                     products.value.push(newProduct)
+                 }
+                 
+                                   
                 
                 // 保存更新后的数据
                 saveOrderData()
@@ -811,18 +811,27 @@ const selectSize = (product, sizeId) => {
     if (!product.quantity) {
         product.quantity = 1
     }
+    
+    // 保存更新后的数据
+    saveOrderData()
+    
+    console.log('选择尺码:', product.name, '尺码:', sizeId, '数量:', product.quantity)
 }
 
 // 数量控制
 const increaseQuantity = (product) => {
     if (product.quantity) {
         product.quantity++
+        saveOrderData() // 保存更新后的数据
+        console.log('增加数量:', product.name, '新数量:', product.quantity)
     }
 }
 
 const decreaseQuantity = (product) => {
     if (product.quantity && product.quantity > 1) {
         product.quantity--
+        saveOrderData() // 保存更新后的数据
+        console.log('减少数量:', product.name, '新数量:', product.quantity)
     }
 }
 
@@ -830,6 +839,8 @@ const updateQuantity = (product) => {
     if (product.quantity && product.quantity < 1) {
         product.quantity = 1
     }
+    saveOrderData() // 保存更新后的数据
+    console.log('更新数量:', product.name, '新数量:', product.quantity)
 }
 
 // 删除商品
@@ -1147,7 +1158,7 @@ const createOrderWithStatus = async (status) => {
             if (quantity > 0 && sizeId) {
                 try {
                     const orderPayload = {
-                        userId: 1,
+                        userId: await userManager.getUserId(),
                         sizeId: sizeId,
                         orderNumber: masterOrderNumber,
                         status: status,
@@ -1157,7 +1168,9 @@ const createOrderWithStatus = async (status) => {
                         updatedAt: formatDate(new Date()),
                         deliveryTime: formatDate(addDays(new Date(), 3))
                     }
-                    const res = await axios.post('/api/order/insertOrder', orderPayload)
+                    const res = await axios.post('/api/order/insertOrder', orderPayload, {
+                        headers: { 'Content-Type': 'application/json' }
+                    })
                     return res.data && res.data.code === 200 && res.data.data === true
                 } catch (e) {
                     console.error('创建订单失败:', e)
@@ -1197,14 +1210,16 @@ const createOrderWithStatus = async (status) => {
                 }
 
                 const shoeNumPromises = createdOrders.map(async (ord) => {
-                const list = sizeIdToItemQueue[ord.sizeId] || []
-                const item = list.length > 0 ? list.shift() : null
-                if (!item) return false
+                    const list = sizeIdToItemQueue[ord.sizeId] || []
+                    const item = list.length > 0 ? list.shift() : null
+                    if (!item) return false
                     try {
-                        const res = await axios.post('/orderShoeNum/insertOrderShoeNum', {
+                        const res = await axios.post('/api/orderShoeNum/insertOrderShoeNum', {
                             orderId: ord.orderId,
-                        shoeId: item.shoeId,
-                        shoeNum: item.qty
+                            shoeId: item.shoeId,
+                            shoeNum: item.qty
+                        }, {
+                            headers: { 'Content-Type': 'application/json' }
                         })
                         return res.data && res.data.code === 200
                     } catch (e) {
@@ -1430,7 +1445,11 @@ const confirmPayment = async () => {
                 showPaymentModal.value = false
                 // 清除用户选择标志
                 window.shouldUpdateExistingOrder = false
-                // 清除保存的订单数据
+                
+                // 从购物车中删除已购买的商品
+                await removeItemsFromCart()
+                
+                // 清除保存的订单数据（但保留商品列表和选择信息）
                 clearOrderData()
                 showPaymentSuccessModal()
             } else {
@@ -1528,10 +1547,11 @@ const showPaymentSuccessModal = () => {
         openOrderDetailsModal()
     })
 
-    continueShoppingBtn.addEventListener('click', () => {
-        document.body.removeChild(successModal)
-        router.push('/products')
-    })
+         continueShoppingBtn.addEventListener('click', () => {
+         document.body.removeChild(successModal)
+         // 跳转到产品列表页面，让用户可以继续选择商品
+         router.push('/products')
+     })
 
     // 点击背景关闭弹窗
     successModal.addEventListener('click', (e) => {
@@ -1582,17 +1602,13 @@ const removeItemsFromCart = async () => {
         }
 
         console.log('开始删除购物车商品，用户ID:', userId)
-        console.log('当前购买的商品:', products.value)
-        console.log('购买数量:', productQuantities.value)
-        console.log('选择的尺码:', selectedSizes.value)
 
         // 获取用户的购物车订单
         const cartResponse = await CartAPI.getCartOrdersWithDetails(userId)
-        console.log('购物车响应:', cartResponse)
         
         if (cartResponse.data?.code === 200 && cartResponse.data.data) {
             const cartOrders = cartResponse.data.data
-            console.log('购物车订单:', cartOrders)
+            console.log('购物车订单数量:', cartOrders.length)
             
             // 遍历购物车中的商品，删除已购买的商品
             for (const cartOrder of cartOrders) {
@@ -1601,33 +1617,39 @@ const removeItemsFromCart = async () => {
                 const cartQuantity = cartOrder.orderShoeNum?.shoeNum || 0
                 const cartSizeId = cartOrder.sizeId
                 
-                console.log(`检查购物车商品: orderId=${orderId}, shoeId=${shoeId}, cartQuantity=${cartQuantity}, cartSizeId=${cartSizeId}`)
-                
                 // 检查当前商品是否在购买列表中
                 const productToBuy = products.value.find(p => p.shoeId === shoeId)
                 if (productToBuy && shoeId) {
-                    const buyQuantity = productQuantities.value[shoeId] || 0
-                    const sizeId = selectedSizes.value[shoeId]
-                    
-                    console.log(`找到匹配商品: shoeId=${shoeId}, buyQuantity=${buyQuantity}, sizeId=${sizeId}`)
+                    const buyQuantity = productToBuy.quantity || 1
+                    const sizeId = productToBuy.selectedSize
                     
                     // 如果尺码匹配且购买数量大于等于购物车数量，删除整个购物车项
                     if (cartSizeId === sizeId && buyQuantity >= cartQuantity) {
-                        console.log(`删除购物车商品: orderId=${orderId}, shoeId=${shoeId}`)
-                        const deleteResponse = await CartAPI.removeFromCart(orderId, shoeId)
-                        console.log('删除响应:', deleteResponse)
+                        try {
+                            const deleteResponse = await CartAPI.removeFromCart(orderId, shoeId)
+                            if (deleteResponse.data?.code === 200) {
+                                console.log(`成功删除购物车商品: orderId=${orderId}, shoeId=${shoeId}`)
+                            } else {
+                                console.warn(`删除购物车商品失败: orderId=${orderId}, shoeId=${shoeId}`)
+                            }
+                        } catch (error) {
+                            console.error(`删除购物车商品出错: orderId=${orderId}, shoeId=${shoeId}`, error)
+                        }
                     }
                     // 如果购买数量小于购物车数量，更新购物车数量
                     else if (cartSizeId === sizeId && buyQuantity > 0 && buyQuantity < cartQuantity) {
-                        console.log(`更新购物车商品数量: orderId=${orderId}, shoeId=${shoeId}, 新数量=${cartQuantity - buyQuantity}`)
-                        const updateResponse = await CartAPI.updateCartItemQuantity(orderId, shoeId, cartQuantity - buyQuantity)
-                        console.log('更新响应:', updateResponse)
+                        const newQuantity = cartQuantity - buyQuantity
+                        try {
+                            const updateResponse = await CartAPI.updateCartItemQuantity(orderId, shoeId, newQuantity)
+                            if (updateResponse.data?.code === 200) {
+                                console.log(`成功更新购物车商品数量: orderId=${orderId}, shoeId=${shoeId}`)
+                            } else {
+                                console.warn(`更新购物车商品数量失败: orderId=${orderId}, shoeId=${shoeId}`)
+                            }
+                        } catch (error) {
+                            console.error(`更新购物车商品数量出错: orderId=${orderId}, shoeId=${shoeId}`, error)
+                        }
                     }
-                    else {
-                        console.log(`不匹配: cartSizeId=${cartSizeId}, sizeId=${sizeId}, buyQuantity=${buyQuantity}, cartQuantity=${cartQuantity}`)
-                    }
-                } else {
-                    console.log(`商品不在购买列表中或shoeId为空: shoeId=${shoeId}`)
                 }
             }
             
@@ -1635,7 +1657,7 @@ const removeItemsFromCart = async () => {
             await cartManager.refreshCartCount()
             console.log('购物车商品删除完成')
         } else {
-            console.log('购物车为空或获取失败:', cartResponse)
+            console.log('购物车为空或获取失败')
         }
     } catch (error) {
         console.error('删除购物车商品失败:', error)
@@ -1694,10 +1716,14 @@ const restoreOrderData = () => {
             if (dataAge < maxAge) {
                 products.value = orderData.products || []
                 selectedAddress.value = orderData.selectedAddress || null
+                
+                console.log('恢复订单数据成功')
+                
                 return true
             } else {
                 // 数据过期，清除
                 localStorage.removeItem(STORAGE_KEY)
+                console.log('订单数据已过期，已清除')
             }
         }
     } catch (error) {
@@ -1709,7 +1735,26 @@ const restoreOrderData = () => {
 
 // 清除本地存储的订单数据
 const clearOrderData = () => {
+    // 只清除订单相关的数据，保留商品列表
+    const currentProducts = products.value
+    const currentAddresses = addresses.value
+    
     localStorage.removeItem(STORAGE_KEY)
+    
+    // 重新保存商品列表，保留尺码和数量信息
+    if (currentProducts.length > 0) {
+        const orderData = {
+            products: currentProducts.map(product => ({
+                ...product,
+                // 保留尺码和数量信息，不清除
+                selectedSize: product.selectedSize,
+                quantity: product.quantity || 1
+            })),
+            selectedAddress: currentAddresses.length > 0 ? currentAddresses[0] : null,
+            timestamp: Date.now()
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(orderData))
+    }
 }
 
 // 添加更多商品
@@ -1730,6 +1775,8 @@ const goBack = () => {
     sessionStorage.setItem('fromOrderConfirmation', 'true')
     router.push('/products')
 }
+
+
 
 // 生命周期钩子
 onMounted(() => {

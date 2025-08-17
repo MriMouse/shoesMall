@@ -362,7 +362,7 @@ const loadProductDetail = async () => {
 
     try {
         // 调用后端接口获取产品详情
-        const response = await axios.post('/shoe/getById', 
+        const response = await axios.post('/api/shoe/getById', 
             `shoeId=${shoeId}`,
             { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
         )
@@ -372,7 +372,7 @@ const loadProductDetail = async () => {
             
             // 获取产品图片
             try {
-                const imageResponse = await axios.get(`/shoeImg/list/${shoeId}`)
+                const imageResponse = await axios.get(`/api/shoeImg/list/${shoeId}`)
                 if (imageResponse.data && imageResponse.data.data) {
                     productData.images = imageResponse.data.data
                 } else {
@@ -402,7 +402,7 @@ const loadProductDetail = async () => {
 // 获取库存数据
 const loadInventoryData = async (shoeId) => {
     try {
-        const response = await axios.get(`/inventory/getInventoryByShoeId/${shoeId}`)
+        const response = await axios.get(`/api/inventory/getInventoryByShoeId/${shoeId}`)
         console.log('库存接口响应:', response.data) // 添加调试日志
         
         if (response.data && response.data.code === 200 && response.data.data) {

@@ -84,7 +84,7 @@
 </template>
 
 <script>
-import { OrderAPI, ShoeAPI, ShoesSizeAPI } from '@/api'
+import { OrderAPI, ShoeAPI } from '@/api'
 import cartManager from '@/utils/cart'
 
 export default {
@@ -189,7 +189,7 @@ export default {
       }
     },
     
-    async loadSizeOptions(productId) {
+    async loadSizeOptions() {
       try {
         console.log('=== 加载尺码选项调试信息 ===')
         console.log('商品数据:', this.product)

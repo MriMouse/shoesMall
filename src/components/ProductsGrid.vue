@@ -100,7 +100,7 @@ export default {
                         
                         // 初始化数量为1
                         quantities[product.shoeId] = 1
-                    })
+                    }))
                 }
             } catch (error) {
                 console.error('加载商品失败:', error)
@@ -122,7 +122,7 @@ export default {
             try {
                 // 检查库存
                 const inventoryResponse = await InventoryAPI.checkInventorySufficient(product.shoeId, sizeId, quantity)
-                if (!inventoryResponse.data?.code === 200 || !inventoryResponse.data.data) {
+                if (inventoryResponse.data?.code !== 200 || !inventoryResponse.data.data) {
                     alert('库存不足')
                     return
                 }
@@ -211,8 +211,9 @@ export default {
     align-items: center;
     justify-content: center;
     background: #f8f9fa;
-    color: #6c757d;
-    font-size: 3rem;
+    border: 2px solid #ddd;
+    font-size: 2rem;
+    color: #999;
 }
 
 .product-info {
@@ -220,19 +221,25 @@ export default {
 }
 
 .product-name {
-    margin: 0 0 8px 0;
     font-size: 1.1rem;
-    color: #333;
     font-weight: 600;
+    margin-bottom: 8px;
+    color: #333;
 }
 
 .product-meta {
     display: flex;
     justify-content: center;
-    gap: 16px;
+    gap: 12px;
     margin-bottom: 12px;
-    font-size: 0.9rem;
-    color: #6c757d;
+}
+
+.brand, .type {
+    padding: 4px 8px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    color: #666;
 }
 
 .product-price {
@@ -246,10 +253,10 @@ export default {
 }
 
 .original-price {
-    margin-left: 8px;
-    font-size: 1rem;
-    color: #6c757d;
+    font-size: 0.9rem;
+    color: #999;
     text-decoration: line-through;
+    margin-left: 8px;
 }
 
 .product-actions {
@@ -266,7 +273,7 @@ export default {
 }
 
 .add-to-cart-btn {
-    padding: 10px 16px;
+    padding: 10px;
     background: #007bff;
     color: white;
     border: none;
@@ -281,19 +288,8 @@ export default {
 }
 
 .add-to-cart-btn:disabled {
-    background: #6c757d;
+    background: #ccc;
     cursor: not-allowed;
-}
-
-@media (max-width: 768px) {
-    .product-grid {
-        grid-template-columns: 1fr;
-        padding: 10px;
-    }
-    
-    .product-item {
-        padding: 12px;
-    }
 }
 </style>
 

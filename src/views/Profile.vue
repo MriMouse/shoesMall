@@ -31,9 +31,12 @@
                     <!-- 订单管理 -->
                     <div v-if="activeTab === 'orders'" class="panel-content">
                         <h3>我的订单</h3>
-                        <div v-if="orders.length === 0" class="empty-state">
+                        <div v-if="loading" class="loading-state">
+                            <p>正在加载订单...</p>
+                        </div>
+                        <div v-else-if="orders.length === 0" class="empty-state">
                             <p>暂无订单记录</p>
-                            <router-link to="/" class="btn btn-primary">去购物</router-link>
+                            <router-link to="/products" class="btn btn-primary">去购物</router-link>
                         </div>
                         <div v-else class="orders-list">
                             <div v-for="order in orders" :key="order.id" class="order-item">
@@ -90,6 +93,9 @@
 </template>
 
 <script>
+import { OrderAPI } from '@/api'
+import userManager from '../utils/userManager'
+
 export default {
     name: 'Profile-Page',
     data() {
@@ -112,11 +118,13 @@ export default {
             settings: {
                 emailNotification: true,
                 smsNotification: false
-            }
+            },
+            loading: false
         }
     },
     mounted() {
         this.loadUserData()
+        this.loadOrders()
     },
     methods: {
         loadUserData() {
@@ -164,6 +172,51 @@ export default {
                 localStorage.removeItem('user')
                 this.$router.push('/')
             }
+        },
+
+        async loadOrders() {
+            try {
+                this.loading = true
+                const userId = await userManager.getUserId()
+                if (!userId) {
+                    console.log('用户未登录，无法加载订单')
+                    return
+                }
+
+                const response = await OrderAPI.getAll()
+                if (response.data?.code === 200 && response.data.data) {
+                    // 过滤当前用户的订单
+                    this.orders = response.data.data
+                        .filter(order => order.userId === userId)
+                        .map(order => ({
+                            id: order.orderNumber,
+                            status: this.getOrderStatus(order.status),
+                            amount: order.totalAmount || 0,
+                            date: order.createdAt,
+                            orderId: order.orderId
+                        }))
+                        .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    
+                    console.log('加载订单成功:', this.orders.length, '个订单')
+                } else {
+                    console.log('没有找到订单数据')
+                }
+            } catch (error) {
+                console.error('加载订单失败:', error)
+            } finally {
+                this.loading = false
+            }
+        },
+
+        getOrderStatus(status) {
+            const statusMap = {
+                '0': '待支付',
+                '1': '已支付',
+                '2': '已发货',
+                '3': '已完成',
+                '4': '已取消'
+            }
+            return statusMap[status] || '未知状态'
         }
     }
 }
@@ -280,12 +333,14 @@ export default {
     color: #2c3e50;
 }
 
+.loading-state,
 .empty-state {
     text-align: center;
     padding: 3rem 0;
     color: #7f8c8d;
 }
 
+.loading-state p,
 .empty-state p {
     margin-bottom: 1rem;
     font-size: 1.1rem;

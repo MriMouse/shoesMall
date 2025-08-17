@@ -315,6 +315,7 @@ import axios from 'axios'
 import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
+const route = useRoute()
 
 // 响应式数据
 const products = ref([])
@@ -513,16 +514,16 @@ const fetchOptions = async () => {
     try {
         // 并行请求所有筛选选项，提高加载速度
         const [brandResponse, typeResponse, colorResponse, sizeResponse] = await Promise.all([
-            axios.post('/brand/getAll', {}, {
+            axios.post('/api/brand/getAll', {}, {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
             }),
-            axios.post('/shoesType/getAll', {}, {
+            axios.post('/api/shoesType/getAll', {}, {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
             }),
-            axios.post('/color/getAll', {}, {
+            axios.post('/api/color/getAll', {}, {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
             }),
-            axios.post('/shoesSize/getAll', {}, {
+            axios.post('/api/shoesSize/getAll', {}, {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
             })
         ])
@@ -813,8 +814,7 @@ onMounted(async () => {
         observeCurrentPage()
         
         // 从路由参数获取初始筛选值
-        const route = useRoute()
-        if (route.query.shoeSex) {
+        if (route.query && route.query.shoeSex) {
             const shoeSex = parseInt(route.query.shoeSex)
             if (!isNaN(shoeSex) && shoeSex >= 1 && shoeSex <= 4) {
                 selectedSexes.value = [shoeSex]

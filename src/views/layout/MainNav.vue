@@ -558,12 +558,6 @@ export default {
 
 				if (allShoes && allShoes.length) {
 					let products = allShoes;
-				const response = await axios.post('/shoe/getAll', {}, {
-					headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-				});
-
-				if (response.data && response.data.data) {
-					let products = response.data.data;
 
 					// 根据当前组类型筛选产品
 					if (currentGroup.value.key === 'brands') {
@@ -592,7 +586,6 @@ export default {
 
 							try {
 								const imageResponse = await axios.get(`/api/shoeImg/list/${product.shoeId}`, { timeout: 5000 });
-								const imageResponse = await axios.get(`/shoeImg/list/${product.shoeId}`);
 								if (imageResponse.data && imageResponse.data.data) {
 									product.images = imageResponse.data.data;
 									// 存入缓存
@@ -652,12 +645,6 @@ export default {
 
 				if (allShoes && allShoes.length) {
 					let products = allShoes;
-				const response = await axios.post('/shoe/getAll', {}, {
-					headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-				});
-
-				if (response.data && response.data.data) {
-					let products = response.data.data;
 
 					// 根据分类筛选产品
 					if (currentGroup.value.key === 'brands') {
@@ -716,7 +703,6 @@ export default {
 
 							try {
 								const imageResponse = await axios.get(`/api/shoeImg/list/${product.shoeId}`, { timeout: 5000 });
-								const imageResponse = await axios.get(`/shoeImg/list/${product.shoeId}`);
 								if (imageResponse.data && imageResponse.data.data) {
 									product.images = imageResponse.data.data;
 									// 存入产品图片缓存

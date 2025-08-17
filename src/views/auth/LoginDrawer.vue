@@ -212,7 +212,7 @@ export default {
 				params.append('username', loginForm.value.username);
 				params.append('password', loginForm.value.password);
 				
-				const response = await axios.post('http://localhost:8081/usersLogin/userLogin', params, {
+				const response = await axios.post('/api/usersLogin/userLogin', params, {
 					headers: {
 						'Content-Type': 'application/x-www-form-urlencoded'
 					}
@@ -260,7 +260,7 @@ export default {
 				params.append('gender', registerForm.value.gender);
 				params.append('password', registerForm.value.password);
 				
-				const response = await axios.post('http://localhost:8081/usersLogin/userRegister', params, {
+				const response = await axios.post('/api/usersLogin/userRegister', params, {
 					headers: {
 						'Content-Type': 'application/x-www-form-urlencoded'
 					}
