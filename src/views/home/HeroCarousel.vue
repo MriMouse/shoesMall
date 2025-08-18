@@ -90,7 +90,7 @@ export default {
 			timer = setInterval(() => {
 				if (!slides.value.length) return;
 				activeIndex.value = (activeIndex.value + 1) % slides.value.length;
-			}, 4000);
+			}, 2500);
 		}
 
 		function stop() {
