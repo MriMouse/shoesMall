@@ -1605,12 +1605,13 @@ export default {
 	transform: none;
 }
 
+
 .mega-menu {
-	position: fixed;
-	top: 120px;
-	/* 使用fixed定位，确保不受父容器限制 */
-	left: 0;
-	right: 0;
+	position: absolute;
+	top: 100%;
+	/* 使下拉菜单始终紧贴白色导航栏底部 */
+	left: 50%;
+	/* 居中并保持全屏宽度 */
 	width: 100vw;
 	height: auto;
 	background: #fff;
@@ -1625,7 +1626,7 @@ export default {
 	z-index: 999;
 	box-sizing: border-box;
 	/* 添加硬件加速 */
-	transform: translateZ(0);
+	transform: translateX(-50%) translateZ(0);
 	will-change: opacity, transform;
 	/* 添加过渡效果 */
 	transition: opacity 0.2s ease, transform 0.2s ease;
@@ -1642,10 +1643,6 @@ export default {
 	padding-right: 32px;
 	/* 强制占满整个视口宽度 */
 	max-width: 100vw;
-	/* 确保从屏幕最左边开始 */
-	left: 0;
-	/* 确保到屏幕最右边结束 */
-	right: 0;
 }
 
 @keyframes fadeIn {
@@ -2356,7 +2353,7 @@ export default {
 	}
 
 	.mega-menu {
-		top: 106px;
+		top: 100%;
 		height: auto;
 		padding: 16px 16px 16px 16px;
 		grid-template-columns: 1fr;
@@ -2364,8 +2361,6 @@ export default {
 		overflow-x: visible;
 		overflow-y: visible;
 		width: 100vw;
-		left: 0;
-		right: 0;
 		/* 强制占满整个视口宽度 */
 		max-width: 100vw;
 		/* 确保左右边距足够 */
@@ -2484,15 +2479,13 @@ export default {
 	}
 
 	.mega-menu {
-		top: 92px;
+		top: 100%;
 		height: auto;
 		padding: 12px 12px 12px 12px;
 		/* 确保在中等屏幕上完全显示 */
 		overflow-x: visible;
 		overflow-y: visible;
 		width: 100vw;
-		left: 0;
-		right: 0;
 		grid-template-columns: 1fr;
 		/* 强制占满整个视口宽度 */
 		max-width: 100vw;
@@ -2579,8 +2572,6 @@ export default {
 		overflow-x: visible;
 		overflow-y: visible;
 		width: 100vw;
-		left: 0;
-		right: 0;
 		padding: 8px 8px 8px 8px;
 		grid-template-columns: 1fr;
 		/* 强制占满整个视口宽度 */
@@ -2590,7 +2581,7 @@ export default {
 		padding-right: 8px;
 		/* 确保从屏幕最左边开始 */
 		margin: 0;
-		top: 88px;
+		top: 100%;
 		height: auto;
 	}
 
