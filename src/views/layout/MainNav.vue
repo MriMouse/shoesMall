@@ -97,6 +97,31 @@
 								<div class="search-tips-content">
 									<p>• 输入关键词即可</p>
 								</div>
+								
+								<!-- 搜索历史 -->
+								<div v-if="isLoggedIn && searchHistory.length > 0" class="search-history-section">
+									<div class="search-history-header">
+										<h4 class="search-history-title">搜索历史</h4>
+										<button class="clear-history-btn" @click="clearAllSearchHistory" title="清空所有历史">🗑️</button>
+									</div>
+									<div class="history-chips">
+										<div v-for="h in searchHistory" :key="`${h.userId ?? h.user_id ?? h.id}-${h.shoeId ?? h.shoe_id}`" class="history-chip" @click="goToProductDetailFromHistory(h.shoeId ?? h.shoe_id)">
+											<span class="chip-text">{{ h.shoe?.name || '商品' }}</span>
+											<button class="chip-close" @click.stop="deleteSearchHistory(h.shoeId ?? h.shoe_id)" title="删除">×</button>
+										</div>
+									</div>
+								</div>
+								
+								<!-- 搜索历史加载状态 -->
+								<div v-else-if="isLoggedIn && searchHistoryLoading" class="search-history-loading">
+									<div class="loading-spinner"></div>
+									<p>加载搜索历史...</p>
+								</div>
+								
+								<!-- 无搜索历史提示 -->
+								<div v-else-if="isLoggedIn && searchHistory.length === 0" class="no-search-history">
+									<p>暂无搜索历史</p>
+								</div>
 							</div>
 							<div v-else class="search-suggestions">
 								<div v-if="searchLoading" class="search-loading">
@@ -106,10 +131,10 @@
 								<div v-else-if="searchResults.length === 0" class="no-results">
 									<p>未找到相关商品</p>
 									<p class="no-results-tip">尝试使用其他关键词搜索</p>
-								</div>
+							</div>
 								<div v-else class="search-results">
 									<div v-for="product in searchResults" :key="product.shoeId" class="search-result-item"
-										@click="goToProductDetail(product.shoeId)">
+										@click="goToProductDetailWithHistory(product.shoeId)">
 										<div class="result-image">
 											<img v-if="product.images && product.images.length > 0"
 												:src="`/api/shoeImg/getImage/${product.images[0].imagePath}`" 
@@ -119,7 +144,7 @@
 												@load="handleSearchImageLoad"
 												@error="handleSearchImageError">
 											<div v-else class="result-placeholder">🖼️</div>
-										</div>
+						</div>
 										<div class="result-info">
 											<div class="result-name">{{ product.name }}</div>
 											<div class="result-meta">
@@ -208,6 +233,7 @@
 import { reactive, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import userManager from '../../utils/userManager';
 
 export default {
 	name: 'MainNav',
@@ -247,7 +273,38 @@ export default {
 		const checkLoginStatus = () => {
 			const user = localStorage.getItem('user');
 			isLoggedIn.value = !!user;
+			// 如果登录状态改变，重新加载搜索历史
+			if (isLoggedIn.value) {
+				loadSearchHistory();
+			} else {
+				searchHistory.value = [];
+			}
 		};
+
+		// 新增：统一获取当前用户ID（兼容本地仅存用户名的情况）
+		async function getCurrentUserId() {
+			try {
+				const raw = localStorage.getItem('user');
+				if (!raw) return null;
+				let parsed = null;
+				try { parsed = JSON.parse(raw); } catch (_) { /* raw 可能是用户名字符串 */ }
+				let userId = null;
+				if (parsed && typeof parsed === 'object') {
+					userId = parsed.id || parsed.userId || null;
+					if (!userId && parsed.username) {
+						userId = await userManager.getUserIdByUsername(parsed.username);
+					}
+				} else {
+					// raw 是用户名
+					userId = await userManager.getUserIdByUsername(raw);
+				}
+
+				return userId || null;
+			} catch (e) {
+				console.warn('解析当前用户ID失败:', e);
+				return null;
+			}
+		}
 		
 		// 监听 localStorage 变化
 		const handleStorageChange = (e) => {
@@ -820,6 +877,10 @@ export default {
 		const searchResults = ref([]);
 		let searchDebounceTimer = null;
 
+		// 新增：搜索历史相关
+		const searchHistory = ref([]);
+		const searchHistoryLoading = ref(false);
+
 		// 新增：防抖搜索函数
 		const debouncedSearch = (query) => {
 			if (searchDebounceTimer) {
@@ -832,6 +893,141 @@ export default {
 					searchResults.value = [];
 				}
 			}, 300); // 300ms 防抖延迟
+		};
+
+		// 新增：记录搜索历史
+		const recordSearchHistory = async (shoeId) => {
+			if (!isLoggedIn.value) return; // 未登录用户不记录
+
+			try {
+				const resolvedUserId = await getCurrentUserId();
+				if (!resolvedUserId) return;
+				const params = new URLSearchParams({ userId: resolvedUserId, shoeId });
+				await axios.post('/api/searchHistory/add', params, {
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+				});
+
+				// 重新加载搜索历史
+				loadSearchHistory();
+			} catch (error) {
+				console.warn('记录搜索历史失败:', error);
+			}
+		};
+
+		// 新增：加载搜索历史
+		const loadSearchHistory = async () => {
+			if (!isLoggedIn.value) {
+				searchHistory.value = [];
+				return;
+			}
+
+			try {
+				searchHistoryLoading.value = true;
+				const resolvedUserId = await getCurrentUserId();
+				if (!resolvedUserId) { searchHistory.value = []; return; }
+
+				const historyParams = new URLSearchParams({ userId: resolvedUserId, limit: 10 });
+				const response = await axios.post('/api/searchHistory/getRecentByUserId', historyParams);
+
+				if (response.data && response.data.data) {
+					// 获取历史记录中的鞋子信息
+					const historyWithShoes = await Promise.all(
+						response.data.data.map(async (raw) => {
+							// 兼容后端字段命名（shoeId/userId 或 shoe_id/id/user_id）
+							const normalized = {
+								userId: raw.userId ?? raw.user_id ?? raw.id ?? null,
+								shoeId: raw.shoeId ?? raw.shoe_id ?? raw.shoeid ?? null,
+								searchOrder: raw.searchOrder ?? raw.search_order ?? raw.search_index ?? null
+							};
+							const { shoeId } = normalized;
+							if (!shoeId) return null;
+							try {
+								const shoeParams = new URLSearchParams({ shoeId });
+								const shoeResponse = await axios.post('/api/shoe/getById', shoeParams);
+
+								if (shoeResponse.data && shoeResponse.data.data) {
+									const shoe = shoeResponse.data.data;
+									// 获取鞋子图片
+									try {
+										const imageResponse = await axios.get(`/api/shoeImg/list/${shoe.shoeId}`);
+										if (imageResponse.data && imageResponse.data.data) {
+											shoe.images = imageResponse.data.data;
+										} else {
+											shoe.images = [];
+										}
+									} catch (error) {
+										shoe.images = [];
+									}
+									return { ...normalized, shoe };
+								}
+							} catch (error) {
+								console.warn(`获取鞋子 ${shoeId} 信息失败:`, error);
+								return null;
+							}
+						})
+					);
+
+					// 过滤掉无效的记录
+					searchHistory.value = historyWithShoes.filter(item => item !== null);
+				} else {
+					searchHistory.value = [];
+				}
+			} catch (error) {
+				console.error('加载搜索历史失败:', error);
+				searchHistory.value = [];
+			} finally {
+				searchHistoryLoading.value = false;
+			}
+		};
+
+
+
+		// 新增：删除搜索历史
+		const deleteSearchHistory = async (shoeId) => {
+			if (!isLoggedIn.value) return;
+
+			// 乐观更新：先从本地移除，失败再回滚
+			const previous = [...searchHistory.value];
+			searchHistory.value = previous.filter(h => (h.shoeId ?? h.shoe_id) !== shoeId);
+
+			try {
+				const resolvedUserId = await getCurrentUserId();
+				if (!resolvedUserId) { searchHistory.value = previous; return; }
+				const delParams = new URLSearchParams({ userId: resolvedUserId, shoeId });
+				const resp = await axios.post('/api/searchHistory/delete', delParams, {
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+				});
+
+				// 如果后端返回失败，则回滚并提示
+				const ok = resp?.data?.code === 200 && (resp.data?.data === true || resp.data?.data === 'true');
+				if (!ok) {
+					console.warn('后端删除失败，回滚本地状态:', resp?.data);
+					searchHistory.value = previous;
+					return;
+				}
+			} catch (error) {
+				console.error('删除搜索历史失败:', error);
+				// 回滚
+				searchHistory.value = previous;
+			}
+		};
+
+		// 新增：清空所有搜索历史
+		const clearAllSearchHistory = async () => {
+			if (!isLoggedIn.value) return;
+
+			try {
+				const resolvedUserId = await getCurrentUserId();
+				if (!resolvedUserId) return;
+				const clearParams = new URLSearchParams({ userId: resolvedUserId });
+				await axios.post('/api/searchHistory/deleteAllByUserId', clearParams, {
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+				});
+
+				searchHistory.value = [];
+			} catch (error) {
+				console.error('清空搜索历史失败:', error);
+			}
 		};
 
 		// 新增：搜索产品函数
@@ -952,6 +1148,8 @@ export default {
 				setTimeout(() => {
 					searchInput.value?.focus();
 				}, 100);
+				// 打开搜索面板时加载搜索历史
+				loadSearchHistory();
 			}
 		}
 
@@ -985,15 +1183,27 @@ export default {
 			closeSearchPanel();
 		}
 
+		// 新增：跳转到产品详情页面并记录搜索历史
+		function goToProductDetailWithHistory(shoeId) {
+			// 记录搜索历史
+			recordSearchHistory(shoeId);
+			// 跳转到产品详情页面
+			router.push(`/product/${shoeId}`);
+			// 关闭搜索面板
+			closeSearchPanel();
+		}
 
-
-
+		// 新增：从搜索历史跳转到产品详情
+		function goToProductDetailFromHistory(shoeId) {
+			// 跳转到产品详情页面
+			router.push(`/product/${shoeId}`);
+			// 关闭搜索面板
+			closeSearchPanel();
+		}
 
 		function hideSuggestions() {
 			setTimeout(() => { isSearchFocused.value = false; }, 100);
 		}
-
-
 
 		// 新增：预加载常用图片
 		async function preloadCommonImages() {
@@ -1012,9 +1222,6 @@ export default {
 				console.warn('预加载常用图片失败:', error);
 			}
 		}
-
-
-
 
 		return {
 			isSticky,
@@ -1058,7 +1265,16 @@ export default {
 			searchResults,
 			searchProducts,
 			handleSearchImageError,
-			handleSearchImageLoad
+			handleSearchImageLoad,
+			// 新增：搜索历史相关
+			searchHistory,
+			searchHistoryLoading,
+			recordSearchHistory,
+			loadSearchHistory,
+			deleteSearchHistory,
+			clearAllSearchHistory,
+			goToProductDetailWithHistory,
+			goToProductDetailFromHistory
 		};
 	}
 };
@@ -1999,6 +2215,179 @@ export default {
 	color: #333;
 }
 
+/* 搜索历史样式 */
+.search-history-section {
+	margin-top: 20px;
+	padding-top: 20px;
+	border-top: 1px solid #eee;
+}
+
+.search-history-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
+}
+
+.search-history-title {
+	font-size: 14px;
+	color: #333;
+	font-weight: 600;
+	margin: 0;
+}
+
+.clear-history-btn {
+	background: transparent;
+	border: none;
+	color: #999;
+	cursor: pointer;
+	padding: 4px;
+	border-radius: 4px;
+	transition: all 0.15s ease;
+	font-size: 14px;
+}
+
+.clear-history-btn:hover {
+	background: #f5f5f5;
+	color: #666;
+}
+
+.search-history-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.search-history-item {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 12px;
+	border: 1px solid #f0f0f0;
+	border-radius: 6px;
+	background: #fafafa;
+	transition: all 0.15s ease;
+}
+
+.search-history-item:hover {
+	background: #f5f5f5;
+	border-color: #e0e0e0;
+}
+
+.history-image {
+	width: 40px;
+	height: 40px;
+	flex-shrink: 0;
+	position: relative;
+	overflow: hidden;
+	border-radius: 4px;
+	background: #f5f5f5;
+}
+
+.history-product-image {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.history-placeholder {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 1rem;
+	color: #999;
+	background: #f0f0f0;
+	border-radius: 4px;
+}
+
+.history-info {
+	flex: 1;
+	min-width: 0;
+}
+
+.history-name {
+	font-size: 13px;
+	font-weight: 500;
+	color: #333;
+	margin-bottom: 4px;
+	line-height: 1.3;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.history-meta {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+.history-brand {
+	font-size: 11px;
+	color: #666;
+	background: rgba(0, 0, 0, 0.05);
+	padding: 2px 6px;
+	border-radius: 10px;
+}
+
+.history-price {
+	font-size: 12px;
+	font-weight: 600;
+	color: #e74c3c;
+}
+
+.history-actions {
+	display: flex;
+	gap: 4px;
+	flex-shrink: 0;
+}
+
+.history-view-btn,
+.history-delete-btn {
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	padding: 4px;
+	border-radius: 4px;
+	transition: all 0.15s ease;
+	font-size: 12px;
+}
+
+.history-view-btn:hover {
+	background: rgba(0, 123, 255, 0.1);
+	color: #007bff;
+}
+
+.history-delete-btn:hover {
+	background: rgba(220, 53, 69, 0.1);
+	color: #dc3545;
+}
+
+.search-history-loading {
+	text-align: center;
+	padding: 20px;
+	color: #666;
+}
+
+.search-history-loading .loading-spinner {
+	width: 20px;
+	height: 20px;
+	border: 2px solid #f3f3f3;
+	border-top: 2px solid #c6ff00;
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+	margin: 0 auto 8px;
+}
+
+.no-search-history {
+	text-align: center;
+	padding: 20px;
+	color: #999;
+	font-size: 13px;
+}
+
 .search-overlay {
 	position: fixed;
 	inset: 0;
@@ -2502,5 +2891,53 @@ export default {
 	}
 }
 
+/* Chip 风格的搜索历史 */
+.history-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.history-chip {
+	background: #f2f2f2;
+	border: 1px solid #e5e5e5;
+	border-radius: 8px;
+	padding: 8px 12px;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.history-chip:hover {
+	background: #ebebeb;
+	border-color: #dcdcdc;
+}
+
+.chip-text {
+	font-size: 13px;
+	color: #333;
+	max-width: 220px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.chip-close {
+	border: none;
+	background: transparent;
+	color: #999;
+	cursor: pointer;
+	font-size: 14px;
+	line-height: 1;
+	padding: 0 2px;
+	border-radius: 4px;
+}
+
+.chip-close:hover {
+	background: rgba(0,0,0,0.05);
+	color: #666;
+}
 
 </style>
