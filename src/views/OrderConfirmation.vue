@@ -170,7 +170,10 @@
 
             <!-- 收货地址 -->
             <div class="address-section">
-                <h2 class="section-title">收货地址</h2>
+                <div class="section-header-row">
+                    <h2 class="section-title">收货地址</h2>
+                    <button @click="showAddAddressForm" class="change-address-btn">添加地址</button>
+                </div>
                 <div class="address-content">
                     <div v-if="selectedAddress" class="selected-address">
                         <div class="address-info">
@@ -180,11 +183,36 @@
                             <p v-if="selectedAddress.postalCode">邮编: {{ selectedAddress.postalCode }}</p>
                             <span v-if="selectedAddress.isDefault" class="default-badge">默认地址</span>
                         </div>
-                        <button @click="changeAddress" class="change-address-btn">更换地址</button>
                     </div>
                     <div v-else class="no-address">
                         <p>请选择收货地址</p>
-                        <button @click="selectAddress" class="select-address-btn">选择地址</button>
+                        <button @click="showAddAddressForm" class="select-address-btn">添加地址</button>
+                    </div>
+
+                    <!-- 我的地址（完整卡片列表，点击选择） -->
+                    <div v-if="addresses.length > 0" class="address-inline">
+                        <div class="address-choices-header">我的地址</div>
+                        <div class="address-inline-list">
+                            <div
+                                v-for="addr in addresses"
+                                :key="addr.addressId"
+                                class="address-item address-item-inline"
+                                :class="{ 'selected': selectedAddress?.addressId === addr.addressId }"
+                                @click="selectAddressItem(addr)"
+                                title="点击选择此地址"
+                            >
+                                <button class="inline-edit-btn" @click.stop="editAddressItem(addr)">编辑</button>
+                                <div class="address-details">
+                                    <div class="address-header">
+                                        <h4>{{ addr.receiverName }}</h4>
+                                        <span v-if="addr.isDefault" class="default-badge">默认</span>
+                                    </div>
+                                    <p>{{ addr.phone }}</p>
+                                    <p>{{ addr.addressInfo }}</p>
+                                    <p v-if="addr.postalCode">邮编: {{ addr.postalCode }}</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -522,6 +550,7 @@ const availableSizes = ref([])
 
 // 数据持久化相关
 const STORAGE_KEY = 'orderConfirmationData'
+const LAST_ADDRESS_KEY = 'orderLastSelectedAddressId'
 
 // 计算属性
 const totalItems = computed(() => {
@@ -792,10 +821,21 @@ const loadAddresses = async () => {
             addresses.value = response.data.data
             console.log('成功加载地址列表:', addresses.value.length, '个地址')
             
-            // 默认选择第一个地址或默认地址
+            // 默认采用上次选择的地址 -> 否则默认地址 -> 否则第一个
             if (addresses.value.length > 0) {
-                const defaultAddress = addresses.value.find(addr => addr.isDefault)
-                selectedAddress.value = defaultAddress || addresses.value[0]
+                let chosen = null
+                try {
+                    const lastId = localStorage.getItem(LAST_ADDRESS_KEY)
+                    if (lastId) {
+                        chosen = addresses.value.find(a => String(a.addressId) === String(lastId)) || null
+                    }
+                } catch (e) {
+                    console.warn('读取最近选择地址失败', e)
+                }
+                if (!chosen) {
+                    chosen = addresses.value.find(addr => addr.isDefault) || addresses.value[0]
+                }
+                selectedAddress.value = chosen
                 console.log('已选择地址:', selectedAddress.value)
             } else {
                 console.log('用户没有保存的地址')
@@ -890,14 +930,7 @@ const removeProduct = (product) => {
     }
 }
 
-// 地址相关操作
-const changeAddress = () => {
-    showAddressModal.value = true
-}
-
-const selectAddress = () => {
-    showAddressModal.value = true
-}
+// 地址相关操作（保留选择/关闭表单与模态）
 
 const closeAddressModal = () => {
     showAddressModal.value = false
@@ -905,6 +938,14 @@ const closeAddressModal = () => {
 
 const selectAddressItem = (address) => {
     selectedAddress.value = address
+    // 持久化最后一次选择
+    try {
+        if (address?.addressId) {
+            localStorage.setItem(LAST_ADDRESS_KEY, String(address.addressId))
+        }
+    } catch (e) {
+        console.warn('保存最近选择地址失败', e)
+    }
     showAddressModal.value = false
 }
 
@@ -1816,16 +1857,39 @@ onUnmounted(() => {
     max-width: 1200px;
     margin: 0 auto;
     padding: 24px;
-    background: #f8f9fa;
     min-height: 100vh;
+    font-family: 'Helvetica Neue', Arial, 'Microsoft YaHei', sans-serif;
+    color: #111;
+    line-height: 1.6;
+    --accent-color: #C6FF00;
+    --accent-hover: #B8FF2E;
+    --bg-start: #f5f7fa;
+    --bg-end: #eef1f6;
+    --card-bg: rgba(255, 255, 255, 0.9);
+    --border-color: rgba(17, 17, 17, 0.08);
+    --ring: rgba(17, 17, 17, 0.12);
+    --shadow-color: rgba(16, 24, 40, 0.08);
+    --primary: #111;
+    --primary-600: #0e0e0e;
+    --primary-700: #000;
+    --success: #28a745;
+    --danger: #e74c3c;
+    --muted: #6c757d;
+    --summary-offset: clamp(280px, 34vh, 420px);
+    background:
+        radial-gradient(1200px 600px at 100% -200px, rgba(198,255,0,0.12), transparent 60%),
+        radial-gradient(800px 400px at -100px 100%, rgba(0,0,0,0.06), transparent 60%),
+        linear-gradient(180deg, var(--bg-start), var(--bg-end));
 }
 
 .page-header {
-    background: white;
+    background: var(--card-bg);
     padding: 24px;
     border-radius: 12px;
     margin-bottom: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 8px 24px var(--shadow-color);
+    backdrop-filter: saturate(140%) blur(6px);
 }
 
 .breadcrumb {
@@ -1837,8 +1901,9 @@ onUnmounted(() => {
 }
 
 .breadcrumb-item {
-    color: #007bff;
+    color: #111;
     text-decoration: none;
+    font-weight: 500;
 }
 
 .breadcrumb-item:hover {
@@ -1879,7 +1944,7 @@ onUnmounted(() => {
     width: 40px;
     height: 40px;
     border: 4px solid #f3f3f3;
-    border-top: 4px solid #007bff;
+    border-top: 4px solid #111;
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto 16px;
@@ -1896,7 +1961,7 @@ onUnmounted(() => {
 }
 
 .retry-btn {
-    background: #007bff;
+    background: #000;
     color: white;
     border: none;
     padding: 12px 24px;
@@ -1907,7 +1972,7 @@ onUnmounted(() => {
 }
 
 .retry-btn:hover {
-    background: #0056b3;
+    background: #111;
 }
 
 .order-content {
@@ -1917,37 +1982,61 @@ onUnmounted(() => {
 }
 
 .products-section, .order-summary-section, .address-section {
-    background: white;
-    border-radius: 12px;
+    background: var(--card-bg);
+    border-radius: 16px;
     padding: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 8px 24px var(--shadow-color);
+    backdrop-filter: saturate(140%) blur(6px);
 }
 
 .section-title {
     margin: 0 0 20px 0;
     font-size: 1.5rem;
     color: #333;
-    border-bottom: 2px solid #e9ecef;
     padding-bottom: 12px;
+    position: relative;
+}
+
+.section-title:after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 72px;
+    height: 2px;
+    background: linear-gradient(90deg, #111, rgba(17,17,17,0.2));
+}
+
+.section-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
 }
 
 .products-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: 20px;
+    align-items: stretch;
 }
 
 .product-card {
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
     overflow: hidden;
-    transition: all 0.3s ease;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
     position: relative;
+    background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.82));
+    box-shadow: 0 8px 24px var(--shadow-color);
+    backdrop-filter: blur(4px);
 }
 
 .product-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 16px 36px rgba(17, 17, 17, 0.12);
     transform: translateY(-2px);
+    border-color: rgba(17,17,17,0.16);
 }
 
 /* 删除商品按钮样式 */
@@ -1957,17 +2046,17 @@ onUnmounted(() => {
     right: 8px;
     width: 28px;
     height: 28px;
-    border: none;
+    border: 1px solid #111;
     border-radius: 50%;
-    background: rgba(220, 53, 69, 0.9);
-    color: white;
+    background: rgba(0, 0, 0, 0.9);
+    color: #fff;
     font-size: 14px;
     font-weight: bold;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s ease;
+    transition: transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease;
     z-index: 10;
     opacity: 0;
     transform: scale(0.8);
@@ -1979,7 +2068,7 @@ onUnmounted(() => {
 }
 
 .remove-product-btn:hover {
-    background: #dc3545;
+    background: #000;
     transform: scale(1.1);
 }
 
@@ -2043,9 +2132,11 @@ onUnmounted(() => {
     padding: 4px 8px;
     border-radius: 12px;
     font-size: 0.7rem;
-    font-weight: 500;
-    background: rgba(0, 123, 255, 0.1);
-    color: #007bff;
+    font-weight: 600;
+    background: linear-gradient(135deg, #111 0%, #333 100%);
+    color: #fff;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
 }
 
 .price-section {
@@ -2057,14 +2148,14 @@ onUnmounted(() => {
 
 .current-price {
     font-size: 1.2rem;
-    font-weight: 600;
-    color: #e74c3c;
+    font-weight: 700;
+    color: #111;
 }
 
 .discount-price {
     font-size: 1rem;
     font-weight: 600;
-    color: #6c757d;
+    color: #9aa0a6;
     text-decoration: line-through;
 }
 
@@ -2107,19 +2198,20 @@ onUnmounted(() => {
     background: white;
     color: #495057;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: border-color 0.2s ease, color 0.2s ease, transform 0.1s ease, background-color 0.2s ease, box-shadow 0.2s ease;
     font-size: 0.9rem;
 }
 
 .size-option:hover {
-    border-color: #007bff;
-    color: #007bff;
+    border-color: #111;
+    color: #111;
 }
 
 .size-option.active {
-    background: #007bff;
+    background: #000;
     color: white;
-    border-color: #007bff;
+    border-color: #000;
+    box-shadow: 0 0 0 6px rgba(17,17,17,0.06) inset, 0 6px 18px rgba(0,0,0,0.12);
 }
 
 .quantity-controls {
@@ -2142,7 +2234,7 @@ onUnmounted(() => {
 
 .quantity-btn:hover:not(:disabled) {
     background: #f8f9fa;
-    border-color: #007bff;
+    border-color: #111;
 }
 
 .quantity-btn:disabled {
@@ -2187,7 +2279,7 @@ onUnmounted(() => {
     font-size: 1.2rem;
     font-weight: 600;
     color: #333;
-    border-top: 2px solid #007bff;
+    border-top: 2px solid #111;
     padding-top: 16px;
 }
 
@@ -2201,13 +2293,13 @@ onUnmounted(() => {
 }
 
 .value.price {
-    color: #e74c3c;
-    font-weight: 600;
+    color: #111;
+    font-weight: 700;
 }
 
 .value.points {
-    color: #17a2b8;
-    font-weight: 600;
+    color: var(--accent-color);
+    font-weight: 700;
 }
 
 .address-content {
@@ -2216,14 +2308,108 @@ onUnmounted(() => {
     gap: 16px;
 }
 
+/* 快速地址选择 chips */
+.address-choices {
+    margin-top: 8px;
+}
+
+.address-choices-header {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-bottom: 8px;
+}
+
+.address-choices-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.address-chip {
+    border: 1px solid var(--border-color);
+    background: #fff;
+    color: #333;
+    border-radius: 999px;
+    padding: 6px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+.address-chip:hover {
+    border-color: #111;
+    transform: translateY(-1px);
+}
+
+.address-chip.selected {
+    background: #000;
+    color: #fff;
+    border-color: #000;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+}
+
+.address-chip .chip-name {
+    font-weight: 600;
+}
+
+.address-chip .chip-phone {
+    opacity: 0.8;
+    font-size: 0.85em;
+}
+
+/* 横向地址卡片列表样式 */
+.address-inline { margin-top: 8px; }
+.address-inline-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+@media (min-width: 768px) {
+    .address-inline-list { grid-template-columns: 1fr; }
+}
+
+.address-item-inline {
+    cursor: pointer;
+}
+
+.address-item-inline.selected {
+    border-color: #111;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.1);
+}
+
+.inline-edit-btn {
+    position: absolute;
+    right: 12px;
+    top: 12px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #000;
+    background: #000;
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.inline-edit-btn:hover {
+    background: #111;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+}
+
 .selected-address {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     padding: 16px;
-    border: 2px solid #28a745;
-    border-radius: 8px;
-    background: rgba(40, 167, 69, 0.05);
+    border: 2px solid #111;
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.88));
+    box-shadow: 0 6px 18px var(--shadow-color);
+    position: relative;
 }
 
 .address-info h4 {
@@ -2237,8 +2423,8 @@ onUnmounted(() => {
 }
 
 .default-badge {
-    background: #28a745;
-    color: white;
+    background: var(--accent-color);
+    color: #111;
     padding: 2px 8px;
     border-radius: 12px;
     font-size: 0.7rem;
@@ -2246,7 +2432,7 @@ onUnmounted(() => {
 }
 
 .change-address-btn {
-    background: #28a745;
+    background: #000;
     color: white;
     border: none;
     padding: 8px 16px;
@@ -2256,7 +2442,7 @@ onUnmounted(() => {
 }
 
 .change-address-btn:hover {
-    background: #218838;
+    background: #111;
 }
 
 .no-address {
@@ -2266,7 +2452,7 @@ onUnmounted(() => {
 }
 
 .select-address-btn {
-    background: #007bff;
+    background: #000;
     color: white;
     border: none;
     padding: 12px 24px;
@@ -2277,7 +2463,7 @@ onUnmounted(() => {
 }
 
 .select-address-btn:hover {
-    background: #0056b3;
+    background: #111;
 }
 
 .action-buttons {
@@ -2285,38 +2471,44 @@ onUnmounted(() => {
     justify-content: space-between;
     gap: 16px;
     padding: 24px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 8px 24px var(--shadow-color);
+    backdrop-filter: saturate(140%) blur(6px);
 }
 
 .back-btn, .submit-order-btn {
     padding: 14px 28px;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
 }
 
 .back-btn {
-    background: #6c757d;
-    color: white;
+    background: #fff;
+    color: #111;
+    border: 1px solid #111;
 }
 
 .back-btn:hover {
-    background: #5a6268;
+    background: #f1f3f5;
+    transform: translateY(-1px);
 }
 
 .submit-order-btn {
-    background: #28a745;
+    background: linear-gradient(135deg, #111 0%, #2b2b2b 50%, #000 100%);
     color: white;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
 }
 
 .submit-order-btn:hover:not(:disabled) {
-    background: #218838;
+    background: linear-gradient(135deg, #000 0%, #111 50%, #000 100%);
     transform: translateY(-2px);
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35);
 }
 
 .submit-order-btn:disabled {
@@ -2337,15 +2529,19 @@ onUnmounted(() => {
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    backdrop-filter: blur(4px) saturate(120%);
 }
 
 .modal-content {
-    background: white;
-    border-radius: 12px;
+    background: var(--card-bg);
+    border-radius: 16px;
     width: 90%;
     max-width: 600px;
     max-height: 80vh;
     overflow-y: auto;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+    animation: scaleIn 0.22s ease;
 }
 
 .address-form-modal {
@@ -2362,7 +2558,7 @@ onUnmounted(() => {
 
 .modal-header h3 {
     margin: 0;
-    color: #333;
+    color: #111;
 }
 
 .close-btn {
@@ -2387,17 +2583,20 @@ onUnmounted(() => {
 }
 
 .add-address-btn {
-    background: #007bff;
+    background: #000;
     color: white;
     border: none;
     padding: 10px 20px;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 0.9rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .add-address-btn:hover {
-    background: #0056b3;
+    background: #111;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
 }
 
 .no-addresses {
@@ -2413,21 +2612,24 @@ onUnmounted(() => {
 }
 
 .address-item {
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
     padding: 16px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    background: rgba(255,255,255,0.9);
+    position: relative;
 }
 
 .address-item:hover {
-    border-color: #007bff;
-    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+    border-color: #111;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
 }
 
 .address-item.selected {
-    border-color: #28a745;
-    background: rgba(40, 167, 69, 0.05);
+    border-color: #111;
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.9));
 }
 
 .address-header {
@@ -2459,6 +2661,7 @@ onUnmounted(() => {
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.8rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 
 .edit-btn {
@@ -2477,6 +2680,8 @@ onUnmounted(() => {
 
 .delete-btn:hover {
     background: #c82333;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(200, 35, 51, 0.35);
 }
 
 .set-default-btn {
@@ -2486,6 +2691,8 @@ onUnmounted(() => {
 
 .set-default-btn:hover {
     background: #138496;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(23, 162, 184, 0.35);
 }
 
 /* 地址表单样式 */
@@ -2517,7 +2724,8 @@ onUnmounted(() => {
 
 .form-input:focus, .form-textarea:focus {
     outline: none;
-    border-color: #007bff;
+    border-color: #111;
+    box-shadow: 0 0 0 4px rgba(17,17,17,0.08);
 }
 
 .form-textarea {
@@ -2637,11 +2845,11 @@ onUnmounted(() => {
  }
 
  .payment-header {
-     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+     background: linear-gradient(135deg, #000 0%, #1a1a1a 50%, #000 100%);
      color: white;
      border-radius: 12px 12px 0 0;
  }
-
+ 
  .payment-header h3 {
      color: white;
      margin: 0;
@@ -2659,7 +2867,7 @@ onUnmounted(() => {
  }
 
  .countdown-value {
-     background: rgba(255, 255, 255, 0.2);
+     background: rgba(255, 255, 255, 0.15);
      padding: 4px 8px;
      border-radius: 12px;
      font-weight: 600;
@@ -2702,9 +2910,10 @@ onUnmounted(() => {
      align-items: center;
      gap: 16px;
      padding: 16px;
-     border: 1px solid #e9ecef;
-     border-radius: 8px;
-     background: #f8f9fa;
+     border: 1px solid var(--border-color);
+     border-radius: 12px;
+     background: linear-gradient(180deg, rgba(248,249,250,0.9), rgba(248,249,250,0.8));
+     box-shadow: 0 6px 18px var(--shadow-color);
  }
 
  .item-image {
@@ -2750,9 +2959,9 @@ onUnmounted(() => {
  }
 
  .item-details .item-points {
-     color: #17a2b8;
+     color: var(--accent-color);
      font-size: 0.8rem;
-     background: rgba(23, 162, 184, 0.1);
+     background: rgba(198, 255, 0, 0.15);
      padding: 2px 6px;
      border-radius: 4px;
      display: inline-block;
@@ -2761,16 +2970,17 @@ onUnmounted(() => {
 
  .item-total {
      font-weight: 600;
-     color: #e74c3c;
+     color: var(--danger);
      font-size: 1.1rem;
      flex-shrink: 0;
  }
 
  .payment-total {
-     background: #f8f9fa;
+     background: linear-gradient(180deg, rgba(248,249,250,0.95), rgba(248,249,250,0.85));
      padding: 16px;
      border-radius: 8px;
-     border: 1px solid #e9ecef;
+     border: 1px solid var(--border-color);
+     box-shadow: 0 6px 18px var(--shadow-color);
  }
 
  .total-row {
@@ -2787,9 +2997,9 @@ onUnmounted(() => {
 
  .total-row.final-total {
      font-size: 1.2rem;
-     font-weight: 600;
-     color: #e74c3c;
-     border-top: 2px solid #e74c3c;
+     font-weight: 700;
+     color: #111;
+     border-top: 2px solid #111;
      padding-top: 12px;
      margin-top: 8px;
  }
@@ -2820,8 +3030,15 @@ onUnmounted(() => {
      gap: 16px;
      padding: 20px 24px;
      border-top: 1px solid #e9ecef;
-     background: #f8f9fa;
+     background: linear-gradient(180deg, rgba(248,249,250,0.96), rgba(248,249,250,0.88));
      border-radius: 0 0 12px 12px;
+ }
+
+ /* 订单详情弹窗：订单信息更清晰（纯黑色） */
+ .order-meta p,
+ .order-meta strong,
+ .order-meta span {
+     color: #000;
  }
 
  .cancel-payment-btn,
@@ -2832,28 +3049,34 @@ onUnmounted(() => {
      font-size: 1rem;
      font-weight: 600;
      cursor: pointer;
-     transition: all 0.3s ease;
+     transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
  }
 
  .cancel-payment-btn {
-     background: #6c757d;
-     color: white;
+     background: #fff;
+     color: #111;
+     border: 1px solid #111;
  }
-
+ 
  .cancel-payment-btn:hover {
-     background: #5a6268;
+     background: #f1f3f5;
+     transform: translateY(-1px);
+     box-shadow: 0 8px 18px rgba(0,0,0,0.1);
  }
 
  .confirm-payment-btn {
-     background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+     background: linear-gradient(135deg, #111 0%, #2b2b2b 50%, #000 100%);
      color: white;
      flex: 1;
      margin-left: 16px;
+     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
  }
 
  .confirm-payment-btn:hover:not(:disabled) {
-     background: linear-gradient(135deg, #218838 0%, #1ea085 100%);
+     background: linear-gradient(135deg, #000 0%, #111 50%, #000 100%);
+     color: #fff;
      transform: translateY(-2px);
+     box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35);
  }
 
  .confirm-payment-btn:disabled {
@@ -2898,21 +3121,30 @@ onUnmounted(() => {
 
  /* 添加商品卡片样式 */
  .add-product-card {
-     border: 2px dashed #dee2e6;
-     border-radius: 8px;
-     background: #f8f9fa;
+     border: 2px dashed #cfd4da;
+     border-radius: 12px;
+     background: linear-gradient(180deg, rgba(248,249,250,0.9), rgba(248,249,250,0.8));
      cursor: pointer;
      transition: all 0.3s ease;
      display: flex;
      align-items: center;
      justify-content: center;
      min-height: 200px;
+     height: 100%;
+ }
+
+ /* 在中等及以上屏幕固定为竖版高卡片，即使换行也保持竖向比例 */
+ @media (min-width: 768px) {
+     .add-product-card {
+         min-height: 420px;
+     }
  }
 
  .add-product-card:hover {
-     border-color: #007bff;
-     background: rgba(0, 123, 255, 0.05);
+     border-color: #111;
+     background: rgba(198, 255, 0, 0.07);
      transform: translateY(-2px);
+     box-shadow: 0 10px 24px rgba(0,0,0,0.08);
  }
 
  .add-product-content {
@@ -2922,9 +3154,11 @@ onUnmounted(() => {
 
  .add-icon {
      font-size: 3rem;
-     color: #007bff;
+     color: #111;
      margin-bottom: 12px;
      font-weight: bold;
+     display: inline-block;
+     transform: rotate(90deg);
  }
 
  .add-text {
@@ -2935,11 +3169,54 @@ onUnmounted(() => {
  }
 
  .add-product-card:hover .add-icon {
-     color: #0056b3;
+     color: var(--accent-color);
  }
 
  .add-product-card:hover .add-text {
-     color: #495057;
+     color: #111;
  }
+
+/* Large screen layout improvements */
+@media (min-width: 1024px) {
+    .order-content {
+        display: grid;
+        grid-template-columns: 1.6fr 1fr;
+        grid-auto-rows: min-content;
+        grid-column-gap: 24px;
+        grid-row-gap: 14px;
+        grid-template-areas:
+            'products summary'
+            'products address'
+            'actions actions';
+    }
+
+    .products-section { grid-area: products; }
+    .order-summary-section { 
+        grid-area: summary; 
+        position: sticky; 
+        top: 24px; 
+        align-self: start;
+    }
+    .address-section { 
+        grid-area: address; 
+        position: sticky; 
+        top: calc(24px + var(--summary-offset) + 10px); 
+        align-self: start;
+    }
+    .action-buttons { grid-area: actions; }
+}
+
+/* Micro animations */
+@keyframes scaleIn {
+    0% { opacity: 0; transform: translateY(6px) scale(0.98); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Ensure the add-product card sits to the right on medium+ screens */
+@media (min-width: 768px) {
+    .products-grid {
+        grid-template-columns: repeat(2, minmax(300px, 1fr));
+    }
+}
  </style>
 
