@@ -67,6 +67,9 @@
                             <div class="item-size">
                                 <span>尺码：{{ item.size }}</span>
                             </div>
+                            <div class="item-points" v-if="item.points">
+                                <span class="points">积分：{{ item.points }} 分</span>
+                            </div>
                         </div>
                         
                         <div class="item-price">
@@ -112,6 +115,10 @@
                         <div class="totals-line savings" v-if="totals.original > totals.discounted">
                             <span>优惠</span>
                             <span>-¥{{ (totals.original - totals.discounted).toFixed(2) }}</span>
+                        </div>
+                        <div class="totals-line points">
+                            <span>可获得积分</span>
+                            <span class="points-amount">{{ totals.points }} 分</span>
                         </div>
                         <div class="totals-line total">
                             <span>应付总额</span>
@@ -636,7 +643,8 @@ export default {
                         shoeName: item.shoeName,
                         brandName: item.brandName,
                         typeName: item.typeName,
-                        size: item.size
+                        size: item.size,
+                        points: item.points || 0
                     })))
                 }
             })
@@ -666,7 +674,8 @@ export default {
                             shoeName: item.shoeName,
                             brandName: item.brandName,
                             typeName: item.typeName,
-                            size: item.size
+                            size: item.size,
+                            points: item.points || 0
                         }])
                     }
                 })
@@ -889,6 +898,15 @@ export default {
     color: #e74c3c;
 }
 
+.totals-line.points {
+    color: #17a2b8;
+}
+
+.totals .points-amount {
+    color: #17a2b8;
+    font-weight: 600;
+}
+
 .footer-actions {
     display: flex;
     align-items: center;
@@ -970,6 +988,18 @@ export default {
 .item-size {
     font-size: 0.9rem;
     color: #495057;
+}
+
+.item-points {
+    margin-top: 4px;
+}
+
+.item-points .points {
+    font-size: 0.8rem;
+    color: #17a2b8;
+    background: rgba(23, 162, 184, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
 }
 
 .item-price {

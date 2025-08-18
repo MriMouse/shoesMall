@@ -157,6 +157,10 @@
                         <span class="label">运费:</span>
                         <span class="value">¥{{ shippingFee.toFixed(2) }}</span>
                     </div>
+                    <div class="summary-item">
+                        <span class="label">可获得积分:</span>
+                        <span class="value points">{{ totalPoints }} 分</span>
+                    </div>
                     <div class="summary-item total">
                         <span class="label">订单总额:</span>
                         <span class="value price">¥{{ orderTotal.toFixed(2) }}</span>
@@ -353,6 +357,7 @@
                                  <p class="item-size">尺码: {{ getSizeName(product.selectedSize) }}</p>
                                  <p class="item-quantity">数量: {{ product.quantity || 1 }} 件</p>
                                  <p class="item-price">单价: ¥{{ getProductPrice(product) }}</p>
+                                 <p class="item-points" v-if="product.points">积分: {{ product.points }} 分</p>
                              </div>
                              <div class="item-total">
                                  ¥{{ (getProductPrice(product) * (product.quantity || 1)).toFixed(2) }}
@@ -368,6 +373,10 @@
                          <div class="total-row">
                              <span>运费:</span>
                              <span>¥{{ shippingFee.toFixed(2) }}</span>
+                         </div>
+                         <div class="total-row">
+                             <span>可获得积分:</span>
+                             <span>{{ totalPoints }} 分</span>
                          </div>
                          <div class="total-row final-total">
                              <span>支付总额:</span>
@@ -431,6 +440,7 @@
                                   <p>尺码: {{ item.sizeName }}</p>
                                   <p>数量: {{ item.quantity }}</p>
                                   <p>单价: ¥{{ item.unitPrice }}</p>
+                                  <p class="item-points" v-if="item.points">积分: {{ item.points }} 分</p>
                               </div>
                               <div class="item-total">¥{{ item.subtotal.toFixed(2) }}</div>
                           </div>
@@ -444,6 +454,10 @@
                       <div class="total-row">
                           <span>运费:</span>
                           <span>¥{{ orderDetails.shippingFee.toFixed(2) }}</span>
+                      </div>
+                      <div class="total-row">
+                          <span>可获得积分:</span>
+                          <span>{{ orderDetails.totalPoints || 0 }} 分</span>
                       </div>
                       <div class="total-row final-total">
                           <span>订单总额:</span>
@@ -536,6 +550,14 @@ const orderTotal = computed(() => {
     return totalPrice.value + shippingFee.value
 })
 
+const totalPoints = computed(() => {
+    return products.value.reduce((sum, product) => {
+        const quantity = product.quantity || 1
+        const points = product.points || 0
+        return sum + (points * quantity)
+    }, 0)
+})
+
 const canSubmitOrder = computed(() => {
     return selectedAddress.value && 
            products.value.length > 0 && 
@@ -573,6 +595,7 @@ const loadOrderData = async () => {
                      discountPrice: it.discountPrice || it.price || 0,
                      brand: { brandName: it.brandName },
                      shoesType: { typeName: it.typeName },
+                     points: it.points || 0, // 添加积分信息
                      images: [],
                      selectedSize: it.sizeId, // 直接设置尺码
                      quantity: it.quantity || 1, // 直接设置数量
@@ -1417,6 +1440,7 @@ const confirmPayment = async () => {
                     const quantity = p.quantity || 1
                     const unitPrice = getProductPrice(p)
                     const subtotal = Number((unitPrice * quantity).toFixed(2))
+                    const points = p.points || 0
                     return {
                         shoeId: p.shoeId,
                         name: p.name,
@@ -1425,7 +1449,8 @@ const confirmPayment = async () => {
                         sizeName,
                         quantity,
                         unitPrice,
-                        subtotal
+                        subtotal,
+                        points
                     }
                 })
 
@@ -1438,7 +1463,8 @@ const confirmPayment = async () => {
                     items,
                     itemsTotal: Number(totalPrice.value.toFixed(2)),
                     shippingFee: Number(shippingFee.value.toFixed(2)),
-                    orderTotal: Number(orderTotal.value.toFixed(2))
+                    orderTotal: Number(orderTotal.value.toFixed(2)),
+                    totalPoints: totalPoints.value
                 }
 
                 clearInterval(paymentTimer.value)
@@ -2183,6 +2209,11 @@ onUnmounted(() => {
     font-weight: 600;
 }
 
+.value.points {
+    color: #17a2b8;
+    font-weight: 600;
+}
+
 .address-content {
     display: flex;
     flex-direction: column;
@@ -2720,6 +2751,16 @@ onUnmounted(() => {
      margin: 0 0 2px 0;
      color: #6c757d;
      font-size: 0.85rem;
+ }
+
+ .item-details .item-points {
+     color: #17a2b8;
+     font-size: 0.8rem;
+     background: rgba(23, 162, 184, 0.1);
+     padding: 2px 6px;
+     border-radius: 4px;
+     display: inline-block;
+     margin-top: 4px;
  }
 
  .item-total {
