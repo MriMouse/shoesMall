@@ -464,7 +464,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { OrderAPI, InventoryAPI, CartAPI } from '@/api'
 import { ShoeAPI, ShoesSizeAPI } from '@/api'
-import { AddressAPI } from '@/api'
+import { AddressAPI, OrderShoeNumAPI } from '@/api'
 import userManager from '../utils/userManager'
 import cartManager from '../utils/cart'
 import axios from 'axios'
@@ -560,9 +560,94 @@ const loadOrderData = async () => {
         const hasRestoredData = restoreOrderData()
         
         // 优先处理来自购物车的跳转
-        const { productId, sizeId, quantity, fromOrderConfirmation, fromCart, items } = route.query
+        const { productId, sizeId, quantity, fromOrderConfirmation, fromCart, items, fromPendingOrder, orderId, orderNumber } = route.query
 
-        if (fromCart === 'true' && items) {
+        if (fromPendingOrder === 'true' && orderId) {
+            // 处理来自待支付订单的跳转
+            try {
+                console.log('处理待支付订单:', orderId, orderNumber)
+                
+                // 获取待支付订单的商品信息
+                const orderResponse = await OrderAPI.getAll()
+                if (orderResponse.data?.code === 200 && orderResponse.data.data) {
+                    const pendingOrders = orderResponse.data.data.filter(o => 
+                        o.orderId === parseInt(orderId) && o.status === '0'
+                    )
+                    
+                    if (pendingOrders.length > 0) {
+                        // 获取订单的商品数量信息
+                        const orderShoeNumPromises = pendingOrders.map(async (order) => {
+                            try {
+                                const orderShoeNumResponse = await OrderShoeNumAPI.getByOrderId(order.orderId)
+                                if (orderShoeNumResponse.data?.code === 200 && orderShoeNumResponse.data.data) {
+                                    return orderShoeNumResponse.data.data
+                                }
+                            } catch (error) {
+                                console.warn('获取订单商品数量失败:', error)
+                            }
+                            return null
+                        })
+                        
+                        const orderShoeNums = await Promise.all(orderShoeNumPromises)
+                        const validOrderShoeNums = orderShoeNums.filter(item => item !== null).flat()
+                        
+                        // 获取商品详细信息
+                        const productPromises = validOrderShoeNums.map(async (item) => {
+                            try {
+                                const shoeResponse = await ShoeAPI.getById(item.shoeId)
+                                if (shoeResponse.data?.code === 200 && shoeResponse.data.data) {
+                                    const shoe = shoeResponse.data.data
+                                    
+                                    // 获取商品图片
+                                    let images = []
+                                    try {
+                                        const imgResponse = await ShoeAPI.getImages(item.shoeId)
+                                        if (imgResponse.data?.code === 200 && imgResponse.data.data) {
+                                            images = imgResponse.data.data
+                                        }
+                                    } catch (imgError) {
+                                        console.warn('获取商品图片失败:', imgError)
+                                    }
+                                    
+                                    return {
+                                        ...shoe,
+                                        images,
+                                        selectedSize: pendingOrders.find(o => o.orderId === item.orderId)?.sizeId,
+                                        quantity: item.shoeNum || 1,
+                                        uniqueId: Date.now() + Math.random() + item.shoeId
+                                    }
+                                }
+                            } catch (error) {
+                                console.warn('获取商品详情失败:', error)
+                            }
+                            return null
+                        })
+                        
+                        const productResults = await Promise.all(productPromises)
+                        const validProducts = productResults.filter(p => p !== null)
+                        
+                        if (validProducts.length > 0) {
+                            products.value = validProducts
+                            console.log('从待支付订单加载的商品:', products.value)
+                            
+                            // 设置订单号用于后续支付
+                            window.pendingOrderNumber = orderNumber
+                        } else {
+                            throw new Error('无法获取待支付订单的商品信息')
+                        }
+                    } else {
+                        throw new Error('未找到待支付订单')
+                    }
+                } else {
+                    throw new Error('获取订单信息失败')
+                }
+            } catch (error) {
+                console.error('处理待支付订单失败:', error)
+                alert('加载待支付订单失败，请重试')
+                router.push('/profile')
+                return
+            }
+        } else if (fromCart === 'true' && items) {
             try {
                 const cartItems = JSON.parse(items)
                                  // 将购物车条目转为本页商品结构
@@ -1324,10 +1409,30 @@ const confirmPayment = async () => {
         let masterOrderNumber = null
         let createdOrders = []
 
+        // 检查是否来自待支付订单的跳转
+        const isFromPendingOrder = window.pendingOrderNumber !== undefined
+
         // 检查用户是否选择更新现有订单
         const shouldUpdateExisting = window.shouldUpdateExistingOrder === true
 
-        if (pendingOrders && pendingOrders.length > 0 && shouldUpdateExisting) {
+        if (isFromPendingOrder && window.pendingOrderNumber) {
+            // 来自待支付订单的跳转，直接更新该订单
+            const orderNumber = window.pendingOrderNumber
+            const updateResult = await updateOrderStatus(orderNumber, '1')
+            
+            if (updateResult) {
+                masterOrderNumber = orderNumber
+                // 获取更新后的订单
+                const fetchRes = await OrderAPI.getAll()
+                if (fetchRes.data && fetchRes.data.code === 200 && Array.isArray(fetchRes.data.data)) {
+                    createdOrders = fetchRes.data.data.filter(o => o.orderNumber === orderNumber)
+                }
+            } else {
+                alert('更新待支付订单失败，请重试')
+                isProcessingPayment.value = false
+                return
+            }
+        } else if (pendingOrders && pendingOrders.length > 0 && shouldUpdateExisting) {
             // 用户选择更新现有订单，更新状态为1
             const orderNumbers = [...new Set(pendingOrders.map(order => order.orderNumber))]
             const updatePromises = orderNumbers.map(orderNumber => 
@@ -1443,8 +1548,9 @@ const confirmPayment = async () => {
 
                 clearInterval(paymentTimer.value)
                 showPaymentModal.value = false
-                // 清除用户选择标志
+                // 清除用户选择标志和待支付订单标记
                 window.shouldUpdateExistingOrder = false
+                window.pendingOrderNumber = undefined
                 
                 // 从购物车中删除已购买的商品
                 await removeItemsFromCart()

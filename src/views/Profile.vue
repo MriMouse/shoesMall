@@ -1,559 +1,513 @@
 <template>
-    <div class="profile">
-        <div class="profile-container">
-            <div class="profile-header">
-                <div class="avatar">
-                    <div class="avatar-placeholder" v-if="!user.avatar">
-                        <span>{{ user.username ? user.username.charAt(0).toUpperCase() : 'U' }}</span>
-                    </div>
-                    <img v-else :src="user.avatar" :alt="user.username" />
-                </div>
-                <div class="user-info">
-                    <h2>{{ user.username }}</h2>
-                    <p>会员等级：{{ user.level || '普通会员' }}</p>
-                    <p>注册时间：{{ formatDate(user.registerTime) }}</p>
-                </div>
-                <div class="actions">
-                    <button @click="editProfile" class="btn btn-primary">编辑资料</button>
-                    <button @click="logout" class="btn btn-secondary">退出登录</button>
-                </div>
-            </div>
-
-            <div class="profile-content">
-                <div class="profile-nav">
-                    <button v-for="tab in tabs" :key="tab.key" :class="['tab-btn', { active: activeTab === tab.key }]"
-                        @click="activeTab = tab.key">
-                        {{ tab.label }}
-                    </button>
-                </div>
-
-                <div class="profile-panel">
-                    <!-- 订单管理 -->
-                    <div v-if="activeTab === 'orders'" class="panel-content">
-                        <h3>我的订单</h3>
-                        <div v-if="loading" class="loading-state">
-                            <p>正在加载订单...</p>
-                        </div>
-                        <div v-else-if="orders.length === 0" class="empty-state">
-                            <p>暂无订单记录</p>
-                            <router-link to="/products" class="btn btn-primary">去购物</router-link>
-                        </div>
-                        <div v-else class="orders-list">
-                            <div v-for="order in orders" :key="order.id" class="order-item">
-                                <div class="order-info">
-                                    <span>订单号：{{ order.id }}</span>
-                                    <span>状态：{{ order.status }}</span>
-                                    <span>金额：¥{{ order.amount }}</span>
-                                </div>
-                                <div class="order-date">{{ formatDate(order.date) }}</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 收藏夹 -->
-                    <div v-if="activeTab === 'favorites'" class="panel-content">
-                        <h3>我的收藏</h3>
-                        <div v-if="favorites.length === 0" class="empty-state">
-                            <p>暂无收藏商品</p>
-                            <router-link to="/" class="btn btn-primary">去看看</router-link>
-                        </div>
-                    </div>
-
-                    <!-- 地址管理 -->
-                    <div v-if="activeTab === 'address'" class="panel-content">
-                        <h3>收货地址</h3>
-                        <div class="address-list">
-                            <div class="address-item">
-                                <button class="btn btn-outline">+ 添加新地址</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 账户设置 -->
-                    <div v-if="activeTab === 'settings'" class="panel-content">
-                        <h3>账户设置</h3>
-                        <div class="settings-list">
-                            <div class="setting-item">
-                                <label>邮箱通知</label>
-                                <input type="checkbox" v-model="settings.emailNotification">
-                            </div>
-                            <div class="setting-item">
-                                <label>短信通知</label>
-                                <input type="checkbox" v-model="settings.smsNotification">
-                            </div>
-                            <div class="setting-item">
-                                <button class="btn btn-primary">保存设置</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  <div class="profile">
+    <div class="profile-container">
+      <!-- 左侧导航（模仿 adidas 结构：左侧竖向菜单） -->
+      <div class="profile-sidebar">
+        <div class="sidebar-nav">
+          <button 
+            v-for="tab in tabs" 
+            :key="tab.key" 
+            :class="['nav-item', { active: activeTab === tab.key }]"
+            @click="activeTab = tab.key"
+          >
+            <span class="nav-icon">{{ tab.icon }}</span>
+            <span class="nav-label">{{ tab.label }}</span>
+          </button>
+          <button class="nav-item logout-btn" @click="handleLogout">
+            <span class="nav-icon">🚪</span>
+            <span class="nav-label">退出登录</span>
+          </button>
         </div>
+      </div>
+
+      <div class="profile-main">
+        <!-- 顶部黑底会员横幅（问候语 + 指标） -->
+        <div class="account-hero">
+          <div class="hero-header">
+            <div class="hero-left">
+              <div class="hero-avatar" @mouseenter="avatarHover=true" @mouseleave="avatarHover=false">
+                <img v-if="avatarPath" :src="heroAvatarUrl" alt="avatar" class="hero-avatar-img" />
+                <div v-else class="hero-avatar-placeholder">{{ userName ? userName.charAt(0).toUpperCase() : 'U' }}</div>
+                <button class="hero-avatar-edit" @click="triggerHeroUpload" :class="{ show: avatarHover }">更换头像</button>
+                <input ref="heroAvatarInput" type="file" accept="image/*" class="hidden-input" @change="handleHeroAvatarChange" />
+              </div>
+              <div class="hello">你好，{{ userName || '会员' }}</div>
+            </div>
+            <div class="hero-actions">
+              <button class="hero-edit" @click="activeTab='info'">编辑资料</button>
+              <button class="hero-logout" @click="handleLogout">退出账户</button>
+            </div>
+          </div>
+          <div class="hero-metrics">
+            <div class="metric">
+              <div class="metric-value">{{ userPoints }}</div>
+              <div class="metric-label">我的积分</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value">{{ availableCoupons }}</div>
+              <div class="metric-label">可用优惠</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value">{{ exclusiveBenefits }}</div>
+              <div class="metric-label">专属权益</div>
+            </div>
+          </div>
+        </div>
+
+      <!-- 个人中心概览 -->
+      <ProfileOverview 
+        v-if="activeTab === 'overview'"
+        @edit-profile="activeTab = 'info'"
+        @navigate="handleNavigation"
+      />
+
+      <!-- 个人信息组件 -->
+      <UserInfoCard 
+        v-if="activeTab === 'info'"
+        @user-updated="handleUserUpdated"
+      />
+
+      <!-- 订单管理组件 -->
+      <OrderManagement 
+        v-if="activeTab === 'orders'"
+      />
+
+      <!-- 地址管理组件 -->
+      <AddressManagement 
+        v-if="activeTab === 'address'"
+      />
+
+      <!-- 账户设置组件 -->
+      <AccountSettings 
+        v-if="activeTab === 'settings'"
+      />
+
+      </div>
     </div>
+  </div>
 </template>
 
 <script>
-import { OrderAPI } from '@/api'
-import userManager from '../utils/userManager'
+import ProfileOverview from '@/components/profile/ProfileOverview.vue'
+import UserInfoCard from '@/components/profile/UserInfoCard.vue'
+import OrderManagement from '@/components/profile/OrderManagement.vue'
+import AddressManagement from '@/components/profile/AddressManagement.vue'
+import AccountSettings from '@/components/profile/AccountSettings.vue'
+import userManager from '@/utils/userManager'
 
 export default {
-    name: 'Profile-Page',
-    data() {
-        return {
-            user: {
-                username: '用户名',
-                level: '普通会员',
-                registerTime: new Date().toISOString(),
-                avatar: null
-            },
-            activeTab: 'orders',
-            tabs: [
-                { key: 'orders', label: '我的订单' },
-                { key: 'favorites', label: '我的收藏' },
-                { key: 'address', label: '收货地址' },
-                { key: 'settings', label: '账户设置' }
-            ],
-            orders: [],
-            favorites: [],
-            settings: {
-                emailNotification: true,
-                smsNotification: false
-            },
-            loading: false
-        }
-    },
-    mounted() {
-        this.loadUserData()
-        this.loadOrders()
-    },
-    methods: {
-        loadUserData() {
-            try {
-                const userDataString = localStorage.getItem('user')
-                if (userDataString) {
-                    // 尝试解析JSON，如果失败则使用默认值
-                    let userData
-                    try {
-                        userData = JSON.parse(userDataString)
-                    } catch (parseError) {
-                        console.warn('用户数据格式错误，使用默认值:', parseError)
-                        // 如果localStorage中存储的不是JSON格式，可能是简单的用户名字符串
-                        if (typeof userDataString === 'string' && userDataString.trim()) {
-                            userData = { username: userDataString }
-                        } else {
-                            userData = {}
-                        }
-                    }
-                    
-                    if (userData.username) {
-                        this.user.username = userData.username
-                        this.user.registerTime = userData.loginTime || new Date().toISOString()
-                    }
-                }
-            } catch (error) {
-                console.error('加载用户数据时出错:', error)
-                // 使用默认值
-                this.user.username = '用户'
-                this.user.registerTime = new Date().toISOString()
-            }
-        },
-
-        formatDate(dateString) {
-            if (!dateString) return '未知'
-            return new Date(dateString).toLocaleDateString('zh-CN')
-        },
-
-        editProfile() {
-            alert('编辑功能暂未开放')
-        },
-
-        logout() {
-            if (confirm('确定要退出登录吗？')) {
-                localStorage.removeItem('user')
-                this.$router.push('/')
-            }
-        },
-
-        async loadOrders() {
-            try {
-                this.loading = true
-                const userId = await userManager.getUserId()
-                if (!userId) {
-                    console.log('用户未登录，无法加载订单')
-                    return
-                }
-
-                const response = await OrderAPI.getAll()
-                if (response.data?.code === 200 && response.data.data) {
-                    // 过滤当前用户的订单
-                    this.orders = response.data.data
-                        .filter(order => order.userId === userId)
-                        .map(order => ({
-                            id: order.orderNumber,
-                            status: this.getOrderStatus(order.status),
-                            amount: order.totalAmount || 0,
-                            date: order.createdAt,
-                            orderId: order.orderId
-                        }))
-                        .sort((a, b) => new Date(b.date) - new Date(a.date))
-                    
-                    console.log('加载订单成功:', this.orders.length, '个订单')
-                } else {
-                    console.log('没有找到订单数据')
-                }
-            } catch (error) {
-                console.error('加载订单失败:', error)
-            } finally {
-                this.loading = false
-            }
-        },
-
-        getOrderStatus(status) {
-            const statusMap = {
-                '0': '待支付',
-                '1': '已支付',
-                '2': '已发货',
-                '3': '已完成',
-                '4': '已取消'
-            }
-            return statusMap[status] || '未知状态'
-        }
+  name: 'Profile-Page',
+  components: {
+    ProfileOverview,
+    UserInfoCard,
+    OrderManagement,
+    AddressManagement,
+    AccountSettings
+  },
+  data() {
+    return {
+      activeTab: 'overview',
+      tabs: [
+        { key: 'overview', label: '个人中心', icon: '🏠' },
+        { key: 'info', label: '个人信息', icon: '👤' },
+        { key: 'orders', label: '我的订单', icon: '📦' },
+        { key: 'address', label: '收货地址', icon: '📍' },
+        { key: 'settings', label: '账户设置', icon: '⚙️' }
+      ],
+      userName: '',
+      userPoints: 0,
+      availableCoupons: 0,
+      exclusiveBenefits: 0,
+      avatarPath: '',
+      avatarHover: false,
+      uploadingHeroAvatar: false
     }
+  },
+  mounted() {
+    // 检查用户是否已登录
+    if (!userManager.isLoggedIn()) {
+      this.$router.push('/')
+      return
+    }
+
+    // 初始化横幅信息
+    const currentUser = userManager.getCurrentUser()
+    const currentUsername = userManager.getCurrentUsername()
+    this.userName = (currentUser && currentUser.username) || currentUsername || '会员'
+    this.userPoints = (currentUser && (currentUser.integral || 0)) || 0
+    this.avatarPath = (currentUser && currentUser.avatarPath) || ''
+    // 后端拉取更权威头像路径
+    try {
+      const username = userManager.getCurrentUsername()
+      if (username) {
+        import('@/api').then(m => m.UserAPI.getAvatarPath(username)).then(res => {
+          if (res.data?.code === 200 && res.data.data) {
+            this.avatarPath = res.data.data
+          }
+        }).catch((e)=>{ console.warn('获取头像路径失败:', e) })
+      }
+    } catch (e) { console.warn('获取头像路径异常:', e) }
+    // 优惠/权益可与后端联动，这里先占位
+    this.availableCoupons = 0
+    this.exclusiveBenefits = 0
+  },
+  computed: {
+    heroAvatarUrl() {
+      if (!this.avatarPath || this.avatarPath === 'default') return ''
+      const parts = this.avatarPath.split(/[/\\]/)
+      const filename = parts[parts.length - 1]
+      return `/api/users/getAvatar/${filename}`
+    }
+  },
+  methods: {
+    handleNavigation(tab) {
+      this.activeTab = tab
+    },
+    
+    handleUserUpdated(user) {
+      // 用户信息更新后的处理
+      console.log('用户信息已更新:', user)
+    },
+
+    handleLogout() {
+      if (confirm('确定要退出登录吗？')) {
+        userManager.logoutUser()
+        this.$router.push('/')
+      }
+    },
+    triggerHeroUpload() {
+      if (this.$refs.heroAvatarInput) this.$refs.heroAvatarInput.click()
+    },
+    async handleHeroAvatarChange(e) {
+      const file = e.target.files && e.target.files[0]
+      if (!file) return
+      this.uploadingHeroAvatar = true
+      try {
+        const formData = new FormData()
+        // 后端要求字段名为 avatar
+        formData.append('avatar', file)
+        // 直接使用导入的 API 模块
+        const { UserAPI } = await import('@/api')
+        const uploadRes = await UserAPI.uploadAvatar(formData)
+        if (uploadRes.data?.code === 200 && uploadRes.data.data) {
+          const data = uploadRes.data.data
+          const serverPath = typeof data === 'string' ? data : (data.avatarPath || data.path || '')
+          if (!serverPath) throw new Error('返回头像路径为空')
+          this.avatarPath = serverPath
+          // 更新数据库字段
+          let ok = false
+          try {
+            const userId = await userManager.getUserId()
+            if (userId) {
+              const { UserAPI } = await import('@/api')
+              const resp = await UserAPI.updateAvatarById(userId, serverPath)
+              ok = resp.data?.code === 200
+            }
+          } catch (e) { ok = false }
+          if (!ok) {
+            const username = userManager.getCurrentUsername()
+            if (username) {
+              const { UserAPI } = await import('@/api')
+              const resp2 = await UserAPI.updateAvatar(username, serverPath)
+              ok = resp2.data?.code === 200
+            }
+          }
+          // 同步本地缓存
+          const currentUser = userManager.getCurrentUser()
+          if (currentUser) userManager.setCurrentUser({ ...currentUser, avatarPath: serverPath })
+        } else {
+          throw new Error(uploadRes.data?.msg || '上传失败')
+        }
+      } catch (err) {
+        console.error('更换头像失败:', err)
+        alert('更换头像失败，请重试')
+      } finally {
+        this.uploadingHeroAvatar = false
+      }
+    }
+  }
 }
 </script>
 
 <style scoped>
 .profile {
-    min-height: 100vh;
-    background-color: #f5f6fa;
-    padding: 2rem 0;
+  min-height: 100vh;
+  /* 黑白极简主题变量 */
+  --bg: #f7f7f7;
+  --surface: #ffffff;
+  --text: #111111;
+  --muted: #666666;
+  --border: #e6e6e6;
+  --accent: #111111;
+
+  background-color: var(--bg);
+  padding: 2rem 0;
 }
 
 .profile-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: grid;
+  grid-template-columns: 260px 1fr; /* 左侧窄栏 + 右侧主内容 */
+  gap: 24px;
 }
 
-.profile-header {
-    background: white;
-    padding: 2rem;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+.profile-sidebar { position: sticky; top: 2rem; height: fit-content; }
+
+.profile-main { display: flex; flex-direction: column; gap: 20px; }
+
+/* 顶部黑底会员横幅 */
+.account-hero {
+  background: #0a0a0a;
+  color: #fff;
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+.account-hero .hero-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.account-hero .hero-left { display:flex; align-items:center; gap:14px; }
+.hero-avatar { position: relative; width: 54px; height: 54px; }
+.hero-avatar-img { width:100%; height:100%; border-radius:50%; object-fit:cover; border:1px solid rgba(255,255,255,.4); }
+.hero-avatar-placeholder { width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#1a1a1a; color:#fff; font-weight:800; border:1px solid rgba(255,255,255,.4); }
+.hero-avatar-edit { position:absolute; bottom:-6px; left:50%; transform:translateX(-50%); background:transparent; color:#fff; border:1px solid #fff; border-radius:10px; padding:2px 6px; font-size:12px; opacity:0; transition:opacity .15s ease; }
+.hero-avatar-edit.show { opacity:1; }
+.hidden-input { display:none; }
+.hero-actions { display:flex; align-items:center; gap:8px; }
+.hero-edit { background:transparent; color:#fff; border:1px solid #fff; border-radius:10px; padding:8px 12px; }
+.account-hero .hello { font-size: 22px; font-weight: 700; }
+.account-hero .hero-logout {
+  background: transparent;
+  color: #fff;
+  border: 1px solid #fff;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.account-hero .hero-logout:hover { background: #fff; color: #000; }
+.account-hero .hero-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.account-hero .metric { text-align: center; }
+.account-hero .metric-value { font-size: 26px; font-weight: 800; line-height: 1; }
+.account-hero .metric-label { color: #cfcfcf; margin-top: 6px; font-size: 12px; letter-spacing: .05em; }
+
+.sidebar-nav {
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  height: fit-content;
 }
 
-.avatar {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #e1e8ed;
-    border: 3px solid #e1e8ed;
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-bottom: 4px;
+  text-align: left;
+  color: var(--text);
 }
 
-.avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+.nav-item:hover {
+  background-color: rgba(0,0,0,0.03);
 }
 
-.avatar-placeholder {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #3498db;
-    color: white;
-    font-size: 2rem;
-    font-weight: bold;
+.nav-item.active {
+  background-color: var(--accent);
+  color: #fff;
+  transform: none;
 }
 
-.user-info h2 {
-    margin: 0 0 0.5rem 0;
-    color: #2c3e50;
+.logout-btn {
+  margin-top: auto;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--text);
+  transition: all 0.2s ease;
 }
 
-.user-info p {
-    margin: 0.25rem 0;
-    color: #7f8c8d;
+.logout-btn:hover {
+  background-color: var(--text);
+  color: #fff;
 }
 
-.actions {
-    margin-left: auto;
-    display: flex;
-    gap: 1rem;
+.logout-btn .nav-icon {
+  font-size: 18px;
 }
 
-.profile-content {
-    background: white;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+.nav-icon {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
 }
 
-.profile-nav {
-    display: flex;
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #e1e8ed;
+.nav-label {
+  font-size: 14px;
+  font-weight: 500;
 }
 
-.tab-btn {
-    padding: 1rem 1.5rem;
-    border: none;
-    background: none;
-    cursor: pointer;
-    transition: all 0.3s;
-    border-bottom: 3px solid transparent;
+/* 全局覆写子组件（黑白极简） */
+:deep(.section-title) {
+  color: var(--text);
+  border-bottom: 1px solid var(--border) !important;
 }
 
-.tab-btn:hover {
-    background-color: #e9ecef;
+:deep(.btn) {
+  appearance: none;
+  border: 1px solid var(--text) !important;
+  background: transparent !important;
+  color: var(--text) !important;
+  border-radius: 10px !important;
+  padding: 10px 18px !important;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+:deep(.btn:hover) {
+  background: var(--text) !important;
+  color: #fff !important;
+}
+:deep(.btn.btn-primary) {
+  background: var(--text) !important;
+  color: #fff !important;
+}
+:deep(.btn.btn-secondary) {
+  background: transparent !important;
+  color: var(--text) !important;
 }
 
-.tab-btn.active {
-    background-color: white;
-    border-bottom-color: #3498db;
-    color: #3498db;
+/* 卡片/容器统一风格 */
+:deep(.user-card),
+:deep(.stats-grid),
+:deep(.quick-actions),
+:deep(.recent-orders),
+:deep(.membership-benefits),
+:deep(.order-card),
+:deep(.address-form-modal),
+:deep(.modal-content),
+:deep(.order-summary-section),
+:deep(.address-section) {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: none !important;
+  border-radius: 14px !important;
 }
 
-.profile-panel {
-    padding: 2rem;
+/* 价格/高亮文本改为黑色，避免彩色 */
+:deep(.value.price),
+:deep(.order-amount),
+:deep(.item-total) {
+  color: var(--text) !important;
 }
 
-.panel-content h3 {
-    margin: 0 0 1.5rem 0;
-    color: #2c3e50;
-}
-
-.loading-state,
-.empty-state {
-    text-align: center;
-    padding: 3rem 0;
-    color: #7f8c8d;
-}
-
-.loading-state p,
-.empty-state p {
-    margin-bottom: 1rem;
-    font-size: 1.1rem;
-}
-
-.orders-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.order-item {
-    border: 1px solid #e1e8ed;
-    border-radius: 6px;
-    padding: 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.order-info {
-    display: flex;
-    gap: 2rem;
-}
-
-.order-info span {
-    color: #2c3e50;
-}
-
-.order-date {
-    color: #7f8c8d;
-    font-size: 0.9rem;
-}
-
-.address-list,
-.settings-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.address-item,
-.setting-item {
-    padding: 1rem;
-    border: 1px solid #e1e8ed;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.btn {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 500;
-    text-decoration: none;
-    display: inline-block;
-    text-align: center;
-    transition: all 0.3s;
-}
-
-.btn-primary {
-    background-color: #3498db;
-    color: white;
-}
-
-.btn-primary:hover {
-    background-color: #2980b9;
-}
-
-.btn-secondary {
-    background-color: #95a5a6;
-    color: white;
-}
-
-.btn-secondary:hover {
-    background-color: #7f8c8d;
-}
-
-.btn-outline {
-    background-color: transparent;
-    color: #3498db;
-    border: 2px solid #3498db;
-}
-
-.btn-outline:hover {
-    background-color: #3498db;
-    color: white;
+/* 状态标签灰阶化 */
+:deep(.status-badge),
+:deep(.status-paid),
+:deep(.status-pending),
+:deep(.status-shipped),
+:deep(.status-completed),
+:deep(.status-cancelled),
+:deep(.status-returning),
+:deep(.status-returned),
+:deep(.status-refunding),
+:deep(.status-cart),
+:deep(.status-unknown) {
+  background: #f0f0f0 !important;
+  color: var(--text) !important;
+  border: 1px solid #dedede !important;
 }
 
 /* 响应式设计 */
 @media (max-width: 1200px) {
-	.profile-page {
-		padding: 0 16px;
-	}
-	
-	.profile-content {
-		grid-template-columns: 1fr 2fr;
-		gap: 20px;
-	}
+  .profile-container {
+    grid-template-columns: 1fr 250px;
+    gap: 20px;
+  }
 }
 
 @media (max-width: 960px) {
-	.profile-page {
-		padding: 0 12px;
-	}
-	
-	.profile-content {
-		grid-template-columns: 1fr;
-		gap: 16px;
-	}
-	
-	.profile-sidebar {
-		order: 2;
-	}
-	
-	.profile-main {
-		order: 1;
-	}
-	
-	.profile-header {
-		padding: 20px 0;
-	}
-	
-	.profile-name {
-		font-size: 24px;
-	}
-	
-	.profile-email {
-		font-size: 14px;
-	}
+  .profile-container {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .profile-sidebar {
+    position: static;
+    order: -1;
+  }
+  
+  .sidebar-nav {
+    display: flex;
+    overflow-x: auto;
+    padding: 12px;
+  }
+  
+  .nav-item {
+    flex-shrink: 0;
+    min-width: 120px;
+    margin-bottom: 0;
+    margin-right: 8px;
+  }
 }
 
 @media (max-width: 768px) {
-	.profile-page {
-		padding: 0 8px;
-	}
-	
-	.profile-header {
-		padding: 16px 0;
-	}
-	
-	.profile-name {
-		font-size: 20px;
-	}
-	
-	.profile-email {
-		font-size: 13px;
-	}
-	
-	.section-title {
-		font-size: 18px;
-	}
-	
-	.order-item {
-		flex-direction: column;
-		align-items: flex-start;
-		gap: 0.5rem;
-	}
-	
-	.order-info {
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-	
-	.address-item,
-	.setting-item {
-		flex-direction: column;
-		align-items: flex-start;
-		gap: 0.5rem;
-	}
+  .profile {
+    padding: 1rem 0;
+  }
+  
+  .profile-container {
+    padding: 0 0.5rem;
+  }
+  
+  .sidebar-nav {
+    padding: 8px;
+  }
+  
+  .nav-item {
+    padding: 10px 12px;
+    min-width: 100px;
+  }
+  
+  .nav-icon {
+    font-size: 16px;
+  }
+  
+  .nav-label {
+    font-size: 12px;
+  }
 }
 
 @media (max-width: 480px) {
-	.profile-page {
-		padding: 0 6px;
-	}
-	
-	.profile-header {
-		padding: 12px 0;
-	}
-	
-	.profile-name {
-		font-size: 18px;
-	}
-	
-	.profile-email {
-		font-size: 12px;
-	}
-	
-	.section-title {
-		font-size: 16px;
-	}
-	
-	.order-item,
-	.address-item,
-	.setting-item {
-		padding: 0.8rem;
-	}
-	
-	.btn {
-		padding: 0.4rem 0.8rem;
-		font-size: 14px;
-	}
-	
-	.empty-state {
-		padding: 2rem 0;
-	}
-	
-	.empty-state p {
-		font-size: 1rem;
-	}
+  .profile-container {
+    padding: 0 0.25rem;
+  }
+  
+  .nav-item {
+    min-width: 80px;
+    padding: 8px 10px;
+  }
+  
+  .nav-icon {
+    font-size: 14px;
+  }
+  
+  .nav-label {
+    font-size: 11px;
+  }
 }
 </style>

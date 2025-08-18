@@ -1,0 +1,915 @@
+<template>
+  <div class="address-management">
+    <div class="address-header">
+      <h3>收货地址</h3>
+      <button @click="showAddModal = true" class="btn btn-primary">
+        <span class="icon">+</span>
+        添加新地址
+      </button>
+    </div>
+
+    <div v-if="loading" class="loading-state">
+      <div class="loading-spinner"></div>
+      <p>正在加载地址...</p>
+    </div>
+
+    <div v-else-if="addresses.length === 0" class="empty-state">
+      <div class="empty-icon">📍</div>
+      <p>暂无收货地址</p>
+      <button @click="showAddModal = true" class="btn btn-primary">添加地址</button>
+    </div>
+
+    <div v-else class="addresses-list">
+      <div v-for="address in addresses" :key="address.id" class="address-item">
+        <div class="address-content">
+          <div class="address-info">
+            <div class="contact-info">
+              <span class="name">{{ address.receiverName }}</span>
+              <span class="phone">{{ address.phone }}</span>
+              <span v-if="address.isDefault" class="default-badge">默认</span>
+            </div>
+            <div class="address-detail">
+              {{ formatAddress(address) }}
+            </div>
+          </div>
+          
+          <div class="address-actions">
+            <button @click="editAddress(address)" class="btn btn-outline">
+              编辑
+            </button>
+            <button @click="deleteAddress(address)" class="btn btn-danger">
+              删除
+            </button>
+            <button 
+              v-if="!address.isDefault" 
+              @click="setDefaultAddress(address)" 
+              class="btn btn-secondary"
+            >
+              设为默认
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 添加/编辑地址模态框 -->
+    <div v-if="showAddModal || showEditModal" class="modal-overlay" @click="closeModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>{{ showEditModal ? '编辑地址' : '添加新地址' }}</h3>
+          <button @click="closeModal" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="saveAddress" class="address-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label>收货人姓名 *</label>
+                <input 
+                  v-model="addressForm.receiverName" 
+                  type="text" 
+                  class="form-input" 
+                  required
+                  placeholder="请输入收货人姓名"
+                />
+              </div>
+              <div class="form-group">
+                <label>手机号码 *</label>
+                <input 
+                  v-model="addressForm.phone" 
+                  type="tel" 
+                  class="form-input" 
+                  required
+                  placeholder="请输入手机号码"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>所在地区 *</label>
+              <div class="region-inputs">
+                <input 
+                  v-model="addressForm.province" 
+                  type="text" 
+                  class="form-input" 
+                  required
+                  placeholder="请输入省份"
+                />
+                <input 
+                  v-model="addressForm.city" 
+                  type="text" 
+                  class="form-input" 
+                  required
+                  placeholder="请输入城市"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>详细地址 *</label>
+              <textarea 
+                v-model="addressForm.detailAddress" 
+                class="form-textarea" 
+                required
+                placeholder="请输入详细地址，如街道、门牌号等"
+                rows="3"
+              ></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>邮政编码</label>
+              <input 
+                v-model="addressForm.postalCode" 
+                type="text" 
+                class="form-input" 
+                placeholder="请输入邮政编码"
+              />
+            </div>
+
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input 
+                  v-model="addressForm.isDefault" 
+                  type="checkbox" 
+                  class="form-checkbox"
+                />
+                <span class="checkbox-text">设为默认收货地址</span>
+              </label>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary" :disabled="saving">
+                {{ saving ? '保存中...' : '保存地址' }}
+              </button>
+              <button type="button" @click="closeModal" class="btn btn-secondary">
+                取消
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { AddressAPI } from '@/api'
+import userManager from '@/utils/userManager'
+
+export default {
+  name: 'AddressManagement',
+  data() {
+    return {
+      addresses: [],
+      loading: false,
+      saving: false,
+      showAddModal: false,
+      showEditModal: false,
+      editingAddress: null,
+      addressForm: {
+        receiverName: '',
+        phone: '',
+        province: '',
+        city: '',
+        detailAddress: '',
+        postalCode: '',
+        isDefault: false
+      },
+      // 简化的地区数据，实际项目中应该从API获取
+      provinces: [],
+      cities: [],
+      regionData: {},
+    }
+  },
+  mounted() {
+    this.loadAddresses()
+  },
+  methods: {
+    async loadAddresses() {
+      try {
+        this.loading = true
+        const userId = await userManager.getUserId()
+        console.log('当前用户ID:', userId)
+        
+        if (!userId) {
+          console.log('用户未登录，无法加载地址')
+          // 使用模拟数据作为演示
+          this.addresses = this.getMockAddresses()
+          return
+        }
+
+        try {
+          const response = await AddressAPI.getList(userId)
+          console.log('API响应:', response)
+          
+          if (response.data?.code === 200 && response.data.data) {
+            // 将数据库格式转换为前端显示格式
+            this.addresses = response.data.data.map(dbAddress => ({
+              id: dbAddress.addressId || dbAddress.id,
+              receiverName: dbAddress.receiverName,
+              phone: dbAddress.phone,
+              // 从addressInfo中解析省市信息
+              ...this.parseAddressInfo(dbAddress.addressInfo),
+              postalCode: dbAddress.postalCode,
+              isDefault: dbAddress.isDefault === 1 || dbAddress.isDefault === true
+            }))
+            console.log('从API加载地址成功:', this.addresses)
+          } else {
+            console.warn('API返回数据异常:', response.data)
+            // 使用模拟数据作为备选
+            this.addresses = this.getMockAddresses()
+          }
+        } catch (apiError) {
+          console.warn('API调用失败，使用模拟数据:', apiError)
+          // 使用模拟数据作为备选
+          this.addresses = this.getMockAddresses()
+        }
+      } catch (error) {
+        console.error('加载地址失败:', error)
+        // 使用模拟数据作为备选
+        this.addresses = this.getMockAddresses()
+      } finally {
+        this.loading = false
+      }
+    },
+
+    // 解析地址信息，从完整地址中提取省市信息
+    parseAddressInfo(addressInfo) {
+      if (!addressInfo) return { province: '', city: '', detailAddress: '' }
+      
+      // 尝试从地址信息中提取省市
+      const parts = addressInfo.split(' ')
+      if (parts.length >= 2) {
+        return {
+          province: parts[0] || '',
+          city: parts[1] || '',
+          detailAddress: parts.slice(2).join(' ') || ''
+        }
+      }
+      
+      return {
+        province: '',
+        city: '',
+        detailAddress: addressInfo
+      }
+    },
+
+    getMockAddresses() {
+      return [
+        {
+          id: 1,
+          receiverName: '张三',
+          phone: '13800138000',
+          province: '北京市',
+          city: '北京市',
+          detailAddress: '朝阳区三里屯SOHO 1号楼 1001室',
+          postalCode: '100020',
+          isDefault: true
+        },
+        {
+          id: 2,
+          receiverName: '李四',
+          phone: '13900139000',
+          province: '广东省',
+          city: '深圳市',
+          detailAddress: '南山区科技园南区 2栋 2002室',
+          postalCode: '518057',
+          isDefault: false
+        },
+        {
+          id: 3,
+          receiverName: '王五',
+          phone: '13700137000',
+          province: '上海市',
+          city: '上海市',
+          detailAddress: '浦东新区陆家嘴金融中心 3号楼 3003室',
+          postalCode: '200120',
+          isDefault: false
+        }
+      ]
+    },
+
+    editAddress(address) {
+      this.editingAddress = address
+      this.addressForm = {
+        receiverName: address.receiverName,
+        phone: address.phone,
+        province: address.province,
+        city: address.city,
+        detailAddress: address.detailAddress,
+        postalCode: address.postalCode,
+        isDefault: address.isDefault
+      }
+      
+      this.showEditModal = true
+    },
+
+    async deleteAddress(address) {
+      if (!confirm(`确定要删除地址"${address.receiverName}"吗？`)) {
+        return
+      }
+
+      try {
+        console.log('删除地址:', address.id)
+        const deleteResponse = await AddressAPI.delete(address.id)
+        console.log('删除地址API响应:', deleteResponse)
+        
+        if (deleteResponse.data?.code === 200) {
+          alert('地址删除成功')
+          console.log('地址删除成功:', address.id)
+          
+          // 从本地列表中移除
+          const index = this.addresses.findIndex(addr => addr.id === address.id)
+          if (index !== -1) {
+            this.addresses.splice(index, 1)
+          }
+        } else {
+          throw new Error(`删除失败: ${deleteResponse.data?.message || '未知错误'}`)
+        }
+      } catch (error) {
+        console.error('删除地址失败:', error)
+        alert(`删除失败: ${error.message}`)
+      }
+    },
+
+    async setDefaultAddress(address) {
+      try {
+        const userId = await userManager.getUserId()
+        if (!userId) {
+          alert('用户未登录，无法设置默认地址')
+          return
+        }
+        
+        console.log('设置默认地址:', address.id, '用户ID:', userId)
+        const setDefaultResponse = await AddressAPI.setDefault(address.id, userId)
+        console.log('设置默认地址API响应:', setDefaultResponse)
+        
+        if (setDefaultResponse.data?.code === 200) {
+          alert('默认地址设置成功')
+          console.log('默认地址设置成功:', address.id)
+          
+          // 更新本地数据
+          this.addresses.forEach(addr => {
+            addr.isDefault = addr.id === address.id
+          })
+        } else {
+          throw new Error(`设置失败: ${setDefaultResponse.data?.message || '未知错误'}`)
+        }
+      } catch (error) {
+        console.error('设置默认地址失败:', error)
+        alert(`设置失败: ${error.message}`)
+      }
+    },
+
+    async saveAddress() {
+      if (!this.validateForm()) {
+        return
+      }
+
+      try {
+        this.saving = true
+        const userId = await userManager.getUserId()
+        console.log('保存地址，用户ID:', userId)
+        
+        if (!userId) {
+          alert('用户未登录，无法保存地址')
+          return
+        }
+        
+        // 将省市信息合并到详细地址中，符合数据库表结构
+        const fullAddress = `${this.addressForm.province} ${this.addressForm.city} ${this.addressForm.detailAddress}`.trim()
+        console.log('完整地址:', fullAddress)
+        
+        const addressData = {
+          receiverName: this.addressForm.receiverName,
+          phone: this.addressForm.phone,
+          addressInfo: fullAddress, // 使用合并后的完整地址
+          postalCode: this.addressForm.postalCode,
+          isDefault: !!this.addressForm.isDefault, // 后端为Boolean，传布尔值
+          user: { id: userId } // 按后端实体要求嵌套user对象
+        }
+        
+        console.log('准备保存的地址数据:', addressData)
+
+        if (this.showEditModal && this.editingAddress) {
+          // 编辑地址
+          try {
+            addressData.addressId = this.editingAddress.id // 使用数据库字段名
+            console.log('编辑地址，ID:', addressData.addressId)
+            
+            const updateResponse = await AddressAPI.update(addressData)
+            console.log('更新地址API响应:', updateResponse)
+            
+            if (updateResponse.data?.code === 200) {
+              alert('地址更新成功')
+              console.log('地址更新成功:', addressData)
+              
+              // 更新本地数据
+              const index = this.addresses.findIndex(addr => addr.id === this.editingAddress.id)
+              if (index !== -1) {
+                this.addresses[index] = {
+                  ...this.addresses[index],
+                  receiverName: this.addressForm.receiverName,
+                  phone: this.addressForm.phone,
+                  province: this.addressForm.province,
+                  city: this.addressForm.city,
+                  detailAddress: this.addressForm.detailAddress,
+                  postalCode: this.addressForm.postalCode,
+                  isDefault: this.addressForm.isDefault
+                }
+              }
+            } else {
+              throw new Error(`更新失败: ${updateResponse.data?.message || '未知错误'}`)
+            }
+          } catch (updateError) {
+            console.error('API更新失败:', updateError)
+            alert(`地址更新失败: ${updateError.message}`)
+            return
+          }
+        } else {
+          // 添加新地址
+          try {
+            console.log('添加新地址')
+            console.log('发送到API的数据:', addressData)
+            
+            const addResponse = await AddressAPI.add(addressData)
+            console.log('添加地址API响应:', addResponse)
+            console.log('响应状态:', addResponse.status)
+            console.log('响应数据:', addResponse.data)
+            
+            if (addResponse.data?.code === 200) {
+              alert('地址添加成功')
+              console.log('地址添加成功:', addressData)
+              
+              // 重新加载地址列表以获取最新的数据
+              await this.loadAddresses()
+            } else {
+              console.error('API返回错误:', addResponse.data)
+              throw new Error(`添加失败: ${addResponse.data?.message || addResponse.data?.msg || '未知错误'}`)
+            }
+          } catch (addError) {
+            console.error('API添加失败:', addError)
+            console.error('错误详情:', {
+              message: addError.message,
+              response: addError.response,
+              request: addError.request,
+              config: addError.config
+            })
+            
+            let errorMessage = '地址添加失败'
+            if (addError.response?.data?.message) {
+              errorMessage += `: ${addError.response.data.message}`
+            } else if (addError.response?.data?.msg) {
+              errorMessage += `: ${addError.response.data.msg}`
+            } else if (addError.message) {
+              errorMessage += `: ${addError.message}`
+            }
+            
+            alert(errorMessage)
+            return
+          }
+        }
+
+        this.closeModal()
+      } catch (error) {
+        console.error('保存地址失败:', error)
+        alert(`保存失败: ${error.message}`)
+      } finally {
+        this.saving = false
+      }
+    },
+
+    validateForm() {
+      if (!this.addressForm.receiverName.trim()) {
+        alert('请输入收货人姓名')
+        return false
+      }
+      
+      // 修复手机号码验证逻辑
+      const phone = this.addressForm.phone.trim()
+      if (!phone) {
+        alert('请输入手机号码')
+        return false
+      }
+      
+      // 更宽松的手机号码验证，支持多种格式
+      const phoneRegex = /^1[3-9]\d{9}$|^0\d{2,3}-?\d{7,8}$|^400-?\d{3}-?\d{4}$/
+      if (!phoneRegex.test(phone)) {
+        alert('请输入正确的手机号码格式（如：13800138000）')
+        return false
+      }
+      
+      if (!this.addressForm.province.trim()) {
+        alert('请输入省份')
+        return false
+      }
+      if (!this.addressForm.city.trim()) {
+        alert('请输入城市')
+        return false
+      }
+      if (!this.addressForm.detailAddress.trim()) {
+        alert('请输入详细地址')
+        return false
+      }
+      return true
+    },
+
+    onProvinceChange() {
+      // 不再需要，因为现在是输入框
+    },
+
+    onCityChange() {
+      // 不再需要，因为现在是输入框
+    },
+
+    updateCityOptions() {
+      // 不再需要，因为现在是输入框
+    },
+
+    updateDistrictOptions() {
+      // 不再需要，因为现在是输入框
+    },
+
+    closeModal() {
+      this.showAddModal = false
+      this.showEditModal = false
+      this.editingAddress = null
+      this.resetAddressForm()
+    },
+
+    resetAddressForm() {
+      this.addressForm = {
+        receiverName: '',
+        phone: '',
+        province: '',
+        city: '',
+        detailAddress: '',
+        postalCode: '',
+        isDefault: false
+      }
+    },
+
+    formatAddress(address) {
+      if (!address) return ''
+      const parts = []
+      if (address.province) parts.push(address.province)
+      if (address.city) parts.push(address.city)
+      if (address.detailAddress) parts.push(address.detailAddress)
+      return parts.join(' ')
+    }
+  }
+}
+</script>
+
+<style scoped>
+.address-management {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.address-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e1e8ed;
+}
+
+.address-header h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 60px 0;
+  color: #7f8c8d;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 0;
+  color: #7f8c8d;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.addresses-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.address-item {
+  border: 1px solid #e1e8ed;
+  border-radius: 8px;
+  padding: 20px;
+  transition: box-shadow 0.3s;
+}
+
+.address-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.address-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.address-info {
+  flex: 1;
+}
+
+.contact-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.name {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 16px;
+}
+
+.phone {
+  color: #7f8c8d;
+  font-size: 14px;
+}
+
+.default-badge {
+  background-color: #e74c3c;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.address-detail {
+  color: #34495e;
+  line-height: 1.5;
+}
+
+.address-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 100px;
+}
+
+/* 模态框样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e1e8ed;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #7f8c8d;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.address-form {
+  max-width: 500px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #34495e;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.3s;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.region-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.checkbox-group {
+  margin-bottom: 24px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.form-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.checkbox-text {
+  color: #34495e;
+  font-size: 14px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  transition: all 0.3s;
+  font-size: 14px;
+}
+
+.btn-primary {
+  background-color: #3498db;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #2980b9;
+}
+
+.btn-primary:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: #95a5a6;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #7f8c8d;
+}
+
+.btn-outline {
+  background-color: transparent;
+  color: #3498db;
+  border: 2px solid #3498db;
+}
+
+.btn-outline:hover {
+  background-color: #3498db;
+  color: white;
+}
+
+.btn-danger {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #c0392b;
+}
+
+.icon {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .address-management {
+    padding: 16px;
+  }
+  
+  .address-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  
+  .address-content {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .address-actions {
+    min-width: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  
+  .modal-content {
+    width: 95%;
+    margin: 20px;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .region-inputs {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+}
+</style>

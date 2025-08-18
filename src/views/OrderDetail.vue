@@ -139,14 +139,13 @@
 
 <script>
 import { ref, onMounted, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { OrderAPI, ShoeAPI, ShoesSizeAPI, AddressAPI, ShoeImgAPI } from '@/api'
 
 export default {
     name: 'OrderDetailPage',
     setup() {
         const route = useRoute()
-        const router = useRouter()
         
         const loading = ref(false)
         const error = ref('')
@@ -193,9 +192,10 @@ export default {
                     console.log('订单详情数据:', orderDetails.value)
                 } else if (orderIds) {
                     // 通过订单ID加载，调用后端API获取订单详情
-                    const orderIdArray = orderIds.split(',').map(id => parseInt(id.trim()))
                     
                     try {
+                        // eslint-disable-next-line no-unused-vars
+                        const orderIdArray = orderIds.split(',').map(id => parseInt(id.trim()))
                         // 调用后端API获取订单详情
                         const orderResponse = await OrderAPI.getById(orderIds)
                         if (orderResponse.data?.code === 200 && orderResponse.data.data) {

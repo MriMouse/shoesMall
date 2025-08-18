@@ -157,13 +157,29 @@
 						<path d="M9 8a3 3 0 0 1 6 0" />
 					</svg>
 				</button>
-				<button class="icon-btn" :class="{ 'disabled': !isLoggedIn }" @click="goProfile" aria-label="个人中心">
-					<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"
-						stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-						<circle cx="12" cy="8" r="3" />
-						<path d="M4 20c0-3.314 3.582-6 8-6s8 2.686 8 6" />
-					</svg>
-				</button>
+				<!-- 用户头像按钮 + 悬浮下拉菜单 -->
+				<div class="user-menu-wrapper" @mouseenter="openUserMenu" @mouseleave="scheduleCloseUserMenu">
+					<button class="icon-btn" :class="{ 'disabled': !isLoggedIn }" @click="goProfile" aria-label="个人中心">
+						<img v-if="avatarPath" :src="avatarUrl" alt="avatar" class="avatar-img" />
+						<svg v-else viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"
+							stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<circle cx="12" cy="8" r="3" />
+							<path d="M4 20c0-3.314 3.582-6 8-6s8 2.686 8 6" />
+						</svg>
+					</button>
+					<input ref="avatarInput" type="file" accept="image/*" class="hidden-input" @change="handleAvatarChange" />
+					<div v-if="isLoggedIn && showUserMenu" class="user-dropdown" @mouseenter="openUserMenu" @mouseleave="scheduleCloseUserMenu">
+						<button class="dropdown-item" @click="goProfileTab('overview')">个人中心</button>
+						<button class="dropdown-item" @click="goProfileTab('info')">个人信息</button>
+						<button class="dropdown-item" @click="goProfileTab('orders')">我的订单</button>
+						<button class="dropdown-item" @click="goProfileTab('address')">收货地址</button>
+						<button class="dropdown-item" @click="goProfileTab('settings')">账户设置</button>
+						<div class="dropdown-divider"></div>
+						<button class="dropdown-item" @click="triggerUpload">更换头像</button>
+						<div class="dropdown-divider"></div>
+						<button class="dropdown-item logout" @click="logout">退出登录</button>
+					</div>
+				</div>
 			</div>
 			<!-- 全局单实例 Mega Menu，避免切换时闪烁 -->
 			<div v-if="currentGroup && activeMenuIndex !== null" class="mega-menu" 
@@ -218,6 +234,7 @@
 <script>
 import { reactive, ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { UserAPI } from '@/api';
 import axios from 'axios';
 
 export default {
@@ -225,6 +242,9 @@ export default {
 	emits: ['open-login'],
 	setup(props, { emit }) {
 		const router = useRouter();
+		// 用户下拉菜单
+		const showUserMenu = ref(false);
+		let userMenuTimer = null;
 		const isSticky = ref(false);
 		const activeMenuIndex = ref(null);
 		const currentGroup = ref(null);
@@ -263,6 +283,24 @@ export default {
 			} else {
 				emit('open-login');
 			}
+		}
+
+		function openUserMenu() {
+			showUserMenu.value = true;
+			if (userMenuTimer) clearTimeout(userMenuTimer);
+		}
+		function scheduleCloseUserMenu() {
+			if (userMenuTimer) clearTimeout(userMenuTimer);
+			userMenuTimer = setTimeout(() => { showUserMenu.value = false; }, 150);
+		}
+		function goProfileTab(tab) {
+			router.push('/profile');
+			sessionStorage.setItem('profile-target-tab', tab);
+		}
+		function logout() {
+			localStorage.removeItem('user');
+			showUserMenu.value = false;
+			router.push('/');
 		}
 
 		const navGroups = reactive([
@@ -435,7 +473,7 @@ export default {
 
 		// 新增：预加载函数，在用户悬停导航项时就开始准备数据
 		function preloadMegaMenu() {
-			// 不再自动预选左侧第一个分类；保持初始为通用“热门主推”预览
+			// 不再自动预选左侧第一个分类；保持初始为通用"热门主推"预览
 			// 如需预热图片，可在此处添加仅缓存加载的逻辑，但不要更新 previewProducts
 			return;
 		}
@@ -928,13 +966,79 @@ export default {
 			}
 		}
 
+		const avatarPath = ref('');
+		const avatarUrl = computed(() => {
+			if (!avatarPath.value) return '';
+			const filename = avatarPath.value.split('/').pop();
+			return `/api/users/getAvatar/${filename}`;
+		});
+		onMounted(async () => {
+			const user = localStorage.getItem('user');
+			try {
+				if (user) {
+					const u = typeof user === 'string' ? JSON.parse(user) : user;
+					avatarPath.value = u.avatarPath || '';
+				}
+			} catch (e) { console.warn('读取本地用户失败', e); }
+			// 同步获取后端头像路径
+			try {
+				const raw = localStorage.getItem('user');
+				if (raw) {
+					const obj = typeof raw === 'string' ? JSON.parse(raw) : raw;
+					if (obj?.username) {
+						const res = await UserAPI.getAvatarPath(obj.username);
+						if (res.data?.code === 200 && res.data.data) {
+							avatarPath.value = res.data.data;
+						}
+					}
+				}
+			} catch (e) { console.warn('获取后端头像路径异常:', e) }
+		});
+		const avatarInput = ref(null);
+		function triggerUpload() { avatarInput.value && avatarInput.value.click(); }
+		async function handleAvatarChange(e) {
+			const file = e.target.files && e.target.files[0];
+			if (!file) return;
+			// 上传到后端
+			const formData = new FormData();
+			// 后端要求字段名为 avatar
+			formData.append('avatar', file);
+			try {
+				const uploadRes = await UserAPI.uploadAvatar(formData);
+				if (uploadRes.data?.code === 200 && uploadRes.data.data) {
+					const serverPath = uploadRes.data.data; // 后端返回的头像相对路径
+					avatarPath.value = serverPath;
+					// 更新数据库 user.avatar_path
+					const raw = localStorage.getItem('user');
+					let userId = null; let username = null; let obj = null;
+					if (raw) { obj = typeof raw === 'string' ? JSON.parse(raw) : raw; userId = obj.id; username = obj.username; }
+					if (userId) {
+						await UserAPI.updateAvatarById(userId, serverPath);
+					} else if (username) {
+						await UserAPI.updateAvatar(username, serverPath);
+					}
+					// 同步本地
+					if (obj) { obj.avatarPath = serverPath; localStorage.setItem('user', JSON.stringify(obj)); }
+				} else {
+					console.warn('头像上传失败:', uploadRes.data);
+				}
+			} catch (err) {
+				console.error('上传头像出错:', err);
+			}
+		}
 
 		return {
+			router,
 			isSticky,
-			navGroups,
 			activeMenuIndex,
 			currentGroup,
 			hoveredCategory,
+			showUserMenu,
+			openUserMenu,
+			scheduleCloseUserMenu,
+			goProfileTab,
+			logout,
+			navGroups,
 			isLoggedIn,
 			previewProducts,
 			previewLoading,
@@ -974,7 +1078,12 @@ export default {
 			currentHotSearchIndex,
 			currentHotSearchTerm,
 			hotSearchTerms,
-			onLoginStatusClick
+			onLoginStatusClick,
+			avatarPath,
+			avatarUrl,
+			avatarInput,
+			triggerUpload,
+			handleAvatarChange
 		};
 	}
 };
@@ -1291,12 +1400,12 @@ mark {
 .actions {
 	display: flex;
 	align-items: center;
-	gap: 24px;
-	/* 增加两个UI按钮之间的距离 (从12px改为24px) */
+	gap: 32px;
+	/* 增大两个按钮间距 */
 	margin-right: -42px;
-	/* 右移UI按钮 (从-32px改为-42px) */
 	flex-shrink: 0;
 }
+.user-menu-wrapper { margin-left: 4px; }
 
 .icon-btn {
 	width: 40px;
@@ -2016,4 +2125,34 @@ mark {
 		height: 32px;
 	}
 }
+
+/* 用户菜单 */
+.user-menu-wrapper { position: relative; }
+.user-dropdown {
+  position: absolute;
+  right: 0;
+  top: 36px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  padding: 8px;
+  min-width: 180px;
+  z-index: 1200;
+}
+.dropdown-item {
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.dropdown-item:hover { background: #f5f6fa; }
+.dropdown-divider { height: 1px; background: #eee; margin: 6px 0; }
+.dropdown-item.logout { color: #e74c3c; }
+
+.avatar-img{width:24px;height:24px;border-radius:50%;object-fit:cover;} .hidden-input{display:none;} .user-dropdown .dropdown-item{color:#111;} .user-dropdown .dropdown-item.logout{color:#111;border-top:1px solid #eee;}
+
 </style>
