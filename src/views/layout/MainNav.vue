@@ -304,7 +304,6 @@ export default {
 			// 监听自定义登录成功事件
 			window.addEventListener('user-login-change', checkLoginStatus);
 			
-			startHotSearchRotation(); // 启动热门搜索词条循环
 			loadCategoriesFromBackend(); // 加载分类数据
 			
 			// 预加载一些常用图片，提升用户体验
@@ -318,7 +317,6 @@ export default {
 			// 清理事件监听器
 			window.removeEventListener('storage', handleStorageChange);
 			window.removeEventListener('user-login-change', checkLoginStatus);
-			stopHotSearchRotation(); // 停止热门搜索词条循环
 			// 清理定时器
 			if (debounceTimer) {
 				clearTimeout(debounceTimer);
