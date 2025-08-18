@@ -883,7 +883,7 @@ export default {
 		const searchHistoryLoading = ref(false);
 
 		// 新增：删除后短时间阻止重新写入的前端防抖（避免刚删除又被详情页/其他地方立刻写回）
-		const HISTORY_BLOCK_MS = 10 * 1000; // 10秒窗口
+		const HISTORY_BLOCK_MS = 3 * 1000; // 3秒窗口
 		const makeHistoryBlockKey = (userId, shoeId) => `search-history-block:${userId}:${shoeId}`;
 		const markHistoryDeleted = (userId, shoeId) => {
 			try {
