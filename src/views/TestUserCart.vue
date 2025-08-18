@@ -105,7 +105,7 @@ export default {
         this.addTestResult(true, '开始测试用户API调用...')
         
         this.addTestResult(true, '测试后端连接...')
-        await axios.post('http://localhost:8081/users/getAllUsers', {}, {
+        await axios.post('/api/users/getAllUsers', {}, {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
           }
@@ -115,7 +115,7 @@ export default {
         this.addTestResult(true, '测试获取用户ID接口...')
         const params = new URLSearchParams({ username: this.currentUsername })
         
-        const response = await axios.post('http://localhost:8081/users/getUserIdByUsername', params, {
+        const response = await axios.post('/api/users/getUserIdByUsername', params, {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
           }
@@ -145,7 +145,7 @@ export default {
           password: '123456'
         })
         
-        const response = await axios.post('http://localhost:8081/usersLogin/userRegister', params, {
+        const response = await axios.post('/api/usersLogin/userRegister', params, {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
           }
@@ -174,7 +174,7 @@ export default {
           password: '123456'
         })
         
-        const response = await axios.post('http://localhost:8081/usersLogin/userLogin', params, {
+        const response = await axios.post('/api/usersLogin/userLogin', params, {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
           }

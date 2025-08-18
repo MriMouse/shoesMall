@@ -73,7 +73,7 @@ class UserManager {
             // 先预热系统 - 调用getAllUsers接口
             try {
                 console.log('预热系统 - 调用getAllUsers接口...')
-                await axios.post('http://localhost:8081/users/getAllUsers', {}, {
+                await axios.post('/api/users/getAllUsers', {}, {
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     }
@@ -87,7 +87,7 @@ class UserManager {
             console.log('参数:', { username })
             
             const params = new URLSearchParams({ username })
-            const response = await axios.post('http://localhost:8081/users/getUserIdByUsername', params, {
+            const response = await axios.post('/api/users/getUserIdByUsername', params, {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded'
                 }

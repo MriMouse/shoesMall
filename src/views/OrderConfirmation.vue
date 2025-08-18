@@ -577,7 +577,7 @@ const loadOrderData = async () => {
         }
         
         // 优先处理来自购物车的跳转
-        const { productId, sizeId, quantity, fromOrderConfirmation, fromCart, items } = route.query
+        const { productId, sizeId, quantity, fromOrderConfirmation, fromCart, items, fromPendingOrder, orderId, orderNumber } = route.query
         
         // 如果有来自购物车的跳转，不恢复本地存储的数据
         // 如果没有来自购物车的跳转，才尝试恢复保存的订单数据

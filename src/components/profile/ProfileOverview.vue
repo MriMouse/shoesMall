@@ -1,24 +1,6 @@
 <template>
   <div class="profile-overview">
-    <!-- 用户基本信息卡片 -->
-    <div class="user-card">
-      <div class="user-avatar">
-        <div class="avatar-placeholder" v-if="!userInfo.avatarPath">
-          <span>{{ userInfo.username ? userInfo.username.charAt(0).toUpperCase() : 'U' }}</span>
-        </div>
-        <img v-else :src="userInfo.avatarPath" :alt="userInfo.username" />
-      </div>
-      <div class="user-details">
-        <h2 class="user-name">{{ userInfo.username }}</h2>
-        <p class="user-level">{{ userInfo.integral ? `积分${userInfo.integral}` : '普通会员' }}</p>
-        <p class="user-join-date">加入时间：{{ formatDate(userInfo.registrationDate) }}</p>
-      </div>
-      <div class="user-actions">
-        <button @click="$emit('edit-profile')" class="btn btn-outline">
-          编辑资料
-        </button>
-      </div>
-    </div>
+    <!-- 顶部横幅已展示用户信息，这里移除重复的白色卡片以减少空白 -->
 
     <!-- 统计信息卡片 -->
     <div class="stats-grid">

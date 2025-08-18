@@ -246,7 +246,7 @@
 </template>
 
 <script>
-import { reactive, ref, onMounted, onBeforeUnmount } from 'vue';
+import { reactive, ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { UserAPI } from '@/api';
 import axios from 'axios';
@@ -1379,7 +1379,12 @@ export default {
 			deleteSearchHistory,
 			clearAllSearchHistory,
 			goToProductDetailWithHistory,
-			goToProductDetailFromHistory
+			goToProductDetailFromHistory,
+			avatarPath,
+			avatarUrl,
+			avatarInput,
+			triggerUpload,
+			handleAvatarChange
 		};
 	}
 };
@@ -1663,7 +1668,7 @@ export default {
 	margin-right: -42px;
 	flex-shrink: 0;
 }
-.user-menu-wrapper { margin-left: 4px; }
+.user-menu-wrapper { margin-left: 4px; position: relative; }
 
 .icon-btn {
 	width: 40px;
@@ -1682,6 +1687,47 @@ export default {
 	transform: translateZ(0);
 	will-change: background, transform, color, border-color;
 }
+
+/* 下拉菜单样式（用户头像菜单） */
+.user-dropdown {
+	position: absolute;
+	top: 52px;
+	right: 0;
+	min-width: 200px;
+	background: #fff;
+	border: 1px solid #eee;
+	border-radius: 12px;
+	box-shadow: 0 12px 32px rgba(0,0,0,.12);
+	padding: 8px;
+	display: flex;
+	flex-direction: column;
+	z-index: 1000;
+}
+
+.dropdown-item {
+	width: 100%;
+	text-align: left;
+	background: transparent;
+	border: none;
+	padding: 10px 12px;
+	border-radius: 8px;
+	font-size: 14px;
+	color: #111;
+	cursor: pointer;
+	transition: background .12s ease, color .12s ease;
+}
+
+.dropdown-item:hover { background: #f5f5f5; }
+.dropdown-item.logout { color: #c0392b; }
+
+.dropdown-divider {
+	height: 1px;
+	background: #eee;
+	margin: 6px 0;
+}
+
+.avatar-img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+.hidden-input { display: none; }
 
 .icon-btn:first-child {
 	margin-left: -32px;

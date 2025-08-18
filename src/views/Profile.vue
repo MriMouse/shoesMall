@@ -1,63 +1,40 @@
 <template>
   <div class="profile">
     <div class="profile-container">
-      <!-- 左侧导航（模仿 adidas 结构：左侧竖向菜单） -->
+      <!-- 左侧导航（分组样式，贴合 adidas 账户页） -->
       <div class="profile-sidebar">
-        <div class="sidebar-nav">
-          <button 
-            v-for="tab in tabs" 
-            :key="tab.key" 
-            :class="['nav-item', { active: activeTab === tab.key }]"
-            @click="activeTab = tab.key"
-          >
-            <span class="nav-icon">{{ tab.icon }}</span>
-            <span class="nav-label">{{ tab.label }}</span>
-          </button>
-          <button class="nav-item logout-btn" @click="handleLogout">
-            <span class="nav-icon">🚪</span>
-            <span class="nav-label">退出登录</span>
-          </button>
-        </div>
+        <nav class="side-groups">
+          <section class="side-group" v-for="group in sideGroups" :key="group.title">
+            <div class="side-title">{{ group.title }}</div>
+            <button 
+              v-for="item in group.items" 
+              :key="item.key"
+              class="side-link"
+              :class="{ active: activeTab === item.key }"
+              @click="navigateTo(item.key)"
+            >{{ item.label }}</button>
+          </section>
+          <section class="side-group">
+            <button class="side-link logout" @click="handleLogout">退出账户</button>
+          </section>
+        </nav>
       </div>
 
       <div class="profile-main">
-        <!-- 顶部黑底会员横幅（问候语 + 指标） -->
-        <div class="account-hero">
-          <div class="hero-header">
-            <div class="hero-left">
-              <div class="hero-avatar" @mouseenter="avatarHover=true" @mouseleave="avatarHover=false">
-                <img v-if="avatarPath" :src="heroAvatarUrl" alt="avatar" class="hero-avatar-img" />
-                <div v-else class="hero-avatar-placeholder">{{ userName ? userName.charAt(0).toUpperCase() : 'U' }}</div>
-                <button class="hero-avatar-edit" @click="triggerHeroUpload" :class="{ show: avatarHover }">更换头像</button>
-                <input ref="heroAvatarInput" type="file" accept="image/*" class="hidden-input" @change="handleHeroAvatarChange" />
-              </div>
-              <div class="hello">你好，{{ userName || '会员' }}</div>
-            </div>
-            <div class="hero-actions">
-              <button class="hero-edit" @click="activeTab='info'">编辑资料</button>
-              <button class="hero-logout" @click="handleLogout">退出账户</button>
-            </div>
-          </div>
-          <div class="hero-metrics">
-            <div class="metric">
-              <div class="metric-value">{{ userPoints }}</div>
-              <div class="metric-label">我的积分</div>
-            </div>
-            <div class="metric">
-              <div class="metric-value">{{ availableCoupons }}</div>
-              <div class="metric-label">可用优惠</div>
-            </div>
-            <div class="metric">
-              <div class="metric-value">{{ exclusiveBenefits }}</div>
-              <div class="metric-label">专属权益</div>
-            </div>
+        <!-- 顶部结构（问候语 + 会员黑色进度横幅），贴合 adidas 账户页比例 -->
+        <div class="profile-header">
+          <h1 class="greeting">你好，{{ userName || '会员' }}</h1>
+          <div class="header-actions">
+            <button class="hero-edit" @click="activeTab='info'">编辑资料</button>
+            <button class="hero-logout" @click="handleLogout">退出账户</button>
           </div>
         </div>
+
+        
 
       <!-- 个人中心概览 -->
       <ProfileOverview 
         v-if="activeTab === 'overview'"
-        @edit-profile="activeTab = 'info'"
         @navigate="handleNavigation"
       />
 
@@ -107,12 +84,27 @@ export default {
   data() {
     return {
       activeTab: 'overview',
-      tabs: [
-        { key: 'overview', label: '个人中心', icon: '🏠' },
-        { key: 'info', label: '个人信息', icon: '👤' },
-        { key: 'orders', label: '我的订单', icon: '📦' },
-        { key: 'address', label: '收货地址', icon: '📍' },
-        { key: 'settings', label: '账户设置', icon: '⚙️' }
+      sideGroups: [
+        {
+          title: '个人中心',
+          items: [
+            { key: 'overview', label: '账户首页' },
+            { key: 'info', label: '个人信息' }
+          ]
+        },
+        {
+          title: '订单中心',
+          items: [
+            { key: 'orders', label: '我的订单' }
+          ]
+        },
+        {
+          title: '账户设置',
+          items: [
+            { key: 'settings', label: '账户设置' },
+            { key: 'address', label: '地址簿' }
+          ]
+        }
       ],
       userName: '',
       userPoints: 0,
@@ -160,6 +152,9 @@ export default {
     }
   },
   methods: {
+    navigateTo(tab) {
+      this.activeTab = tab
+    },
     handleNavigation(tab) {
       this.activeTab = tab
     },
@@ -247,15 +242,44 @@ export default {
 .profile-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 1rem;
+  padding: 0 24px;
   display: grid;
-  grid-template-columns: 260px 1fr; /* 左侧窄栏 + 右侧主内容 */
+  grid-template-columns: 240px 1fr; /* 左侧窄栏 + 右侧主内容 */
   gap: 24px;
+  justify-content: center;
 }
 
 .profile-sidebar { position: sticky; top: 2rem; height: fit-content; }
 
-.profile-main { display: flex; flex-direction: column; gap: 20px; }
+.profile-main { display: flex; flex-direction: column; gap: 16px; }
+
+/* 顶部区域（问候语 + 操作） */
+.profile-header { display: flex; justify-content: space-between; align-items: center; }
+.greeting { font-size: 28px; font-weight: 700; margin: 0; }
+.header-actions { display: flex; gap: 12px; }
+.hero-edit, .hero-logout { border: 1px solid #111; background: #fff; color: #111; border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+.hero-edit:hover, .hero-logout:hover { background: #111; color: #fff; }
+
+/* 会员黑色横幅（比例与留白贴合） */
+.adiclub-banner { background: #0a0a0a; color: #fff; border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; justify-content: center; gap: 64px; }
+.banner-left { display: flex; align-items: center; }
+.progress { position: relative; width: 520px; height: 4px; }
+.progress-track { position: absolute; top: 50%; left: 0; right: 0; height: 4px; background: rgba(255,255,255,.2); transform: translateY(-50%); border-radius: 2px; }
+.progress-step { position: absolute; top: 50%; width: 10px; height: 10px; background: #fff; border-radius: 50%; transform: translate(-50%, -50%); }
+.banner-metrics { display: flex; gap: 64px; }
+.b-metric { text-align: center; min-width: 120px; }
+.b-value { font-size: 24px; font-weight: 800; }
+.b-label { color: #cfcfcf; margin-top: 4px; font-size: 12px; }
+
+/* 左侧导航分组样式 */
+.side-groups { display: flex; flex-direction: column; gap: 28px; }
+.side-group { border-left: 1px solid #eee; padding-left: 12px; }
+.side-title { font-size: 12px; color: #777; letter-spacing: .08em; margin-bottom: 8px; }
+.side-link { display: block; width: 100%; text-align: left; background: transparent; border: none; padding: 8px 8px; border-radius: 8px; cursor: pointer; color: #111; font-size: 14px; }
+.side-link:hover { background: #f5f5f5; }
+.side-link.active { background: #111; color: #fff; }
+.side-link.logout { border: 1px solid #111; border-radius: 999px; text-align: center; margin-top: 4px; }
+.hidden-input { display: none; }
 
 /* 顶部黑底会员横幅 */
 .account-hero {
@@ -352,11 +376,8 @@ export default {
   font-size: 18px;
 }
 
-.nav-icon {
-  font-size: 18px;
-  width: 24px;
-  text-align: center;
-}
+/* 移除前置UI图标占位，统一左对齐 */
+.nav-icon { display: none; }
 
 .nav-label {
   font-size: 14px;
