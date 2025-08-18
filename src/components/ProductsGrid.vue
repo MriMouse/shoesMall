@@ -171,6 +171,14 @@ export default {
 
 <style scoped>
 .product-grid {
+    /* 统一 MainNav 黑白极简主题 */
+    --color-text: #111;
+    --color-subtext: #666;
+    --color-border: #ddd;
+    --color-bg: #fff;
+    --btn-radius: 8px;
+    --btn-border: 1.5px;
+
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 20px;
@@ -178,11 +186,11 @@ export default {
 }
 
 .product-item {
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
     padding: 16px;
-    background: white;
-    transition: all 0.3s ease;
+    background: var(--color-bg);
+    transition: box-shadow .15s ease, transform .1s ease;
 }
 
 .product-item:hover {
@@ -218,13 +226,14 @@ export default {
 
 .product-info {
     text-align: center;
+    color: var(--color-text);
 }
 
 .product-name {
     font-size: 1.1rem;
-    font-weight: 600;
+    font-weight: 700;
     margin-bottom: 8px;
-    color: #333;
+    color: var(--color-text);
 }
 
 .product-meta {
@@ -236,10 +245,10 @@ export default {
 
 .brand, .type {
     padding: 4px 8px;
-    background: #f8f9fa;
+    background: #f2f2f2;
     border-radius: 12px;
     font-size: 0.8rem;
-    color: #666;
+    color: #333;
 }
 
 .product-price {
@@ -248,7 +257,7 @@ export default {
 
 .current-price {
     font-size: 1.2rem;
-    font-weight: 600;
+    font-weight: 700;
     color: #e74c3c;
 }
 
@@ -267,28 +276,30 @@ export default {
 
 .size-select, .quantity-input {
     padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--btn-radius);
     font-size: 0.9rem;
 }
 
 .add-to-cart-btn {
     padding: 10px;
-    background: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
+    background: transparent;
+    color: #000;
+    border: var(--btn-border) solid #000;
+    border-radius: var(--btn-radius);
     cursor: pointer;
     font-size: 0.9rem;
-    transition: background 0.3s ease;
+    transition: background .15s ease, color .15s ease, border-color .15s ease, transform .1s ease;
 }
 
 .add-to-cart-btn:hover:not(:disabled) {
-    background: #0056b3;
+    background: #000;
+    color: #fff;
+    border-color: #000;
 }
 
 .add-to-cart-btn:disabled {
-    background: #ccc;
+    opacity: 0.5;
     cursor: not-allowed;
 }
 </style>
