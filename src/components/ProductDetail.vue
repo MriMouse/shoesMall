@@ -1,5 +1,6 @@
 <template>
     <div class="product-detail-container">
+        <BasicToast ref="toast" :message="toastMessage" :type="toastType" :duration="3000" />
         <!-- 加载状态 -->
         <div v-if="loading" class="loading-container">
             <div class="loading-spinner"></div>
@@ -31,54 +32,26 @@
                 <div class="product-images-section">
                     <!-- 主图片展示 -->
                     <div class="main-image-container">
-                        <div 
-                            class="main-image-wrapper"
-                            @mousemove="handleImageZoom"
-                            @mouseleave="hideZoom"
-                            ref="mainImageWrapper"
-                        >
-                            <img 
-                                :src="currentMainImage" 
-                                :alt="product.name"
-                                class="main-image"
-                                ref="mainImage"
-                            >
+                        <div class="main-image-wrapper" @mousemove="handleImageZoom" @mouseleave="hideZoom"
+                            ref="mainImageWrapper">
+                            <img :src="currentMainImage" :alt="product.name" class="main-image" ref="mainImage">
                             <!-- 放大镜效果 -->
-                            <div 
-                                v-show="showZoom"
-                                class="zoom-lens"
-                                :style="zoomLensStyle"
-                            ></div>
+                            <div v-show="showZoom" class="zoom-lens" :style="zoomLensStyle"></div>
                         </div>
-                        
+
                         <!-- 放大后的图片 - 固定在右侧 -->
-                        <div 
-                            v-show="showZoom"
-                            class="zoomed-image-container"
-                        >
-                            <img 
-                                :src="currentMainImage" 
-                                :alt="product.name"
-                                class="zoomed-image"
-                                :style="zoomedImageStyle"
-                            >
+                        <div v-show="showZoom" class="zoomed-image-container">
+                            <img :src="currentMainImage" :alt="product.name" class="zoomed-image"
+                                :style="zoomedImageStyle">
                         </div>
                     </div>
 
                     <!-- 缩略图列表 -->
                     <div v-if="product.images && product.images.length > 1" class="thumbnail-list">
-                        <div 
-                            v-for="(image, index) in product.images" 
-                            :key="image.imgId"
-                            class="thumbnail-item"
-                            :class="{ 'active': currentImageIndex === index }"
-                            @click="selectImage(index)"
-                        >
-                            <img 
-                                :src="`/api/shoeImg/getImage/${image.imagePath}`"
-                                :alt="`${product.name} ${index + 1}`"
-                                class="thumbnail-image"
-                            >
+                        <div v-for="(image, index) in product.images" :key="image.imgId" class="thumbnail-item"
+                            :class="{ 'active': currentImageIndex === index }" @click="selectImage(index)">
+                            <img :src="`/api/shoeImg/getImage/${image.imagePath}`" :alt="`${product.name} ${index + 1}`"
+                                class="thumbnail-image">
                         </div>
                     </div>
                 </div>
@@ -87,7 +60,7 @@
                 <div class="product-info-section">
                     <!-- 产品标题 -->
                     <h1 class="product-title">{{ product.name }}</h1>
-                    
+
                     <!-- 产品编号 -->
                     <div class="product-serial">
                         <span class="label">产品编号：</span>
@@ -122,17 +95,10 @@
                     <div class="size-section">
                         <h3 class="section-title">选择尺码</h3>
                         <div class="size-options">
-                            <button 
-                                v-for="size in availableSizes" 
-                                :key="size.sizeId"
-                                class="size-option"
-                                :class="{ 
-                                    'selected': selectedSize === size.sizeId,
-                                    'disabled': !size.hasStock
-                                }"
-                                @click="selectSize(size.sizeId)"
-                                :disabled="!size.hasStock"
-                            >
+                            <button v-for="size in availableSizes" :key="size.sizeId" class="size-option" :class="{
+                                'selected': selectedSize === size.sizeId,
+                                'disabled': !size.hasStock
+                            }" @click="selectSize(size.sizeId)" :disabled="!size.hasStock">
                                 {{ size.size }}
                                 <span v-if="size.hasStock" class="stock-info">({{ size.stock }}双)</span>
                                 <span v-else class="stock-info">(无库存)</span>
@@ -144,26 +110,12 @@
                     <div class="quantity-section">
                         <h3 class="section-title">购买数量</h3>
                         <div class="quantity-controls">
-                            <button 
-                                @click="decreaseQuantity" 
-                                class="quantity-btn"
-                                :disabled="quantity <= 1"
-                            >
+                            <button @click="decreaseQuantity" class="quantity-btn" :disabled="quantity <= 1">
                                 -
                             </button>
-                            <input 
-                                v-model.number="quantity" 
-                                type="number" 
-                                min="1" 
-                                :max="maxQuantity"
-                                class="quantity-input"
-                                @input="validateQuantity"
-                            >
-                            <button 
-                                @click="increaseQuantity" 
-                                class="quantity-btn"
-                                :disabled="quantity >= maxQuantity"
-                            >
+                            <input v-model.number="quantity" type="number" min="1" :max="maxQuantity"
+                                class="quantity-input" @input="validateQuantity">
+                            <button @click="increaseQuantity" class="quantity-btn" :disabled="quantity >= maxQuantity">
                                 +
                             </button>
                         </div>
@@ -195,63 +147,63 @@
             <!-- 产品详细信息 -->
             <div class="product-details-section">
                 <h2 class="section-title">产品详细信息</h2>
-                
+
                 <div class="details-grid">
                     <div class="detail-item">
                         <span class="detail-label">产品名称：</span>
                         <span class="detail-value">{{ product.name }}</span>
                     </div>
-                    
+
                     <div class="detail-item">
                         <span class="detail-label">产品编号：</span>
                         <span class="detail-value">{{ product.serialNumber }}</span>
                     </div>
-                    
+
                     <div class="detail-item">
                         <span class="detail-label">品牌：</span>
                         <span class="detail-value">{{ product.brand?.brandName || 'N/A' }}</span>
                     </div>
-                    
+
                     <div class="detail-item">
                         <span class="detail-label">版型：</span>
                         <span class="detail-value">{{ product.shoesType?.typeName || 'N/A' }}</span>
                     </div>
-                    
+
                     <div class="detail-item">
                         <span class="detail-label">颜色：</span>
                         <span class="detail-value">{{ product.color?.colorName || 'N/A' }}</span>
                     </div>
-                    
+
                     <div class="detail-item">
                         <span class="detail-label">适用性别：</span>
                         <span class="detail-value">{{ getShoeSexText(product.shoeSex) }}</span>
                     </div>
-                    
+
                     <div class="detail-item">
                         <span class="detail-label">原价：</span>
                         <span class="detail-value">¥{{ product.price }}</span>
                     </div>
-                    
+
                     <div v-if="product.discountPrice" class="detail-item">
                         <span class="detail-label">现价：</span>
                         <span class="detail-value discount">¥{{ product.discountPrice }}</span>
                     </div>
-                    
+
                     <div class="detail-item">
                         <span class="detail-label">可获得积分：</span>
                         <span class="detail-value">{{ product.points || 0 }} 分</span>
                     </div>
-                    
+
                     <div class="detail-item">
                         <span class="detail-label">已售出数量：</span>
                         <span class="detail-value">{{ product.salesVolume || 0 }} 双</span>
                     </div>
-                    
+
                     <div v-if="product.origin" class="detail-item">
                         <span class="detail-label">产地：</span>
                         <span class="detail-value">{{ product.origin }}</span>
                     </div>
-                    
+
                     <div v-if="product.launchDate" class="detail-item">
                         <span class="detail-label">上市日期：</span>
                         <span class="detail-value">{{ formatDate(product.launchDate) }}</span>
@@ -265,11 +217,15 @@
                 </div>
             </div>
         </div>
+
+        <!-- Toast 提示组件 -->
+        <!-- <BasicToast ref="toast" :message="toastMessage" :type="toastType" /> -->
     </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import BasicToast from '@/views/BasicToast.vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import cartManager from '@/utils/cart'
@@ -299,6 +255,17 @@ const quantity = ref(1)
 const mainImageWrapper = ref(null)
 const mainImage = ref(null)
 
+// Toast相关
+const toast = ref(null)
+const toastMessage = ref('')
+toastMessage.value = ''
+const toastType = ref('success')
+const showToast = (message, type = 'error') => {
+    toastMessage.value = message
+    toastType.value = type
+    toast.value?.show?.()
+}
+
 // 计算属性
 const currentMainImage = computed(() => {
     if (product.value?.images && product.value.images.length > 0) {
@@ -309,7 +276,7 @@ const currentMainImage = computed(() => {
 
 const availableSizes = computed(() => {
     if (!inventoryData.value || !Array.isArray(inventoryData.value)) return []
-    
+
     return inventoryData.value.map(item => ({
         sizeId: item.sizeId,
         size: item.size,
@@ -320,7 +287,7 @@ const availableSizes = computed(() => {
 
 const maxQuantity = computed(() => {
     if (!selectedSize.value || !inventoryData.value || !Array.isArray(inventoryData.value)) return 99
-    
+
     const selectedInventory = inventoryData.value.find(item => item.sizeId === selectedSize.value)
     return selectedInventory ? Math.min(selectedInventory.inventoryNumber, 99) : 99
 })
@@ -328,7 +295,7 @@ const maxQuantity = computed(() => {
 // 获取鞋子性别文本
 const getShoeSexText = (shoeSex) => {
     if (!shoeSex) return 'N/A'
-    
+
     switch (Number(shoeSex)) {
         case 1:
             return '男鞋'
@@ -343,14 +310,10 @@ const getShoeSexText = (shoeSex) => {
     }
 }
 
-
-
-
-
 // 获取产品详情
 const loadProductDetail = async () => {
     const shoeId = route.params.id || route.query.shoeId
-    
+
     if (!shoeId) {
         error.value = '缺少产品ID参数'
         loading.value = false
@@ -362,14 +325,14 @@ const loadProductDetail = async () => {
 
     try {
         // 调用后端接口获取产品详情
-        const response = await axios.post('/api/shoe/getById', 
+        const response = await axios.post('/api/shoe/getById',
             `shoeId=${shoeId}`,
             { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
         )
 
         if (response.data && response.data.code === 200 && response.data.data) {
             const productData = response.data.data
-            
+
             // 获取产品图片
             try {
                 const imageResponse = await axios.get(`/api/shoeImg/list/${shoeId}`)
@@ -385,7 +348,7 @@ const loadProductDetail = async () => {
 
             product.value = productData
             currentImageIndex.value = 0
-            
+
             // 获取库存信息
             await loadInventoryData(shoeId)
         } else {
@@ -404,11 +367,11 @@ const loadInventoryData = async (shoeId) => {
     try {
         const response = await axios.get(`/api/inventory/getInventoryByShoeId/${shoeId}`)
         console.log('库存接口响应:', response.data) // 添加调试日志
-        
+
         if (response.data && response.data.code === 200 && response.data.data) {
             // 根据后端返回的数据结构处理
             let inventoryArray = []
-            
+
             if (Array.isArray(response.data.data)) {
                 // 如果返回的是数组
                 inventoryArray = response.data.data
@@ -422,7 +385,7 @@ const loadInventoryData = async (shoeId) => {
                 // 如果返回的是单个库存对象，转换为数组
                 inventoryArray = [response.data.data]
             }
-            
+
             console.log('处理后的库存数组:', inventoryArray)
             inventoryData.value = inventoryArray
         } else {
@@ -518,47 +481,42 @@ const getCurrentSizeStock = () => {
 // 操作按钮
 const addToCart = async () => {
     if (!selectedSize.value) {
-        alert('请先选择尺码')
+        showToast('请先选择尺码', 'warning')
         return
     }
-
     if (!product.value || !product.value.shoeId) {
-        alert('商品信息不完整，请刷新后重试')
+        showToast('商品信息不完整，请刷新后重试', 'error')
         return
     }
-
     try {
-        // 获取并设置用户ID
         const userId = await userManager.getUserId()
         if (!userId) {
-            alert('请先登录')
+            showToast('请先登录', 'error')
             return
         }
         cartManager.setUserId(userId)
-
-        // 调用购物车管理器（参数顺序：sizeId, quantity, shoeId）
         const ok = await cartManager.addToCart(selectedSize.value, quantity.value, product.value.shoeId)
         if (ok) {
             await cartManager.refreshCartCount()
-            alert(`已将 ${product.value.name} 加入购物车`)
+            showToast(`已将 ${product.value.name} 加入购物车`, 'success')
         } else {
-            alert('加入购物车失败，请重试')
+            showToast('加入购物车失败，请重试', 'error')
         }
     } catch (err) {
         console.error('加入购物车失败:', err)
-        alert('加入购物车失败，请检查网络或稍后再试')
+        showToast('加入购物车失败，请检查网络或稍后再试', 'error')
     }
 }
 
 const buyNow = () => {
     if (!selectedSize.value) {
-        alert('请先选择尺码')
+        showToast('请先选择尺码', 'warning')
         return
     }
-    
+
     // 检查是否从订单确认页面跳转过来
     const fromOrderConfirmation = sessionStorage.getItem('fromOrderConfirmation')
-    
+
     // 跳转到订单确认页面，传递商品信息
     router.push({
         name: 'OrderConfirmation',
@@ -574,7 +532,7 @@ const buyNow = () => {
 // 格式化日期
 const formatDate = (dateString) => {
     if (!dateString) return 'N/A'
-    
+
     try {
         const date = new Date(dateString)
         return date.toLocaleDateString('zh-CN')
@@ -631,8 +589,13 @@ async function recordSearchHistoryOnView() {
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* 错误状态 */
@@ -841,7 +804,8 @@ async function recordSearchHistoryOnView() {
     text-decoration: line-through;
 }
 
-.points-section, .sales-section {
+.points-section,
+.sales-section {
     margin-bottom: 20px;
     padding: 12px 0;
     border-bottom: 1px solid #eee;
@@ -854,7 +818,8 @@ async function recordSearchHistoryOnView() {
     margin: 0 0 15px 0;
 }
 
-.size-section, .quantity-section {
+.size-section,
+.quantity-section {
     margin-bottom: 25px;
 }
 
@@ -988,7 +953,8 @@ async function recordSearchHistoryOnView() {
     margin-bottom: 30px;
 }
 
-.add-to-cart-btn, .buy-now-btn {
+.add-to-cart-btn,
+.buy-now-btn {
     flex: 1;
     padding: 15px 20px;
     border: none;
@@ -1009,12 +975,14 @@ async function recordSearchHistoryOnView() {
     color: white;
 }
 
-.add-to-cart-btn:hover:not(:disabled), .buy-now-btn:hover:not(:disabled) {
+.add-to-cart-btn:hover:not(:disabled),
+.buy-now-btn:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-.add-to-cart-btn:disabled, .buy-now-btn:disabled {
+.add-to-cart-btn:disabled,
+.buy-now-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     transform: none;
