@@ -803,28 +803,37 @@ const handlePageSizeChange = () => {
 
 // 生命周期钩子
 onMounted(async () => {
-    try {
-        // 先获取筛选选项，再获取产品数据
-        console.log('开始获取筛选选项...')
-        await fetchOptions()
-        console.log('筛选选项获取完成，开始获取产品数据...')
-        await fetchProducts()
-        console.log('产品数据获取完成')
-        initIntersectionObserver()
-        observeCurrentPage()
-        
-        // 从路由参数获取初始筛选值
-        if (route.query && route.query.shoeSex) {
-            const shoeSex = parseInt(route.query.shoeSex)
-            if (!isNaN(shoeSex) && shoeSex >= 1 && shoeSex <= 4) {
-                selectedSexes.value = [shoeSex]
-                applyFilters()
-            }
-        }
-    } catch (error) {
-        console.error('初始化失败:', error)
-        error.value = '初始化失败，请刷新页面重试'
-    }
+	try {
+		// 先获取筛选选项，再获取产品数据
+		console.log('开始获取筛选选项...')
+		await fetchOptions()
+		console.log('筛选选项获取完成，开始获取产品数据...')
+		await fetchProducts()
+		console.log('产品数据获取完成')
+		initIntersectionObserver()
+		observeCurrentPage()
+		
+		// 从路由参数获取初始筛选值
+		if (route.query && route.query.shoeSex) {
+			const shoeSex = parseInt(route.query.shoeSex)
+			if (!isNaN(shoeSex) && shoeSex >= 1 && shoeSex <= 4) {
+				selectedSexes.value = [shoeSex]
+				applyFilters()
+			}
+		}
+		
+		// 从路由参数获取搜索关键字并自动搜索
+		if (route.query && route.query.q) {
+			searchKeyword.value = route.query.q
+			// 延迟一下执行搜索，确保产品数据已加载
+			setTimeout(() => {
+				handleSearch()
+			}, 100)
+		}
+	} catch (error) {
+		console.error('初始化失败:', error)
+		error.value = '初始化失败，请刷新页面重试'
+	}
 })
 
 // 在分页或筛选变更后重新观察

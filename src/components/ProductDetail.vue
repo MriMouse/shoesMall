@@ -586,7 +586,24 @@ const formatDate = (dateString) => {
 // 生命周期
 onMounted(() => {
     loadProductDetail()
+    // 进入详情页即记录搜索历史（如果从搜索或列表进入）
+    recordSearchHistoryOnView()
 })
+
+// 进入详情页记录历史
+async function recordSearchHistoryOnView() {
+    try {
+        const shoeId = route.params.id || route.query.shoeId
+        if (!shoeId) return
+        const userId = await userManager.getUserId()
+        if (!userId) return
+        const params = new URLSearchParams({ userId, shoeId })
+        await axios.post('/api/searchHistory/add', params)
+    } catch (e) {
+        // 静默失败即可，不影响详情页
+        console.warn('记录搜索历史失败(详情页):', e?.message || e)
+    }
+}
 </script>
 
 <style scoped>

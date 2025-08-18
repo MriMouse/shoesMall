@@ -13,7 +13,7 @@
 							<line x1="8" y1="15" x2="12" y2="15" />
 							<line x1="9" y1="18" x2="11" y2="18" />
 						</svg>
-						<span v-if="isLoggedIn">欢迎来到</span>
+						<span v-if="isLoggedIn">欢迎回来</span>
 						<span v-else>请登录</span>
 					</button>
 				</div>
@@ -66,9 +66,7 @@
 							<circle cx="9" cy="9" r="6" vector-effect="non-scaling-stroke" />
 							<path d="M18 18l-4.5-4.5" vector-effect="non-scaling-stroke" />
 						</svg>
-						<transition name="fade" mode="out-in">
-							<span :key="currentHotSearchIndex">{{ currentHotSearchTerm }}</span>
-						</transition>
+						<span>搜索商品、品牌或类型</span>
 					</div>
 				</div>
 				<div v-if="isSearchPanelOpen" class="search-overlay" @click="closeSearchPanel">
@@ -82,7 +80,7 @@
 									<path d="M18 18l-4.5-4.5" vector-effect="non-scaling-stroke" />
 								</svg>
 								<input ref="searchInput" type="text" class="search-input" v-model="searchQuery"
-									placeholder="搜索相关类型、品牌或商品" @focus="isSearchFocused = true" @blur="hideSuggestions"
+									placeholder="搜索商品名称、品牌或类型" @focus="isSearchFocused = true" @blur="hideSuggestions"
 									@input="updateSuggestions" @keydown.enter="submitSearch" />
 							</div>
 							<button class="close-search-btn" @click="closeSearchPanel" aria-label="关闭搜索">
@@ -94,56 +92,72 @@
 							</button>
 						</div>
 						<div class="search-panel-content">
-							<div v-if="!searchQuery.trim()" class="hot-searches">
-								<h3 class="hot-searches-title">热门搜索</h3>
-								<div class="hot-searches-tags">
-									<button class="search-tag" @click="selectHotSearch('Safari穿搭')">
-										<span>🦒</span>
-										<span>Safari穿搭</span>
-									</button>
-									<button class="search-tag" @click="selectHotSearch('明星同款')">
-										<span>明星同款</span>
-									</button>
-									<button class="search-tag" @click="selectHotSearch('百搭三条纹')">
-										<span>💜</span>
-										<span>百搭三条纹</span>
-									</button>
-									<button class="search-tag" @click="selectHotSearch('夏日blokecore')">
-										<span>⚽</span>
-										<span>夏日blokecore</span>
-									</button>
-									<button class="search-tag" @click="selectHotSearch('造型感包袋')">
-										<span>👜</span>
-										<span>造型感包袋</span>
-									</button>
-									<button class="search-tag" @click="selectHotSearch('玛丽猫')">
-										<span>🐱</span>
-										<span>玛丽猫</span>
-									</button>
-									<button class="search-tag" @click="selectHotSearch('竞速美学')">
-										<span>🏃</span>
-										<span>竞速美学</span>
-									</button>
-									<button class="search-tag" @click="selectHotSearch('梅赛德斯AMG车队')">
-										<span>🏁</span>
-										<span>梅赛德斯AMG车队</span>
-									</button>
-									<button class="search-tag" @click="selectHotSearch('当红爆款')">
-										<span>🔥</span>
-										<span>当红爆款</span>
-									</button>
-									<button class="search-tag" @click="selectHotSearch('入群有礼')">
-										<span>🎁</span>
-										<span>入群有礼</span>
-									</button>
+							<div v-if="!searchQuery.trim()" class="search-tips">
+								<h3 class="search-tips-title">搜索提示</h3>
+								<div class="search-tips-content">
+									<p>• 输入关键词即可</p>
+								</div>
+								
+								<!-- 搜索历史 -->
+								<div v-if="isLoggedIn && searchHistory.length > 0" class="search-history-section">
+									<div class="search-history-header">
+										<h4 class="search-history-title">搜索历史</h4>
+										<button class="clear-history-btn" @click="clearAllSearchHistory" title="清空所有历史">🗑️</button>
+									</div>
+									<div class="history-chips">
+										<div v-for="h in searchHistory" :key="`${h.userId ?? h.user_id ?? h.id}-${h.shoeId ?? h.shoe_id}`" class="history-chip" @click="goToProductDetailFromHistory(h.shoeId ?? h.shoe_id)">
+											<span class="chip-text">{{ h.shoe?.name || '商品' }}</span>
+											<button class="chip-close" @click.stop="deleteSearchHistory(h.shoeId ?? h.shoe_id)" title="删除">×</button>
+										</div>
+									</div>
+								</div>
+								
+								<!-- 搜索历史加载状态 -->
+								<div v-else-if="isLoggedIn && searchHistoryLoading" class="search-history-loading">
+									<div class="loading-spinner"></div>
+									<p>加载搜索历史...</p>
+								</div>
+								
+								<!-- 无搜索历史提示 -->
+								<div v-else-if="isLoggedIn && searchHistory.length === 0" class="no-search-history">
+									<p>暂无搜索历史</p>
 								</div>
 							</div>
 							<div v-else class="search-suggestions">
-								<div v-for="item in suggestions" :key="item.key" class="suggest-item"
-									@click="selectSuggestion(item)">
-									<span v-html="highlight(item.label)"></span>
+								<div v-if="searchLoading" class="search-loading">
+									<div class="loading-spinner"></div>
+									<p>搜索中...</p>
 								</div>
-								<div class="suggest-footer" @click="submitSearch">按回车搜索 "{{ searchQuery }}"</div>
+								<div v-else-if="searchResults.length === 0" class="no-results">
+									<p>未找到相关商品</p>
+									<p class="no-results-tip">尝试使用其他关键词搜索</p>
+							</div>
+								<div v-else class="search-results">
+									<div v-for="product in searchResults" :key="product.shoeId" class="search-result-item"
+										@click="goToProductDetailWithHistory(product.shoeId)">
+										<div class="result-image">
+											<img v-if="product.images && product.images.length > 0"
+												:src="`/api/shoeImg/getImage/${product.images[0].imagePath}`" 
+												:alt="product.name"
+												class="result-product-image" 
+												loading="lazy"
+												@load="handleSearchImageLoad"
+												@error="handleSearchImageError">
+											<div v-else class="result-placeholder">🖼️</div>
+						</div>
+										<div class="result-info">
+											<div class="result-name">{{ product.name }}</div>
+											<div class="result-meta">
+												<span class="result-brand">{{ product.brand?.brandName || 'N/A' }}</span>
+												<span class="result-type">{{ product.shoesType?.typeName || 'N/A' }}</span>
+											</div>
+											<div class="result-price">¥{{ product.discountPrice || product.price }}</div>
+										</div>
+									</div>
+								</div>
+								<div v-if="searchResults.length > 0" class="search-footer" @click="submitSearch">
+									按回车搜索 "{{ searchQuery }}" 的更多结果
+								</div>
 							</div>
 						</div>
 					</div>
@@ -232,10 +246,11 @@
 </template>
 
 <script>
-import { reactive, ref, onMounted, onBeforeUnmount, computed } from 'vue';
+import { reactive, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { UserAPI } from '@/api';
 import axios from 'axios';
+import userManager from '../../utils/userManager';
 
 export default {
 	name: 'MainNav',
@@ -272,9 +287,51 @@ export default {
 		const dynamicCategories = ref([]);
 
 		// 检查登录状态
-		const isLoggedIn = computed(() => {
-			return !!localStorage.getItem('user');
-		});
+		const isLoggedIn = ref(false);
+		
+		// 检查登录状态的函数
+		const checkLoginStatus = () => {
+			const user = localStorage.getItem('user');
+			isLoggedIn.value = !!user;
+			// 如果登录状态改变，重新加载搜索历史
+			if (isLoggedIn.value) {
+				loadSearchHistory();
+			} else {
+				searchHistory.value = [];
+			}
+		};
+
+		// 新增：统一获取当前用户ID（兼容本地仅存用户名的情况）
+		async function getCurrentUserId() {
+			try {
+				const raw = localStorage.getItem('user');
+				if (!raw) return null;
+				let parsed = null;
+				try { parsed = JSON.parse(raw); } catch (_) { /* raw 可能是用户名字符串 */ }
+				let userId = null;
+				if (parsed && typeof parsed === 'object') {
+					userId = parsed.id || parsed.userId || null;
+					if (!userId && parsed.username) {
+						userId = await userManager.getUserIdByUsername(parsed.username);
+					}
+				} else {
+					// raw 是用户名
+					userId = await userManager.getUserIdByUsername(raw);
+				}
+
+				return userId || null;
+			} catch (e) {
+				console.warn('解析当前用户ID失败:', e);
+				return null;
+			}
+		}
+		
+		// 监听 localStorage 变化
+		const handleStorageChange = (e) => {
+			if (e.key === 'user') {
+				checkLoginStatus();
+			}
+		};
 
 		function onLoginStatusClick() {
 			if (isLoggedIn.value) {
@@ -335,7 +392,13 @@ export default {
 
 		onMounted(() => {
 			window.addEventListener('scroll', handleScroll, { passive: true });
-			startHotSearchRotation(); // 启动热门搜索词条循环
+			// 检查初始登录状态
+			checkLoginStatus();
+			// 监听 localStorage 变化
+			window.addEventListener('storage', handleStorageChange);
+			// 监听自定义登录成功事件
+			window.addEventListener('user-login-change', checkLoginStatus);
+			
 			loadCategoriesFromBackend(); // 加载分类数据
 			
 			// 预加载一些常用图片，提升用户体验
@@ -346,10 +409,16 @@ export default {
 
 		onBeforeUnmount(() => {
 			window.removeEventListener('scroll', handleScroll);
-			stopHotSearchRotation(); // 停止热门搜索词条循环
+			// 清理事件监听器
+			window.removeEventListener('storage', handleStorageChange);
+			window.removeEventListener('user-login-change', checkLoginStatus);
 			// 清理定时器
 			if (debounceTimer) {
 				clearTimeout(debounceTimer);
+			}
+			// 清理防抖定时器
+			if (searchDebounceTimer) {
+				clearTimeout(searchDebounceTimer);
 			}
 			// 清理图片缓存
 			imageCache.clear();
@@ -839,113 +908,339 @@ export default {
 		// 搜索框逻辑
 		const searchQuery = ref('');
 		const isSearchFocused = ref(false);
-		const suggestions = ref([]);
 		const isSearchPanelOpen = ref(false);
 		const searchInput = ref(null);
+		// 新增：搜索功能
+		const searchLoading = ref(false);
+		const searchResults = ref([]);
+		let searchDebounceTimer = null;
 
-		// 热门搜索词条循环展示
-		const hotSearchTerms = [
-			'竞速美学',
-			'Safari穿搭',
-			'明星同款',
-			'百搭三条纹 💜💜',
-			'夏日blokecore ⚽',
-			'造型感包袋',
-			'玛丽猫',
-			'梅赛德斯AMG车队',
-			'当红爆款 🔥',
-			'入群有礼 🎁'
-		];
-		const currentHotSearchIndex = ref(0);
-		const currentHotSearchTerm = ref(hotSearchTerms[0]);
-		let hotSearchTimer = null;
+		// 新增：搜索历史相关
+		const searchHistory = ref([]);
+		const searchHistoryLoading = ref(false);
 
-		// 开始循环展示热门搜索词条
-		function startHotSearchRotation() {
-			hotSearchTimer = setInterval(() => {
-				currentHotSearchIndex.value = (currentHotSearchIndex.value + 1) % hotSearchTerms.length;
-				currentHotSearchTerm.value = hotSearchTerms[currentHotSearchIndex.value];
-			}, 3000); // 每3秒切换一次
+		// 新增：防抖搜索函数
+		const debouncedSearch = (query) => {
+			if (searchDebounceTimer) {
+				clearTimeout(searchDebounceTimer);
+			}
+			searchDebounceTimer = setTimeout(() => {
+				if (query.trim()) {
+					searchProducts(query);
+				} else {
+					searchResults.value = [];
+				}
+			}, 300); // 300ms 防抖延迟
+		};
+
+		// 新增：记录搜索历史
+		const recordSearchHistory = async (shoeId) => {
+			if (!isLoggedIn.value) return; // 未登录用户不记录
+
+			try {
+				const resolvedUserId = await getCurrentUserId();
+				if (!resolvedUserId) return;
+				const params = new URLSearchParams({ userId: resolvedUserId, shoeId });
+				await axios.post('/api/searchHistory/add', params, {
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+				});
+
+				// 重新加载搜索历史
+				loadSearchHistory();
+			} catch (error) {
+				console.warn('记录搜索历史失败:', error);
+			}
+		};
+
+		// 新增：加载搜索历史
+		const loadSearchHistory = async () => {
+			if (!isLoggedIn.value) {
+				searchHistory.value = [];
+				return;
+			}
+
+			try {
+				searchHistoryLoading.value = true;
+				const resolvedUserId = await getCurrentUserId();
+				if (!resolvedUserId) { searchHistory.value = []; return; }
+
+				const historyParams = new URLSearchParams({ userId: resolvedUserId, limit: 10 });
+				const response = await axios.post('/api/searchHistory/getRecentByUserId', historyParams);
+
+				if (response.data && response.data.data) {
+					// 获取历史记录中的鞋子信息
+					const historyWithShoes = await Promise.all(
+						response.data.data.map(async (raw) => {
+							// 兼容后端字段命名（shoeId/userId 或 shoe_id/id/user_id）
+							const normalized = {
+								userId: raw.userId ?? raw.user_id ?? raw.id ?? null,
+								shoeId: raw.shoeId ?? raw.shoe_id ?? raw.shoeid ?? null,
+								searchOrder: raw.searchOrder ?? raw.search_order ?? raw.search_index ?? null
+							};
+							const { shoeId } = normalized;
+							if (!shoeId) return null;
+							try {
+								const shoeParams = new URLSearchParams({ shoeId });
+								const shoeResponse = await axios.post('/api/shoe/getById', shoeParams);
+
+								if (shoeResponse.data && shoeResponse.data.data) {
+									const shoe = shoeResponse.data.data;
+									// 获取鞋子图片
+									try {
+										const imageResponse = await axios.get(`/api/shoeImg/list/${shoe.shoeId}`);
+										if (imageResponse.data && imageResponse.data.data) {
+											shoe.images = imageResponse.data.data;
+										} else {
+											shoe.images = [];
+										}
+									} catch (error) {
+										shoe.images = [];
+									}
+									return { ...normalized, shoe };
+								}
+							} catch (error) {
+								console.warn(`获取鞋子 ${shoeId} 信息失败:`, error);
+								return null;
+							}
+						})
+					);
+
+					// 过滤掉无效的记录
+					searchHistory.value = historyWithShoes.filter(item => item !== null);
+				} else {
+					searchHistory.value = [];
+				}
+			} catch (error) {
+				console.error('加载搜索历史失败:', error);
+				searchHistory.value = [];
+			} finally {
+				searchHistoryLoading.value = false;
+			}
+		};
+
+
+
+		// 新增：删除搜索历史
+		const deleteSearchHistory = async (shoeId) => {
+			if (!isLoggedIn.value) return;
+
+			// 乐观更新：先从本地移除，失败再回滚
+			const previous = [...searchHistory.value];
+			searchHistory.value = previous.filter(h => (h.shoeId ?? h.shoe_id) !== shoeId);
+
+			try {
+				const resolvedUserId = await getCurrentUserId();
+				if (!resolvedUserId) { searchHistory.value = previous; return; }
+				const delParams = new URLSearchParams({ userId: resolvedUserId, shoeId });
+				const resp = await axios.post('/api/searchHistory/delete', delParams, {
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+				});
+
+				// 如果后端返回失败，则回滚并提示
+				const ok = resp?.data?.code === 200 && (resp.data?.data === true || resp.data?.data === 'true');
+				if (!ok) {
+					console.warn('后端删除失败，回滚本地状态:', resp?.data);
+					searchHistory.value = previous;
+					return;
+				}
+			} catch (error) {
+				console.error('删除搜索历史失败:', error);
+				// 回滚
+				searchHistory.value = previous;
+			}
+		};
+
+		// 新增：清空所有搜索历史
+		const clearAllSearchHistory = async () => {
+			if (!isLoggedIn.value) return;
+
+			try {
+				const resolvedUserId = await getCurrentUserId();
+				if (!resolvedUserId) return;
+				const clearParams = new URLSearchParams({ userId: resolvedUserId });
+				await axios.post('/api/searchHistory/deleteAllByUserId', clearParams, {
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+				});
+
+				searchHistory.value = [];
+			} catch (error) {
+				console.error('清空搜索历史失败:', error);
+			}
+		};
+
+		// 新增：搜索产品函数
+		async function searchProducts(query) {
+			if (!query || !query.trim()) {
+				searchResults.value = [];
+				return;
+			}
+
+			searchLoading.value = true;
+			try {
+				// 使用现有的全量商品数据进行本地搜索
+				let allShoes = [];
+				if (allShoesCache) {
+					allShoes = allShoesCache;
+				} else {
+					const response = await axios.post('/api/shoe/getAll', {}, {
+						headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+					});
+					if (response.data && response.data.data) {
+						allShoes = response.data.data;
+						allShoesCache = allShoes;
+					}
+				}
+
+				if (allShoes.length > 0) {
+					// 本地模糊搜索
+					const searchTerm = query.toLowerCase().trim();
+					const filteredProducts = allShoes.filter(product => {
+						// 搜索商品名称
+						if (product.name && product.name.toLowerCase().includes(searchTerm)) {
+							return true;
+						}
+						// 搜索品牌名称
+						if (product.brand?.brandName && product.brand.brandName.toLowerCase().includes(searchTerm)) {
+							return true;
+						}
+						// 搜索商品类型
+						if (product.shoesType?.typeName && product.shoesType.typeName.toLowerCase().includes(searchTerm)) {
+							return true;
+						}
+						// 搜索颜色
+						if (product.color?.colorName && product.color.colorName.toLowerCase().includes(searchTerm)) {
+							return true;
+						}
+						// 搜索产品编号
+						if (product.serialNumber && product.serialNumber.toLowerCase().includes(searchTerm)) {
+							return true;
+						}
+						return false;
+					});
+
+					// 限制搜索结果数量为5个
+					searchResults.value = filteredProducts.slice(0, 5);
+
+					// 为搜索结果加载图片数据
+					await Promise.all(
+						searchResults.value.map(async (product) => {
+							try {
+								// 检查图片缓存
+								const cacheKey = `product_${product.shoeId}`;
+								if (imageCache.has(cacheKey)) {
+									product.images = imageCache.get(cacheKey);
+								} else {
+									const imageResponse = await axios.get(`/api/shoeImg/list/${product.shoeId}`, { timeout: 5000 });
+									if (imageResponse.data && imageResponse.data.data) {
+										product.images = imageResponse.data.data;
+										// 存入缓存
+										imageCache.set(cacheKey, product.images);
+									} else {
+										product.images = [];
+									}
+								}
+							} catch (error) {
+								console.warn(`加载产品 ${product.name} 图片失败:`, error);
+								product.images = [];
+							}
+							return product;
+						})
+					);
+				} else {
+					searchResults.value = [];
+				}
+			} catch (error) {
+				console.error('搜索产品失败:', error);
+				searchResults.value = [];
+			} finally {
+				searchLoading.value = false;
+			}
 		}
 
-		// 停止循环展示
-		function stopHotSearchRotation() {
-			if (hotSearchTimer) {
-				clearInterval(hotSearchTimer);
-				hotSearchTimer = null;
+		// 新增：处理搜索图片加载成功
+		function handleSearchImageLoad(event) {
+			const img = event.target;
+			img.style.display = 'block';
+			img.classList.add('loaded');
+			// 隐藏占位符
+			const placeholder = img.parentElement.querySelector('.result-placeholder');
+			if (placeholder) {
+				placeholder.style.display = 'none';
+			}
+		}
+
+		// 新增：处理搜索图片加载错误
+		function handleSearchImageError(event) {
+			const img = event.target;
+			img.style.display = 'none';
+			// 显示占位符
+			const placeholder = img.parentElement.querySelector('.result-placeholder');
+			if (placeholder) {
+				placeholder.style.display = 'flex';
 			}
 		}
 
 		function toggleSearchPanel() {
 			isSearchPanelOpen.value = !isSearchPanelOpen.value;
 			if (isSearchPanelOpen.value) {
-				stopHotSearchRotation(); // 打开搜索面板时暂停循环
 				setTimeout(() => {
 					searchInput.value?.focus();
 				}, 100);
-			} else {
-				startHotSearchRotation(); // 关闭搜索面板时恢复循环
+				// 打开搜索面板时加载搜索历史
+				loadSearchHistory();
 			}
 		}
 
 		function closeSearchPanel() {
 			isSearchPanelOpen.value = false;
 			searchQuery.value = '';
-			suggestions.value = [];
+			searchResults.value = [];
 			isSearchFocused.value = false;
-			startHotSearchRotation(); // 关闭搜索面板时恢复循环
+			// 清理防抖定时器
+			if (searchDebounceTimer) {
+				clearTimeout(searchDebounceTimer);
+				searchDebounceTimer = null;
+			}
 		}
 
 		function updateSuggestions() {
-			const q = searchQuery.value.trim().toLowerCase();
-			if (!q) { suggestions.value = []; return; }
-			const base = [
-				{ key: 'ultra', label: 'Ultraboost 系列' },
-				{ key: 'stan', label: 'Stan Smith 经典' },
-				{ key: 'campus', label: 'Campus 休闲' },
-				{ key: 'running', label: '跑步 男鞋' },
-				{ key: 'training', label: '训练 女鞋' },
-				{ key: 'kids', label: '童鞋 热门' },
-				{ key: 'nike', label: 'Nike 品牌' },
-				{ key: 'adidas', label: 'Adidas 品牌' },
-				{ key: 'puma', label: 'Puma 品牌' },
-				{ key: 'reebok', label: 'Reebok 品牌' }
-			];
-			suggestions.value = base.filter(i => i.label.toLowerCase().includes(q)).slice(0, 6);
+			// 使用防抖搜索
+			debouncedSearch(searchQuery.value);
 		}
 
 		function submitSearch() {
 			if (!searchQuery.value.trim()) return;
-			router.push({ name: 'ProductListPage', query: { q: searchQuery.value.trim() } });
+			
+			// 跳转到产品列表页面，传递搜索关键字
+			router.push({ 
+				name: 'ProductListPage', 
+				query: { q: searchQuery.value.trim() } 
+			});
+			
 			isSearchFocused.value = false;
 			closeSearchPanel();
 		}
 
-		function clearSearch() {
-			searchQuery.value = '';
-			suggestions.value = [];
-			isSearchFocused.value = false;
+		// 新增：跳转到产品详情页面并记录搜索历史
+		function goToProductDetailWithHistory(shoeId) {
+			// 记录搜索历史
+			recordSearchHistory(shoeId);
+			// 跳转到产品详情页面
+			router.push(`/product/${shoeId}`);
+			// 关闭搜索面板
+			closeSearchPanel();
 		}
 
-		function selectSuggestion(item) {
-			searchQuery.value = item.label;
-			submitSearch();
-		}
-
-		function selectHotSearch(query) {
-			searchQuery.value = query;
-			submitSearch();
+		// 新增：从搜索历史跳转到产品详情
+		function goToProductDetailFromHistory(shoeId) {
+			// 跳转到产品详情页面
+			router.push(`/product/${shoeId}`);
+			// 关闭搜索面板
+			closeSearchPanel();
 		}
 
 		function hideSuggestions() {
 			setTimeout(() => { isSearchFocused.value = false; }, 100);
-		}
-
-		function highlight(text) {
-			const q = searchQuery.value.trim();
-			if (!q) return text;
-			const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')})`, 'ig');
-			return text.replace(re, '<mark>$1</mark>');
 		}
 
 		// 新增：预加载常用图片
@@ -1063,27 +1358,28 @@ export default {
 			handleImageError,
 			searchQuery,
 			isSearchFocused,
-			suggestions,
 			updateSuggestions,
 			submitSearch,
-			clearSearch,
-			selectSuggestion,
 			hideSuggestions,
-			highlight,
 			isSearchPanelOpen,
 			toggleSearchPanel,
 			closeSearchPanel,
-			selectHotSearch,
 			searchInput,
-			currentHotSearchIndex,
-			currentHotSearchTerm,
-			hotSearchTerms,
 			onLoginStatusClick,
-			avatarPath,
-			avatarUrl,
-			avatarInput,
-			triggerUpload,
-			handleAvatarChange
+			searchLoading,
+			searchResults,
+			searchProducts,
+			handleSearchImageError,
+			handleSearchImageLoad,
+			// 新增：搜索历史相关
+			searchHistory,
+			searchHistoryLoading,
+			recordSearchHistory,
+			loadSearchHistory,
+			deleteSearchHistory,
+			clearAllSearchHistory,
+			goToProductDetailWithHistory,
+			goToProductDetailFromHistory
 		};
 	}
 };
@@ -1115,6 +1411,10 @@ export default {
 	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 	width: 100%;
 	box-sizing: border-box;
+	position: relative;
+	overflow: visible;
+	margin: 0;
+	padding: 0;
 }
 
 .top-bar-inner {
@@ -1126,6 +1426,9 @@ export default {
 	height: 100%;
 	padding: 0 16px;
 	box-sizing: border-box;
+	width: 100%;
+	position: relative;
+	margin-right: 0;
 }
 
 .top-bar-left {
@@ -1135,29 +1438,35 @@ export default {
 .top-bar-right {
 	display: flex;
 	align-items: center;
-	margin-right: -120px;
-	/* 右移登录按钮 (从-32px改为-48px) */
+	justify-content: flex-end;
+	position: absolute;
+	right: 8px;
+	top: 0;
+	bottom: 0;
+	z-index: 10;
+	width: auto;
 }
 
 .login-status {
 	background: transparent;
 	border: 1px solid rgba(255, 255, 255, 0.3);
-	/* 添加白色边框 */
 	color: #fff;
 	font-size: 14px;
 	font-weight: 500;
 	cursor: pointer;
 	padding: 6px 12px;
-	/* 增加水平内边距 */
-	border-radius: 6px;
+	border-radius: 8px;
 	transition: background .15s ease, border-color .15s ease;
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	/* 增加图标和文字的间距 */
 	letter-spacing: 0.5px;
-	/* 增加字间距 */
 	white-space: nowrap;
+	flex-shrink: 0;
+	min-width: 80px;
+	justify-content: center;
+	margin: 0;
+	position: relative;
 }
 
 .login-status:hover {
@@ -1183,6 +1492,7 @@ export default {
 	background: #fff;
 	box-sizing: border-box;
 	width: 100%;
+	position: relative;
 }
 
 .brand {
@@ -1247,7 +1557,7 @@ export default {
 
 .search-box .search-icon {
 	position: absolute;
-	left: 10px;
+	left: 8px;
 	top: 50%;
 	transform: translateY(-50%);
 	color: #666;
@@ -1256,18 +1566,8 @@ export default {
 	pointer-events: none;
 }
 
-.search-icon-mask {
-	position: absolute;
-	left: 0;
-	top: 0;
-	bottom: 0;
-	width: 36px;
-	border-top-left-radius: 999px;
-	border-bottom-left-radius: 999px;
-	background: transparent;
-	z-index: 2;
-	pointer-events: none;
-}
+/* 已移除未使用的 .search-icon-mask */
+
 
 .search-placeholder {
 	width: 100%;
@@ -1276,7 +1576,7 @@ export default {
 	border: 1px solid #ddd;
 	background: #f8f8f8;
 	color: #999;
-	padding: 0 14px 0 36px;
+	padding: 0 14px 0 32px;
 	display: flex;
 	align-items: center;
 	font-size: 14px;
@@ -1311,7 +1611,7 @@ export default {
 	border: 1px solid #ddd;
 	background: #f8f8f8;
 	color: #333;
-	padding: 0 14px 0 36px;
+	padding: 0 14px 0 32px;
 	outline: none;
 	z-index: 1;
 	position: relative;
@@ -1327,51 +1627,9 @@ export default {
 	background: #fff;
 }
 
-.suggest-panel {
-	position: absolute;
-	top: 42px;
-	left: 0;
-	width: 100%;
-	background: rgba(255, 255, 255, 0.98);
-	backdrop-filter: blur(8px);
-	border: 1px solid #eee;
-	border-radius: 12px;
-	padding: 8px;
-	z-index: 1001;
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-	box-sizing: border-box;
-}
+/* 已移除未使用的 .suggest-panel */
 
-.suggest-item {
-	padding: 8px 10px;
-	border-radius: 8px;
-	color: #333;
-	cursor: pointer;
-}
 
-.suggest-item:hover {
-	background: #f5f5f5;
-}
-
-.suggest-footer {
-	padding: 10px;
-	border-top: 1px dashed #eee;
-	color: #666;
-	cursor: pointer;
-	border-radius: 0 0 12px 12px;
-}
-
-.suggest-footer:hover {
-	background: #f5f5f5;
-	color: #333;
-}
-
-mark {
-	background: #c6ff00;
-	color: #111;
-	border-radius: 4px;
-	padding: 0 2px;
-}
 
 .nav-item {
 	position: relative;
@@ -1452,13 +1710,13 @@ mark {
 }
 
 .mega-menu {
-	position: absolute;
-	top: 100%;
-	/* 紧贴导航栏底部 */
+	position: fixed;
+	top: 120px;
+	/* 使用fixed定位，确保不受父容器限制 */
 	left: 0;
 	right: 0;
 	width: 100vw;
-	min-height: 420px;
+	height: auto;
 	background: #fff;
 	color: #000;
 	border-top: 1px solid #eee;
@@ -1466,7 +1724,7 @@ mark {
 	display: grid;
 	grid-template-columns: 280px 1fr;
 	gap: 0;
-	padding: 20px 32px;
+	padding: 20px 32px 20px 32px;
 	animation: fadeIn .2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 	z-index: 999;
 	box-sizing: border-box;
@@ -1479,8 +1737,19 @@ mark {
 	backface-visibility: hidden;
 	transform-style: preserve-3d;
 	/* 确保内容不会溢出 */
-	overflow-x: hidden;
-	overflow-y: auto;
+	overflow-x: visible;
+	overflow-y: visible;
+	/* 强制占满整个视口宽度，消除左右边距 */
+	margin: 0;
+	/* 确保左右边距为0，内容完全占满 */
+	padding-left: 32px;
+	padding-right: 32px;
+	/* 强制占满整个视口宽度 */
+	max-width: 100vw;
+	/* 确保从屏幕最左边开始 */
+	left: 0;
+	/* 确保到屏幕最右边结束 */
+	right: 0;
 }
 
 @keyframes fadeIn {
@@ -1498,18 +1767,30 @@ mark {
 .mega-left {
 	border-right: 1px solid #f0f0f0;
 	padding-right: 16px;
+	/* 确保左侧内容从最左边开始 */
+	padding-left: 0;
+	margin-left: 0;
+	/* 强制占满可用宽度 */
+	width: 100%;
+	box-sizing: border-box;
 }
 
 .mega-title {
 	font-size: 12px;
 	color: #666;
 	margin-bottom: 8px;
+	/* 确保标题从最左边开始 */
+	padding-left: 0;
+	margin-left: 0;
 }
 
 .mega-cat-list {
 	list-style: none;
 	display: grid;
 	gap: 6px;
+	/* 确保列表从最左边开始 */
+	padding-left: 0;
+	margin-left: 0;
 }
 
 .mega-cat-item {
@@ -1522,6 +1803,9 @@ mark {
 	will-change: background, transform;
 	/* 添加悬停状态的边框 */
 	border: 1px solid transparent;
+	/* 确保项目从最左边开始 */
+	padding-left: 10px;
+	margin-left: 0;
 }
 
 .mega-cat-item:hover {
@@ -1532,6 +1816,14 @@ mark {
 
 .mega-right {
 	padding-left: 24px;
+	/* 确保右侧内容不被遮挡 */
+	overflow: visible;
+	width: 100%;
+	box-sizing: border-box;
+	/* 确保右边距足够 */
+	padding-right: 0;
+	/* 强制占满可用宽度 */
+	min-width: 0;
 }
 
 .mega-right-header {
@@ -1558,8 +1850,16 @@ mark {
 .preview-grid {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
-	gap: 0;
+	gap: 2px;
 	max-width: 100%;
+	/* 确保网格不被遮挡 */
+	overflow: visible;
+	width: 100%;
+	box-sizing: border-box;
+	/* 确保网格占满整个可用宽度 */
+	min-width: 0;
+	/* 添加右边距确保最后一个产品完全可见 */
+	padding-right: 0;
 }
 
 
@@ -1574,10 +1874,17 @@ mark {
 	gap: 12px;
 	padding: 10px 12px;
 	box-sizing: border-box;
-	overflow: hidden;
+	overflow: visible;
 	/* 添加硬件加速 */
 	transform: translateZ(0);
 	position: relative;
+	/* 确保卡片完全可见 */
+	width: 100%;
+	min-width: 0;
+	/* 确保右边距足够 */
+	margin-right: 0;
+	/* 强制占满网格单元格 */
+	flex: 1;
 }
 
 .preview-card:hover {
@@ -1651,6 +1958,14 @@ mark {
 .preview-meta {
 	padding: 0;
 	min-width: 0;
+	/* 确保文字不被遮挡 */
+	overflow: visible;
+	width: 100%;
+	box-sizing: border-box;
+	/* 确保右边距足够 */
+	padding-right: 0;
+	/* 强制占满可用宽度 */
+	flex: 1;
 }
 
 .preview-name {
@@ -1660,17 +1975,20 @@ mark {
 	line-height: 1.2;
 	letter-spacing: 0;
 	text-transform: none;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	overflow: visible;
+	text-overflow: clip;
+	white-space: normal;
 	min-width: 0;
+	/* 确保文字完全显示 */
+	word-wrap: break-word;
+	word-break: break-word;
+	/* 确保右边距足够 */
+	padding-right: 0;
+	/* 强制占满可用宽度 */
+	width: 100%;
 }
 
-.preview-price {
-	font-size: 11px;
-	color: #e74c3c;
-	font-weight: 600;
-}
+/* 已移除未使用的 .preview-price */
 
 /* 新增：加载状态样式 */
 .preview-loading {
@@ -1722,7 +2040,7 @@ mark {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 16px 24px;
+	padding: 14px 20px;
 	max-width: 1200px;
 	margin: 0 auto;
 	position: relative;
@@ -1733,10 +2051,10 @@ mark {
 	content: '';
 	position: absolute;
 	bottom: 0;
-	left: 24px;
-	right: 24px;
+	left: 20px;
+	right: 20px;
 	height: 1px;
-	background: #ddd;
+	background: #eee;
 }
 
 .search-input-wrapper {
@@ -1747,7 +2065,7 @@ mark {
 
 .search-input-wrapper .search-icon {
 	position: absolute;
-	left: 12px;
+	left: 8px;
 	top: 50%;
 	transform: translateY(-50%);
 	color: #666;
@@ -1757,14 +2075,14 @@ mark {
 
 .search-input {
 	width: 100%;
-	height: 44px;
+	height: 40px;
 	border-radius: 999px;
 	border: 1px solid #ddd;
 	background: #f8f8f8;
 	color: #333;
-	padding: 0 16px 0 44px;
+	padding: 0 16px 0 32px;
 	outline: none;
-	font-size: 16px;
+	font-size: 15px;
 	transition: border-color .15s ease, background .15s ease;
 	box-sizing: border-box;
 }
@@ -1796,97 +2114,245 @@ mark {
 .search-panel-content {
 	max-width: 1200px;
 	margin: 0 auto;
-	padding: 24px;
+	padding: 20px;
 	box-sizing: border-box;
 }
 
-.hot-searches {
-	margin-bottom: 24px;
+.search-tips {
+	margin-bottom: 20px;
 }
 
-.hot-searches-title {
-	font-size: 16px;
+.search-tips-title {
+	font-size: 14px;
 	color: #333;
-	margin-bottom: 16px;
+	margin-bottom: 12px;
 	font-weight: 600;
 	display: flex;
 	align-items: center;
 }
 
-.hot-searches-title::before {
+.search-tips-title::before {
 	content: '';
-	width: 16px;
-	height: 16px;
+	width: 14px;
+	height: 14px;
 	background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="%23666" stroke-width="2"><circle cx="9" cy="9" r="6"/><path d="M18 18l-4.5-4.5"/></svg>') no-repeat center;
 	background-size: contain;
-	margin-right: 8px;
+	margin-right: 6px;
 }
 
-.hot-searches-tags {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 12px;
+.search-tips-content {
+	color: #666;
+	line-height: 1.4;
 }
 
-.search-tag {
-	background: #f8f8f8;
-	border: 1px solid #eee;
-	border-radius: 20px;
-	padding: 8px 16px;
-	font-size: 14px;
-	color: #333;
-	cursor: pointer;
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	transition: background .15s ease, border-color .15s ease, transform .15s ease;
-	white-space: nowrap;
-}
-
-.search-tag:hover {
-	background: #f0f0f0;
-	border-color: #ddd;
-	transform: translateY(-1px);
+.search-tips-content p {
+	margin: 6px 0;
+	font-size: 13px;
 }
 
 .search-suggestions {
 	position: relative;
 }
 
-.search-suggestions .suggest-item {
-	padding: 12px 0;
-	border-bottom: 1px solid #f5f5f5;
-	color: #333;
+
+
+
+
+/* 搜索结果样式 */
+.search-loading {
+	text-align: center;
+	padding: 40px 20px;
+	color: #666;
+}
+
+.search-loading .loading-spinner {
+	width: 30px;
+	height: 30px;
+	border: 3px solid #f3f3f3;
+	border-top: 3px solid #c6ff00;
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+	margin: 0 auto 16px;
+}
+
+.no-results {
+	text-align: center;
+	padding: 40px 20px;
+	color: #666;
+}
+
+.no-results-tip {
+	font-size: 14px;
+	color: #999;
+	margin-top: 8px;
+}
+
+.search-results {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.search-result-item {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 16px;
+	border: none;
+	border-radius: 6px;
 	cursor: pointer;
-	transition: background .15s ease;
+	transition: all 0.15s ease;
+	background: transparent;
 }
 
-.search-suggestions .suggest-item:last-child {
-	border-bottom: none;
+.search-result-item:hover {
+	background: #f5f5f5;
+	transform: none;
+	box-shadow: none;
 }
 
-.search-suggestions .suggest-item:hover {
-	background: #f8f8f8;
+.result-image {
+	width: 48px;
+	height: 48px;
+	flex-shrink: 0;
+	position: relative;
+	overflow: hidden;
+	border-radius: 4px;
+	background: #f5f5f5;
 }
 
-.search-suggestions .suggest-footer {
-	padding: 16px 0;
+.result-product-image {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.result-placeholder {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 1.2rem;
+	color: #999;
+	background: #f0f0f0;
+	border-radius: 4px;
+}
+
+.result-info {
+	flex: 1;
+	min-width: 0;
+}
+
+.result-name {
+	font-size: 14px;
+	font-weight: 500;
+	color: #333;
+	margin-bottom: 4px;
+	line-height: 1.3;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.result-meta {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 4px;
+}
+
+.result-brand, .result-type {
+	font-size: 11px;
+	color: #666;
+	background: transparent;
+	padding: 0;
+	border-radius: 0;
+}
+
+.result-price {
+	font-size: 14px;
+	font-weight: 600;
+	color: #e74c3c;
+}
+
+.search-footer {
+	padding: 12px 0;
 	border-top: 1px solid #eee;
 	color: #666;
 	cursor: pointer;
-	margin-top: 16px;
+	margin-top: 12px;
+	text-align: center;
+	background: #f8f8f8;
+	border-radius: 6px;
+	transition: background 0.15s ease;
+	font-size: 13px;
 }
 
-.search-suggestions .suggest-footer:hover {
-	background: #f8f8f8;
+.search-footer:hover {
+	background: #f0f0f0;
 	color: #333;
 }
 
-.search-panel .suggest-item mark {
-	background: #c6ff00;
-	color: #111;
+/* 搜索历史样式 */
+.search-history-section {
+	margin-top: 20px;
+	padding-top: 20px;
+	border-top: 1px solid #eee;
+}
+
+.search-history-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
+}
+
+.search-history-title {
+	font-size: 14px;
+	color: #333;
+	font-weight: 600;
+	margin: 0;
+}
+
+.clear-history-btn {
+	background: transparent;
+	border: none;
+	color: #999;
+	cursor: pointer;
+	padding: 4px;
 	border-radius: 4px;
-	padding: 0 2px;
+	transition: all 0.15s ease;
+	font-size: 14px;
+}
+
+.clear-history-btn:hover {
+	background: #f5f5f5;
+	color: #666;
+}
+
+/* 已移除未使用的旧版搜索历史列表样式（改为 chip 风格） */
+
+.search-history-loading {
+	text-align: center;
+	padding: 20px;
+	color: #666;
+}
+
+.search-history-loading .loading-spinner {
+	width: 20px;
+	height: 20px;
+	border: 2px solid #f3f3f3;
+	border-top: 2px solid #c6ff00;
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+	margin: 0 auto 8px;
+}
+
+.no-search-history {
+	text-align: center;
+	padding: 20px;
+	color: #999;
+	font-size: 13px;
 }
 
 .search-overlay {
@@ -1903,19 +2369,10 @@ mark {
 	transition: opacity 0.3s ease;
 }
 
-.search-placeholder span.fade-enter-active,
-.search-placeholder span.fade-leave-active {
-	transition: opacity 0.3s ease;
-}
-
-.search-placeholder span.fade-enter-from,
-.search-placeholder span.fade-leave-to {
-	opacity: 0;
-}
+/* 已移除未使用的 fade 过渡类 */
 
 /* 响应式设计 */
 @media (max-width: 1200px) {
-
 	.top-bar-inner,
 	.nav-inner,
 	.search-panel-header,
@@ -1929,9 +2386,32 @@ mark {
 		width: 40%;
 		min-width: 200px;
 	}
+	
+	.top-bar-right {
+		right: 8px;
+	}
 }
 
 @media (max-width: 960px) {
+	.top-bar {
+		height: 36px;
+	}
+	
+	.top-bar-inner {
+		padding: 0 12px;
+	}
+	
+	.login-status {
+		font-size: 13px;
+		padding: 5px 10px;
+		gap: 6px;
+		min-width: 70px;
+	}
+	
+	.top-bar-right {
+		right: 6px;
+	}
+	
 	.nav-inner {
 		height: 70px;
 		padding: 0 12px;
@@ -1980,40 +2460,72 @@ mark {
 	}
 
 	.mega-menu {
-		top: 110px;
-		min-height: 360px;
-		padding: 16px;
+		top: 106px;
+		height: auto;
+		padding: 16px 16px 16px 16px;
 		grid-template-columns: 1fr;
+		/* 确保在小屏幕上完全显示 */
+		overflow-x: visible;
+		overflow-y: visible;
+		width: 100vw;
+		left: 0;
+		right: 0;
+		/* 强制占满整个视口宽度 */
+		max-width: 100vw;
+		/* 确保左右边距足够 */
+		padding-left: 16px;
+		padding-right: 16px;
+		/* 确保从屏幕最左边开始 */
+		margin: 0;
 	}
 
 	.mega-left {
 		border: none;
 		padding-right: 0;
+		/* 确保左侧内容从最左边开始 */
+		padding-left: 0;
+		margin-left: 0;
 	}
 
 	.mega-right {
 		padding-left: 0;
 		margin-top: 12px;
+		/* 确保右侧内容完全显示 */
+		overflow: visible;
+		width: 100%;
+		/* 确保右边距足够 */
+		padding-right: 0;
 	}
 
 	.preview-grid {
 		grid-template-columns: repeat(3, 1fr);
+		/* 确保网格完全显示 */
+		overflow: visible;
+		width: 100%;
+		gap: 2px;
+		/* 确保右边距足够 */
+		padding-right: 0;
 	}
 }
 
 @media (max-width: 768px) {
 	.top-bar {
-		height: 36px;
+		height: 32px;
 	}
 
 	.top-bar-inner {
-		padding: 0 12px;
+		padding: 0 8px;
 	}
 
 	.login-status {
 		font-size: 12px;
 		padding: 4px 8px;
-		gap: 6px;
+		gap: 4px;
+		min-width: 60px;
+	}
+
+	.top-bar-right {
+		right: 4px;
 	}
 
 	.nav-inner {
@@ -2076,20 +2588,61 @@ mark {
 	}
 
 	.mega-menu {
-		top: 96px;
-		min-height: 280px;
-		padding: 12px;
+		top: 92px;
+		height: auto;
+		padding: 12px 12px 12px 12px;
+		/* 确保在中等屏幕上完全显示 */
+		overflow-x: visible;
+		overflow-y: visible;
+		width: 100vw;
+		left: 0;
+		right: 0;
+		grid-template-columns: 1fr;
+		/* 强制占满整个视口宽度 */
+		max-width: 100vw;
+		/* 确保左右边距足够 */
+		padding-left: 12px;
+		padding-right: 12px;
+		/* 确保从屏幕最左边开始 */
+		margin: 0;
+	}
+
+	.preview-grid {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 2px;
+		overflow: visible;
+		width: 100%;
+		/* 确保右边距足够 */
+		padding-right: 0;
 	}
 }
 
 @media (max-width: 480px) {
+	.top-bar {
+		height: 28px;
+	}
+
+	.top-bar-inner {
+		padding: 0 6px;
+	}
+
+	.login-status {
+		font-size: 11px;
+		padding: 3px 6px;
+		gap: 3px;
+		min-width: 50px;
+	}
+
+	.top-bar-right {
+		right: 3px;
+	}
 
 	.top-bar-inner,
 	.nav-inner,
 	.search-panel-header,
 	.search-panel-content {
-		padding-left: 8px;
-		padding-right: 8px;
+		padding-left: 6px;
+		padding-right: 6px;
 	}
 
 	.brand-logo svg {
@@ -2113,7 +2666,7 @@ mark {
 	.search-placeholder {
 		font-size: 12px;
 		height: 32px;
-		padding: 0 12px 0 32px;
+		padding: 0 12px 0 28px;
 	}
 
 	.actions {
@@ -2124,35 +2677,226 @@ mark {
 		width: 32px;
 		height: 32px;
 	}
+
+	.mega-menu {
+		/* 确保在小屏幕上完全显示 */
+		overflow-x: visible;
+		overflow-y: visible;
+		width: 100vw;
+		left: 0;
+		right: 0;
+		padding: 8px 8px 8px 8px;
+		grid-template-columns: 1fr;
+		/* 强制占满整个视口宽度 */
+		max-width: 100vw;
+		/* 确保左右边距足够 */
+		padding-left: 8px;
+		padding-right: 8px;
+		/* 确保从屏幕最左边开始 */
+		margin: 0;
+		top: 88px;
+		height: auto;
+	}
+
+	.preview-grid {
+		grid-template-columns: 1fr;
+		gap: 2px;
+		overflow: visible;
+		width: 100%;
+		/* 确保右边距足够 */
+		padding-right: 0;
+	}
+
+	.preview-card {
+		padding: 8px;
+		gap: 8px;
+		/* 确保右边距足够 */
+		margin-right: 0;
+	}
+
+	.preview-name {
+		font-size: 13px;
+		/* 确保右边距足够 */
+		padding-right: 0;
+	}
 }
 
-/* 用户菜单 */
-.user-menu-wrapper { position: relative; }
-.user-dropdown {
-  position: absolute;
-  right: 0;
-  top: 36px;
-  background: #fff;
-  border: 1px solid rgba(0,0,0,0.08);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-  padding: 8px;
-  min-width: 180px;
-  z-index: 1200;
+@media (max-width: 360px) {
+	.top-bar {
+		height: 24px;
+	}
+	
+	.top-bar-inner {
+		padding: 0 4px;
+	}
+	
+	.login-status {
+		font-size: 10px;
+		padding: 2px 4px;
+		gap: 2px;
+		min-width: 45px;
+	}
+	
+	.top-bar-right {
+		right: 2px;
+	}
+	
+	.nav-inner {
+		height: 56px;
+		padding: 0 4px;
+	}
+	
+	.brand {
+		margin-left: -4px;
+	}
+	
+	.brand-logo svg {
+		width: 60px;
+		height: 20px;
+	}
+	
+	.primary-nav {
+		margin-left: 8px;
+	}
+	
+	.primary-nav .nav-list {
+		gap: 6px;
+	}
+	
+	.nav-link {
+		font-size: 11px;
+		padding: 2px 1px;
+	}
+	
+	.nav-search {
+		margin-right: 16px;
+		padding: 0 4px 0 2px;
+	}
+	
+	.search-box {
+		margin-right: 4px;
+	}
+	
+	.search-placeholder {
+		font-size: 11px;
+		height: 28px;
+		padding: 0 10px 0 26px;
+	}
+	
+	.actions {
+		margin-right: -4px;
+		gap: 6px;
+	}
+	
+	.icon-btn {
+		width: 28px;
+		height: 28px;
+	}
+	
+	.icon-btn:first-child {
+		margin-left: -4px;
+	}
 }
-.dropdown-item {
-  width: 100%;
-  background: none;
-  border: none;
-  text-align: left;
-  padding: 8px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.dropdown-item:hover { background: #f5f6fa; }
-.dropdown-divider { height: 1px; background: #eee; margin: 6px 0; }
-.dropdown-item.logout { color: #e74c3c; }
 
-.avatar-img{width:24px;height:24px;border-radius:50%;object-fit:cover;} .hidden-input{display:none;} .user-dropdown .dropdown-item{color:#111;} .user-dropdown .dropdown-item.logout{color:#111;border-top:1px solid #eee;}
+/* 超小屏幕特殊处理 */
+@media (max-width: 320px) {
+	.top-bar {
+		height: 22px;
+	}
+	
+	.top-bar-inner {
+		padding: 0 2px;
+	}
+	
+	.login-status {
+		font-size: 9px;
+		padding: 1px 3px;
+		gap: 1px;
+		min-width: 40px;
+	}
+	
+	.top-bar-right {
+		right: 1px;
+	}
+	
+	.nav-inner {
+		height: 52px;
+		padding: 0 2px;
+	}
+	
+	.brand-logo svg {
+		width: 50px;
+		height: 18px;
+	}
+	
+	.primary-nav .nav-list {
+		gap: 4px;
+	}
+	
+	.nav-link {
+		font-size: 10px;
+		padding: 1px 1px;
+	}
+	
+	.search-placeholder {
+		font-size: 10px;
+		height: 26px;
+		padding: 0 8px 0 24px;
+	}
+	
+	.icon-btn {
+		width: 26px;
+		height: 26px;
+	}
+}
+
+/* Chip 风格的搜索历史 */
+.history-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.history-chip {
+	background: #f2f2f2;
+	border: 1px solid #e5e5e5;
+	border-radius: 8px;
+	padding: 8px 12px;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.history-chip:hover {
+	background: #ebebeb;
+	border-color: #dcdcdc;
+}
+
+.chip-text {
+	font-size: 13px;
+	color: #333;
+	max-width: 220px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.chip-close {
+	border: none;
+	background: transparent;
+	color: #999;
+	cursor: pointer;
+	font-size: 14px;
+	line-height: 1;
+	padding: 0 2px;
+	border-radius: 4px;
+}
+
+.chip-close:hover {
+	background: rgba(0,0,0,0.05);
+	color: #666;
+}
 
 </style>
