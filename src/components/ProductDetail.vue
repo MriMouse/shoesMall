@@ -548,13 +548,22 @@ onMounted(() => {
     recordSearchHistoryOnView()
 })
 
-// 进入详情页记录历史
+// 进入详情页记录历史（带本地短期阻止，避免刚删又写回）
 async function recordSearchHistoryOnView() {
     try {
         const shoeId = route.params.id || route.query.shoeId
         if (!shoeId) return
         const userId = await userManager.getUserId()
         if (!userId) return
+        // 与 MainNav.vue 使用同一套阻止规则
+        const HISTORY_BLOCK_MS = 5 * 60 * 1000
+        const blockKey = `search-history-block:${userId}:${Number(shoeId)}`
+        try {
+            const ts = sessionStorage.getItem(blockKey)
+            if (ts && Date.now() - Number(ts) < HISTORY_BLOCK_MS) {
+                return // 在阻止窗口内，跳过写入
+            }
+        } catch (_) { void 0 }
         const params = new URLSearchParams({ userId, shoeId })
         await axios.post('/api/searchHistory/add', params)
     } catch (e) {
@@ -566,10 +575,20 @@ async function recordSearchHistoryOnView() {
 
 <style scoped>
 .product-detail-container {
+    /* 统一到 MainNav 黑白极简主题 */
+    --color-text: #111;
+    --color-subtext: #666;
+    --color-border: #ddd;
+    --color-bg: #fff;
+    --color-bg-soft: #f8f8f8;
+    --color-accent: #c6ff00;
+    --btn-radius: 8px;
+    --btn-border: 1.5px;
+
     max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
-    font-family: 'Playfair Display', 'Georgia', serif;
+    font-family: Helvetica Neue, Arial, sans-serif;
 }
 
 /* 加载状态 */
@@ -582,7 +601,7 @@ async function recordSearchHistoryOnView() {
     width: 50px;
     height: 50px;
     border: 4px solid #f3f3f3;
-    border-top: 4px solid rgb(211, 169, 101);
+    border-top: 4px solid var(--color-accent);
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto 20px;
@@ -611,14 +630,15 @@ async function recordSearchHistoryOnView() {
 }
 
 .retry-btn {
-    background: rgb(211, 169, 101);
-    color: white;
-    border: none;
+    background: transparent;
+    color: #000;
+    border: var(--btn-border) solid #000;
     padding: 12px 24px;
-    border-radius: 8px;
+    border-radius: var(--btn-radius);
     cursor: pointer;
     font-size: 1rem;
     margin-top: 20px;
+    transition: background .15s ease, color .15s ease, border-color .15s ease, transform .1s ease;
 }
 
 .sex-tag {
@@ -627,7 +647,9 @@ async function recordSearchHistoryOnView() {
 }
 
 .retry-btn:hover {
-    background: #d4af37;
+    background: #000;
+    color: #fff;
+    border-color: #000;
 }
 
 /* 面包屑导航 */
@@ -638,9 +660,9 @@ async function recordSearchHistoryOnView() {
 }
 
 .breadcrumb-item {
-    color: rgb(211, 169, 101);
+    color: #000;
     text-decoration: none;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .breadcrumb-item:hover {
@@ -760,8 +782,8 @@ async function recordSearchHistoryOnView() {
 
 .product-title {
     font-size: 2rem;
-    font-weight: 600;
-    color: #333;
+    font-weight: 700;
+    color: var(--color-text);
     margin: 0 0 20px 0;
     line-height: 1.3;
 }
@@ -769,18 +791,18 @@ async function recordSearchHistoryOnView() {
 .product-serial {
     margin-bottom: 20px;
     padding: 15px;
-    background: #f8f9fa;
-    border-radius: 8px;
+    background: var(--color-bg-soft);
+    border-radius: var(--btn-radius);
 }
 
 .label {
     font-weight: 600;
-    color: #666;
+    color: var(--color-subtext);
     margin-right: 10px;
 }
 
 .value {
-    color: #333;
+    color: var(--color-text);
     font-weight: 500;
 }
 
@@ -813,8 +835,8 @@ async function recordSearchHistoryOnView() {
 
 .section-title {
     font-size: 1.2rem;
-    font-weight: 600;
-    color: #333;
+    font-weight: 700;
+    color: var(--color-text);
     margin: 0 0 15px 0;
 }
 
@@ -844,14 +866,14 @@ async function recordSearchHistoryOnView() {
 }
 
 .size-option:hover:not(.disabled) {
-    border-color: rgb(211, 169, 101);
-    color: rgb(211, 169, 101);
+    border-color: #000;
+    color: #000;
 }
 
 .size-option.selected {
-    background: rgb(211, 169, 101);
-    color: white;
-    border-color: rgb(211, 169, 101);
+    background: #000;
+    color: #fff;
+    border-color: #000;
 }
 
 .size-option.disabled {
@@ -888,8 +910,8 @@ async function recordSearchHistoryOnView() {
 }
 
 .quantity-btn:hover:not(:disabled) {
-    border-color: rgb(211, 169, 101);
-    color: rgb(211, 169, 101);
+    border-color: #000;
+    color: #000;
 }
 
 .quantity-btn:disabled {
@@ -909,7 +931,7 @@ async function recordSearchHistoryOnView() {
 
 .quantity-input:focus {
     outline: none;
-    border-color: rgb(211, 169, 101);
+    border-color: #000;
 }
 
 .stock-warning {
@@ -933,18 +955,18 @@ async function recordSearchHistoryOnView() {
 }
 
 .brand-tag {
-    background: rgba(52, 152, 219, 0.1);
-    color: #3498db;
+    background: #f2f2f2;
+    color: #333;
 }
 
 .type-tag {
-    background: rgba(46, 204, 113, 0.1);
-    color: #2ecc71;
+    background: #f2f2f2;
+    color: #333;
 }
 
 .color-tag {
-    background: rgba(155, 89, 182, 0.1);
-    color: #9b59b6;
+    background: #f2f2f2;
+    color: #333;
 }
 
 .action-buttons {
@@ -956,29 +978,23 @@ async function recordSearchHistoryOnView() {
 .add-to-cart-btn,
 .buy-now-btn {
     flex: 1;
-    padding: 15px 20px;
-    border: none;
-    border-radius: 8px;
-    font-size: 1.1rem;
+    padding: 14px 20px;
+    border-radius: var(--btn-radius);
+    font-size: 1.05rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.add-to-cart-btn {
-    background: linear-gradient(135deg, #28a745, #20c997);
-    color: white;
-}
-
-.buy-now-btn {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
-    color: white;
+    transition: background .15s ease, color .15s ease, border-color .15s ease, transform .1s ease;
+    border: var(--btn-border) solid #000;
+    background: transparent;
+    color: #000;
 }
 
 .add-to-cart-btn:hover:not(:disabled),
 .buy-now-btn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    background: #000;
+    color: #fff;
+    border-color: #000;
+    transform: translateY(-1px);
 }
 
 .add-to-cart-btn:disabled,
@@ -990,7 +1006,7 @@ async function recordSearchHistoryOnView() {
 
 /* 产品详细信息 */
 .product-details-section {
-    background: white;
+    background: var(--color-bg);
     border-radius: 12px;
     padding: 30px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
@@ -1007,19 +1023,19 @@ async function recordSearchHistoryOnView() {
     display: flex;
     align-items: center;
     padding: 15px;
-    background: #f8f9fa;
+    background: var(--color-bg-soft);
     border-radius: 8px;
 }
 
 .detail-label {
     font-weight: 600;
-    color: #666;
+    color: var(--color-subtext);
     min-width: 120px;
     margin-right: 15px;
 }
 
 .detail-value {
-    color: #333;
+    color: var(--color-text);
     font-weight: 500;
 }
 
@@ -1035,14 +1051,14 @@ async function recordSearchHistoryOnView() {
 
 .subsection-title {
     font-size: 1.3rem;
-    font-weight: 600;
-    color: #333;
+    font-weight: 700;
+    color: var(--color-text);
     margin: 0 0 20px 0;
 }
 
 .description-text {
     line-height: 1.8;
-    color: #666;
+    color: var(--color-subtext);
     font-size: 1rem;
 }
 
