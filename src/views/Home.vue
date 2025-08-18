@@ -6,6 +6,7 @@
 				@view-all="goAll"
 				@view-men="goMen"
 				@view-women="goWomen"
+				@view-kids="goKids"
 			/>
 			<ProductGrid @view-all="goAll" />
 		</main>
@@ -41,6 +42,7 @@ export default {
 		function goAll() { router.push({ name: 'ProductListPage' }); }
 		function goMen() { router.push('/men-shoes'); }
 		function goWomen() { router.push('/women-shoes'); }
+		function goKids() { router.push('/kids-shoes'); }
 		function onLoginSuccess() {
 			// 登录成功后不再跳转到个人中心，保持在首页，避免闪烁
 			loginOpen.value = false;
@@ -53,6 +55,7 @@ export default {
 			goAll, 
 			goMen, 
 			goWomen, 
+			goKids,
 			onLoginSuccess,
 			onOpenLogin
 		};

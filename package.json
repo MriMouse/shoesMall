@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "preserve": "node scripts/generate-ads-manifest.js",
     "serve": "vue-cli-service serve",
+    "prebuild": "node scripts/generate-ads-manifest.js",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint"
   },
