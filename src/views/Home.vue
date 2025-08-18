@@ -10,6 +10,7 @@
 			/>
 			<ProductGrid @view-all="goAll" />
 		</main>
+		<SiteFooter />
 		<LoginDrawer 
 			v-model="loginOpen" 
 			:show-profile-access-message="showProfileAccessMessage"
@@ -22,13 +23,14 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import MainNav from '@/views/layout/MainNav.vue';
+import SiteFooter from '@/views/layout/Footer.vue';
 import LoginDrawer from '@/views/auth/LoginDrawer.vue';
 import HeroCarousel from '@/views/home/HeroCarousel.vue';
 import ProductGrid from '@/views/home/ProductGrid.vue';
 
 export default {
 	name: 'HomePage',
-	components: { MainNav, LoginDrawer, HeroCarousel, ProductGrid },
+	components: { MainNav, SiteFooter, LoginDrawer, HeroCarousel, ProductGrid },
 	setup() {
 		const router = useRouter();
 		const loginOpen = ref(false);
