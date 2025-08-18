@@ -1461,18 +1461,8 @@ export default {
 	pointer-events: none;
 }
 
-.search-icon-mask {
-	position: absolute;
-	left: 0;
-	top: 0;
-	bottom: 0;
-	width: 36px;
-	border-top-left-radius: 999px;
-	border-bottom-left-radius: 999px;
-	background: transparent;
-	z-index: 2;
-	pointer-events: none;
-}
+/* 已移除未使用的 .search-icon-mask */
+
 
 .search-placeholder {
 	width: 100%;
@@ -1532,20 +1522,7 @@ export default {
 	background: #fff;
 }
 
-.suggest-panel {
-	position: absolute;
-	top: 42px;
-	left: 0;
-	width: 100%;
-	background: rgba(255, 255, 255, 0.98);
-	backdrop-filter: blur(8px);
-	border: 1px solid #eee;
-	border-radius: 12px;
-	padding: 8px;
-	z-index: 1001;
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-	box-sizing: border-box;
-}
+/* 已移除未使用的 .suggest-panel */
 
 
 
@@ -1906,11 +1883,7 @@ export default {
 	width: 100%;
 }
 
-.preview-price {
-	font-size: 11px;
-	color: #e74c3c;
-	font-weight: 600;
-}
+/* 已移除未使用的 .preview-price */
 
 /* 新增：加载状态样式 */
 .preview-loading {
@@ -2252,118 +2225,7 @@ export default {
 	color: #666;
 }
 
-.search-history-list {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-}
-
-.search-history-item {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	padding: 10px 12px;
-	border: 1px solid #f0f0f0;
-	border-radius: 6px;
-	background: #fafafa;
-	transition: all 0.15s ease;
-}
-
-.search-history-item:hover {
-	background: #f5f5f5;
-	border-color: #e0e0e0;
-}
-
-.history-image {
-	width: 40px;
-	height: 40px;
-	flex-shrink: 0;
-	position: relative;
-	overflow: hidden;
-	border-radius: 4px;
-	background: #f5f5f5;
-}
-
-.history-product-image {
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
-}
-
-.history-placeholder {
-	width: 100%;
-	height: 100%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-size: 1rem;
-	color: #999;
-	background: #f0f0f0;
-	border-radius: 4px;
-}
-
-.history-info {
-	flex: 1;
-	min-width: 0;
-}
-
-.history-name {
-	font-size: 13px;
-	font-weight: 500;
-	color: #333;
-	margin-bottom: 4px;
-	line-height: 1.3;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.history-meta {
-	display: flex;
-	gap: 8px;
-	align-items: center;
-}
-
-.history-brand {
-	font-size: 11px;
-	color: #666;
-	background: rgba(0, 0, 0, 0.05);
-	padding: 2px 6px;
-	border-radius: 10px;
-}
-
-.history-price {
-	font-size: 12px;
-	font-weight: 600;
-	color: #e74c3c;
-}
-
-.history-actions {
-	display: flex;
-	gap: 4px;
-	flex-shrink: 0;
-}
-
-.history-view-btn,
-.history-delete-btn {
-	background: transparent;
-	border: none;
-	cursor: pointer;
-	padding: 4px;
-	border-radius: 4px;
-	transition: all 0.15s ease;
-	font-size: 12px;
-}
-
-.history-view-btn:hover {
-	background: rgba(0, 123, 255, 0.1);
-	color: #007bff;
-}
-
-.history-delete-btn:hover {
-	background: rgba(220, 53, 69, 0.1);
-	color: #dc3545;
-}
+/* 已移除未使用的旧版搜索历史列表样式（改为 chip 风格） */
 
 .search-history-loading {
 	text-align: center;
@@ -2402,15 +2264,7 @@ export default {
 	transition: opacity 0.3s ease;
 }
 
-.search-placeholder span.fade-enter-active,
-.search-placeholder span.fade-leave-active {
-	transition: opacity 0.3s ease;
-}
-
-.search-placeholder span.fade-enter-from,
-.search-placeholder span.fade-leave-to {
-	opacity: 0;
-}
+/* 已移除未使用的 fade 过渡类 */
 
 /* 响应式设计 */
 @media (max-width: 1200px) {
