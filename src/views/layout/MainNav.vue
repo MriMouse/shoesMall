@@ -13,7 +13,7 @@
 							<line x1="8" y1="15" x2="12" y2="15" />
 							<line x1="9" y1="18" x2="11" y2="18" />
 						</svg>
-						<span v-if="isLoggedIn">欢迎来到</span>
+						<span v-if="isLoggedIn">欢迎回来</span>
 						<span v-else>请登录</span>
 					</button>
 				</div>
@@ -216,7 +216,7 @@
 </template>
 
 <script>
-import { reactive, ref, onMounted, onBeforeUnmount, computed } from 'vue';
+import { reactive, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 
@@ -252,9 +252,20 @@ export default {
 		const dynamicCategories = ref([]);
 
 		// 检查登录状态
-		const isLoggedIn = computed(() => {
-			return !!localStorage.getItem('user');
-		});
+		const isLoggedIn = ref(false);
+		
+		// 检查登录状态的函数
+		const checkLoginStatus = () => {
+			const user = localStorage.getItem('user');
+			isLoggedIn.value = !!user;
+		};
+		
+		// 监听 localStorage 变化
+		const handleStorageChange = (e) => {
+			if (e.key === 'user') {
+				checkLoginStatus();
+			}
+		};
 
 		function onLoginStatusClick() {
 			if (isLoggedIn.value) {
@@ -297,6 +308,13 @@ export default {
 
 		onMounted(() => {
 			window.addEventListener('scroll', handleScroll, { passive: true });
+			// 检查初始登录状态
+			checkLoginStatus();
+			// 监听 localStorage 变化
+			window.addEventListener('storage', handleStorageChange);
+			// 监听自定义登录成功事件
+			window.addEventListener('user-login-change', checkLoginStatus);
+			
 			startHotSearchRotation(); // 启动热门搜索词条循环
 			loadCategoriesFromBackend(); // 加载分类数据
 			
@@ -308,6 +326,9 @@ export default {
 
 		onBeforeUnmount(() => {
 			window.removeEventListener('scroll', handleScroll);
+			// 清理事件监听器
+			window.removeEventListener('storage', handleStorageChange);
+			window.removeEventListener('user-login-change', checkLoginStatus);
 			stopHotSearchRotation(); // 停止热门搜索词条循环
 			// 清理定时器
 			if (debounceTimer) {
@@ -435,7 +456,7 @@ export default {
 
 		// 新增：预加载函数，在用户悬停导航项时就开始准备数据
 		function preloadMegaMenu() {
-			// 不再自动预选左侧第一个分类；保持初始为通用“热门主推”预览
+			// 不再自动预选左侧第一个分类；保持初始为通用"热门主推"预览
 			// 如需预热图片，可在此处添加仅缓存加载的逻辑，但不要更新 previewProducts
 			return;
 		}
@@ -1006,6 +1027,10 @@ export default {
 	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 	width: 100%;
 	box-sizing: border-box;
+	position: relative;
+	overflow: visible;
+	margin: 0;
+	padding: 0;
 }
 
 .top-bar-inner {
@@ -1017,6 +1042,9 @@ export default {
 	height: 100%;
 	padding: 0 16px;
 	box-sizing: border-box;
+	width: 100%;
+	position: relative;
+	margin-right: 0;
 }
 
 .top-bar-left {
@@ -1026,29 +1054,35 @@ export default {
 .top-bar-right {
 	display: flex;
 	align-items: center;
-	margin-right: -120px;
-	/* 右移登录按钮 (从-32px改为-48px) */
+	justify-content: flex-end;
+	position: absolute;
+	right: 8px;
+	top: 0;
+	bottom: 0;
+	z-index: 10;
+	width: auto;
 }
 
 .login-status {
 	background: transparent;
 	border: 1px solid rgba(255, 255, 255, 0.3);
-	/* 添加白色边框 */
 	color: #fff;
 	font-size: 14px;
 	font-weight: 500;
 	cursor: pointer;
 	padding: 6px 12px;
-	/* 增加水平内边距 */
-	border-radius: 6px;
+	border-radius: 8px;
 	transition: background .15s ease, border-color .15s ease;
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	/* 增加图标和文字的间距 */
 	letter-spacing: 0.5px;
-	/* 增加字间距 */
 	white-space: nowrap;
+	flex-shrink: 0;
+	min-width: 80px;
+	justify-content: center;
+	margin: 0;
+	position: relative;
 }
 
 .login-status:hover {
@@ -1074,6 +1108,7 @@ export default {
 	background: #fff;
 	box-sizing: border-box;
 	width: 100%;
+	position: relative;
 }
 
 .brand {
@@ -1806,7 +1841,6 @@ mark {
 
 /* 响应式设计 */
 @media (max-width: 1200px) {
-
 	.top-bar-inner,
 	.nav-inner,
 	.search-panel-header,
@@ -1820,9 +1854,32 @@ mark {
 		width: 40%;
 		min-width: 200px;
 	}
+	
+	.top-bar-right {
+		right: 8px;
+	}
 }
 
 @media (max-width: 960px) {
+	.top-bar {
+		height: 36px;
+	}
+	
+	.top-bar-inner {
+		padding: 0 12px;
+	}
+	
+	.login-status {
+		font-size: 13px;
+		padding: 5px 10px;
+		gap: 6px;
+		min-width: 70px;
+	}
+	
+	.top-bar-right {
+		right: 6px;
+	}
+	
 	.nav-inner {
 		height: 70px;
 		padding: 0 12px;
@@ -1894,17 +1951,22 @@ mark {
 
 @media (max-width: 768px) {
 	.top-bar {
-		height: 36px;
+		height: 32px;
 	}
 
 	.top-bar-inner {
-		padding: 0 12px;
+		padding: 0 8px;
 	}
 
 	.login-status {
 		font-size: 12px;
 		padding: 4px 8px;
-		gap: 6px;
+		gap: 4px;
+		min-width: 60px;
+	}
+
+	.top-bar-right {
+		right: 4px;
 	}
 
 	.nav-inner {
@@ -1974,13 +2036,31 @@ mark {
 }
 
 @media (max-width: 480px) {
+	.top-bar {
+		height: 28px;
+	}
+
+	.top-bar-inner {
+		padding: 0 6px;
+	}
+
+	.login-status {
+		font-size: 11px;
+		padding: 3px 6px;
+		gap: 3px;
+		min-width: 50px;
+	}
+
+	.top-bar-right {
+		right: 3px;
+	}
 
 	.top-bar-inner,
 	.nav-inner,
 	.search-panel-header,
 	.search-panel-content {
-		padding-left: 8px;
-		padding-right: 8px;
+		padding-left: 6px;
+		padding-right: 6px;
 	}
 
 	.brand-logo svg {
@@ -2016,4 +2096,135 @@ mark {
 		height: 32px;
 	}
 }
+
+@media (max-width: 360px) {
+	.top-bar {
+		height: 24px;
+	}
+	
+	.top-bar-inner {
+		padding: 0 4px;
+	}
+	
+	.login-status {
+		font-size: 10px;
+		padding: 2px 4px;
+		gap: 2px;
+		min-width: 45px;
+	}
+	
+	.top-bar-right {
+		right: 2px;
+	}
+	
+	.nav-inner {
+		height: 56px;
+		padding: 0 4px;
+	}
+	
+	.brand {
+		margin-left: -4px;
+	}
+	
+	.brand-logo svg {
+		width: 60px;
+		height: 20px;
+	}
+	
+	.primary-nav {
+		margin-left: 8px;
+	}
+	
+	.primary-nav .nav-list {
+		gap: 6px;
+	}
+	
+	.nav-link {
+		font-size: 11px;
+		padding: 2px 1px;
+	}
+	
+	.nav-search {
+		margin-right: 16px;
+		padding: 0 4px 0 2px;
+	}
+	
+	.search-box {
+		margin-right: 4px;
+	}
+	
+	.search-placeholder {
+		font-size: 11px;
+		height: 28px;
+		padding: 0 10px 0 28px;
+	}
+	
+	.actions {
+		margin-right: -4px;
+		gap: 6px;
+	}
+	
+	.icon-btn {
+		width: 28px;
+		height: 28px;
+	}
+	
+	.icon-btn:first-child {
+		margin-left: -4px;
+	}
+}
+
+/* 超小屏幕特殊处理 */
+@media (max-width: 320px) {
+	.top-bar {
+		height: 22px;
+	}
+	
+	.top-bar-inner {
+		padding: 0 2px;
+	}
+	
+	.login-status {
+		font-size: 9px;
+		padding: 1px 3px;
+		gap: 1px;
+		min-width: 40px;
+	}
+	
+	.top-bar-right {
+		right: 1px;
+	}
+	
+	.nav-inner {
+		height: 52px;
+		padding: 0 2px;
+	}
+	
+	.brand-logo svg {
+		width: 50px;
+		height: 18px;
+	}
+	
+	.primary-nav .nav-list {
+		gap: 4px;
+	}
+	
+	.nav-link {
+		font-size: 10px;
+		padding: 1px 1px;
+	}
+	
+	.search-placeholder {
+		font-size: 10px;
+		height: 26px;
+		padding: 0 8px 0 26px;
+	}
+	
+	.icon-btn {
+		width: 26px;
+		height: 26px;
+	}
+}
+
+
 </style>

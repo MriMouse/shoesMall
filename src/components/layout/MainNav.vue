@@ -120,6 +120,9 @@ export default {
             // 清空购物车管理器的用户ID
             cartManager.setUserId(null)
             
+            // 触发自定义事件，通知其他组件登录状态变化
+            window.dispatchEvent(new CustomEvent('user-login-change'));
+            
             this.$router.push('/')
         },
         
