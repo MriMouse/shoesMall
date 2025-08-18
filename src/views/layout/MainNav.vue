@@ -66,9 +66,7 @@
 							<circle cx="9" cy="9" r="6" vector-effect="non-scaling-stroke" />
 							<path d="M18 18l-4.5-4.5" vector-effect="non-scaling-stroke" />
 						</svg>
-						<transition name="fade" mode="out-in">
-							<span :key="currentHotSearchIndex">{{ currentHotSearchTerm }}</span>
-						</transition>
+						<span>搜索商品、品牌或类型</span>
 					</div>
 				</div>
 				<div v-if="isSearchPanelOpen" class="search-overlay" @click="closeSearchPanel">
@@ -82,7 +80,7 @@
 									<path d="M18 18l-4.5-4.5" vector-effect="non-scaling-stroke" />
 								</svg>
 								<input ref="searchInput" type="text" class="search-input" v-model="searchQuery"
-									placeholder="搜索相关类型、品牌或商品" @focus="isSearchFocused = true" @blur="hideSuggestions"
+									placeholder="搜索商品名称、品牌或类型" @focus="isSearchFocused = true" @blur="hideSuggestions"
 									@input="updateSuggestions" @keydown.enter="submitSearch" />
 							</div>
 							<button class="close-search-btn" @click="closeSearchPanel" aria-label="关闭搜索">
@@ -94,56 +92,47 @@
 							</button>
 						</div>
 						<div class="search-panel-content">
-							<div v-if="!searchQuery.trim()" class="hot-searches">
-								<h3 class="hot-searches-title">热门搜索</h3>
-								<div class="hot-searches-tags">
-									<button class="search-tag" @click="selectHotSearch('Safari穿搭')">
-										<span>🦒</span>
-										<span>Safari穿搭</span>
-									</button>
-									<button class="search-tag" @click="selectHotSearch('明星同款')">
-										<span>明星同款</span>
-									</button>
-									<button class="search-tag" @click="selectHotSearch('百搭三条纹')">
-										<span>💜</span>
-										<span>百搭三条纹</span>
-									</button>
-									<button class="search-tag" @click="selectHotSearch('夏日blokecore')">
-										<span>⚽</span>
-										<span>夏日blokecore</span>
-									</button>
-									<button class="search-tag" @click="selectHotSearch('造型感包袋')">
-										<span>👜</span>
-										<span>造型感包袋</span>
-									</button>
-									<button class="search-tag" @click="selectHotSearch('玛丽猫')">
-										<span>🐱</span>
-										<span>玛丽猫</span>
-									</button>
-									<button class="search-tag" @click="selectHotSearch('竞速美学')">
-										<span>🏃</span>
-										<span>竞速美学</span>
-									</button>
-									<button class="search-tag" @click="selectHotSearch('梅赛德斯AMG车队')">
-										<span>🏁</span>
-										<span>梅赛德斯AMG车队</span>
-									</button>
-									<button class="search-tag" @click="selectHotSearch('当红爆款')">
-										<span>🔥</span>
-										<span>当红爆款</span>
-									</button>
-									<button class="search-tag" @click="selectHotSearch('入群有礼')">
-										<span>🎁</span>
-										<span>入群有礼</span>
-									</button>
+							<div v-if="!searchQuery.trim()" class="search-tips">
+								<h3 class="search-tips-title">搜索提示</h3>
+								<div class="search-tips-content">
+									<p>• 输入关键词即可</p>
 								</div>
 							</div>
 							<div v-else class="search-suggestions">
-								<div v-for="item in suggestions" :key="item.key" class="suggest-item"
-									@click="selectSuggestion(item)">
-									<span v-html="highlight(item.label)"></span>
+								<div v-if="searchLoading" class="search-loading">
+									<div class="loading-spinner"></div>
+									<p>搜索中...</p>
 								</div>
-								<div class="suggest-footer" @click="submitSearch">按回车搜索 "{{ searchQuery }}"</div>
+								<div v-else-if="searchResults.length === 0" class="no-results">
+									<p>未找到相关商品</p>
+									<p class="no-results-tip">尝试使用其他关键词搜索</p>
+								</div>
+								<div v-else class="search-results">
+									<div v-for="product in searchResults" :key="product.shoeId" class="search-result-item"
+										@click="goToProductDetail(product.shoeId)">
+										<div class="result-image">
+											<img v-if="product.images && product.images.length > 0"
+												:src="`/api/shoeImg/getImage/${product.images[0].imagePath}`" 
+												:alt="product.name"
+												class="result-product-image" 
+												loading="lazy"
+												@load="handleSearchImageLoad"
+												@error="handleSearchImageError">
+											<div v-else class="result-placeholder">🖼️</div>
+										</div>
+										<div class="result-info">
+											<div class="result-name">{{ product.name }}</div>
+											<div class="result-meta">
+												<span class="result-brand">{{ product.brand?.brandName || 'N/A' }}</span>
+												<span class="result-type">{{ product.shoesType?.typeName || 'N/A' }}</span>
+											</div>
+											<div class="result-price">¥{{ product.discountPrice || product.price }}</div>
+										</div>
+									</div>
+								</div>
+								<div v-if="searchResults.length > 0" class="search-footer" @click="submitSearch">
+									按回车搜索 "{{ searchQuery }}" 的更多结果
+								</div>
 							</div>
 						</div>
 					</div>
@@ -297,7 +286,6 @@ export default {
 
 		onMounted(() => {
 			window.addEventListener('scroll', handleScroll, { passive: true });
-			startHotSearchRotation(); // 启动热门搜索词条循环
 			loadCategoriesFromBackend(); // 加载分类数据
 			
 			// 预加载一些常用图片，提升用户体验
@@ -308,10 +296,13 @@ export default {
 
 		onBeforeUnmount(() => {
 			window.removeEventListener('scroll', handleScroll);
-			stopHotSearchRotation(); // 停止热门搜索词条循环
 			// 清理定时器
 			if (debounceTimer) {
 				clearTimeout(debounceTimer);
+			}
+			// 清理防抖定时器
+			if (searchDebounceTimer) {
+				clearTimeout(searchDebounceTimer);
 			}
 			// 清理图片缓存
 			imageCache.clear();
@@ -801,114 +792,187 @@ export default {
 		// 搜索框逻辑
 		const searchQuery = ref('');
 		const isSearchFocused = ref(false);
-		const suggestions = ref([]);
 		const isSearchPanelOpen = ref(false);
 		const searchInput = ref(null);
+		// 新增：搜索功能
+		const searchLoading = ref(false);
+		const searchResults = ref([]);
+		let searchDebounceTimer = null;
 
-		// 热门搜索词条循环展示
-		const hotSearchTerms = [
-			'竞速美学',
-			'Safari穿搭',
-			'明星同款',
-			'百搭三条纹 💜💜',
-			'夏日blokecore ⚽',
-			'造型感包袋',
-			'玛丽猫',
-			'梅赛德斯AMG车队',
-			'当红爆款 🔥',
-			'入群有礼 🎁'
-		];
-		const currentHotSearchIndex = ref(0);
-		const currentHotSearchTerm = ref(hotSearchTerms[0]);
-		let hotSearchTimer = null;
+		// 新增：防抖搜索函数
+		const debouncedSearch = (query) => {
+			if (searchDebounceTimer) {
+				clearTimeout(searchDebounceTimer);
+			}
+			searchDebounceTimer = setTimeout(() => {
+				if (query.trim()) {
+					searchProducts(query);
+				} else {
+					searchResults.value = [];
+				}
+			}, 300); // 300ms 防抖延迟
+		};
 
-		// 开始循环展示热门搜索词条
-		function startHotSearchRotation() {
-			hotSearchTimer = setInterval(() => {
-				currentHotSearchIndex.value = (currentHotSearchIndex.value + 1) % hotSearchTerms.length;
-				currentHotSearchTerm.value = hotSearchTerms[currentHotSearchIndex.value];
-			}, 3000); // 每3秒切换一次
+		// 新增：搜索产品函数
+		async function searchProducts(query) {
+			if (!query || !query.trim()) {
+				searchResults.value = [];
+				return;
+			}
+
+			searchLoading.value = true;
+			try {
+				// 使用现有的全量商品数据进行本地搜索
+				let allShoes = [];
+				if (allShoesCache) {
+					allShoes = allShoesCache;
+				} else {
+					const response = await axios.post('/api/shoe/getAll', {}, {
+						headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+					});
+					if (response.data && response.data.data) {
+						allShoes = response.data.data;
+						allShoesCache = allShoes;
+					}
+				}
+
+				if (allShoes.length > 0) {
+					// 本地模糊搜索
+					const searchTerm = query.toLowerCase().trim();
+					const filteredProducts = allShoes.filter(product => {
+						// 搜索商品名称
+						if (product.name && product.name.toLowerCase().includes(searchTerm)) {
+							return true;
+						}
+						// 搜索品牌名称
+						if (product.brand?.brandName && product.brand.brandName.toLowerCase().includes(searchTerm)) {
+							return true;
+						}
+						// 搜索商品类型
+						if (product.shoesType?.typeName && product.shoesType.typeName.toLowerCase().includes(searchTerm)) {
+							return true;
+						}
+						// 搜索颜色
+						if (product.color?.colorName && product.color.colorName.toLowerCase().includes(searchTerm)) {
+							return true;
+						}
+						// 搜索产品编号
+						if (product.serialNumber && product.serialNumber.toLowerCase().includes(searchTerm)) {
+							return true;
+						}
+						return false;
+					});
+
+					// 限制搜索结果数量为5个
+					searchResults.value = filteredProducts.slice(0, 5);
+
+					// 为搜索结果加载图片数据
+					await Promise.all(
+						searchResults.value.map(async (product) => {
+							try {
+								// 检查图片缓存
+								const cacheKey = `product_${product.shoeId}`;
+								if (imageCache.has(cacheKey)) {
+									product.images = imageCache.get(cacheKey);
+								} else {
+									const imageResponse = await axios.get(`/api/shoeImg/list/${product.shoeId}`, { timeout: 5000 });
+									if (imageResponse.data && imageResponse.data.data) {
+										product.images = imageResponse.data.data;
+										// 存入缓存
+										imageCache.set(cacheKey, product.images);
+									} else {
+										product.images = [];
+									}
+								}
+							} catch (error) {
+								console.warn(`加载产品 ${product.name} 图片失败:`, error);
+								product.images = [];
+							}
+							return product;
+						})
+					);
+				} else {
+					searchResults.value = [];
+				}
+			} catch (error) {
+				console.error('搜索产品失败:', error);
+				searchResults.value = [];
+			} finally {
+				searchLoading.value = false;
+			}
 		}
 
-		// 停止循环展示
-		function stopHotSearchRotation() {
-			if (hotSearchTimer) {
-				clearInterval(hotSearchTimer);
-				hotSearchTimer = null;
+		// 新增：处理搜索图片加载成功
+		function handleSearchImageLoad(event) {
+			const img = event.target;
+			img.style.display = 'block';
+			img.classList.add('loaded');
+			// 隐藏占位符
+			const placeholder = img.parentElement.querySelector('.result-placeholder');
+			if (placeholder) {
+				placeholder.style.display = 'none';
+			}
+		}
+
+		// 新增：处理搜索图片加载错误
+		function handleSearchImageError(event) {
+			const img = event.target;
+			img.style.display = 'none';
+			// 显示占位符
+			const placeholder = img.parentElement.querySelector('.result-placeholder');
+			if (placeholder) {
+				placeholder.style.display = 'flex';
 			}
 		}
 
 		function toggleSearchPanel() {
 			isSearchPanelOpen.value = !isSearchPanelOpen.value;
 			if (isSearchPanelOpen.value) {
-				stopHotSearchRotation(); // 打开搜索面板时暂停循环
 				setTimeout(() => {
 					searchInput.value?.focus();
 				}, 100);
-			} else {
-				startHotSearchRotation(); // 关闭搜索面板时恢复循环
 			}
 		}
 
 		function closeSearchPanel() {
 			isSearchPanelOpen.value = false;
 			searchQuery.value = '';
-			suggestions.value = [];
+			searchResults.value = [];
 			isSearchFocused.value = false;
-			startHotSearchRotation(); // 关闭搜索面板时恢复循环
+			// 清理防抖定时器
+			if (searchDebounceTimer) {
+				clearTimeout(searchDebounceTimer);
+				searchDebounceTimer = null;
+			}
 		}
 
 		function updateSuggestions() {
-			const q = searchQuery.value.trim().toLowerCase();
-			if (!q) { suggestions.value = []; return; }
-			const base = [
-				{ key: 'ultra', label: 'Ultraboost 系列' },
-				{ key: 'stan', label: 'Stan Smith 经典' },
-				{ key: 'campus', label: 'Campus 休闲' },
-				{ key: 'running', label: '跑步 男鞋' },
-				{ key: 'training', label: '训练 女鞋' },
-				{ key: 'kids', label: '童鞋 热门' },
-				{ key: 'nike', label: 'Nike 品牌' },
-				{ key: 'adidas', label: 'Adidas 品牌' },
-				{ key: 'puma', label: 'Puma 品牌' },
-				{ key: 'reebok', label: 'Reebok 品牌' }
-			];
-			suggestions.value = base.filter(i => i.label.toLowerCase().includes(q)).slice(0, 6);
+			// 使用防抖搜索
+			debouncedSearch(searchQuery.value);
 		}
 
 		function submitSearch() {
 			if (!searchQuery.value.trim()) return;
-			router.push({ name: 'ProductListPage', query: { q: searchQuery.value.trim() } });
+			
+			// 跳转到产品列表页面，传递搜索关键字
+			router.push({ 
+				name: 'ProductListPage', 
+				query: { q: searchQuery.value.trim() } 
+			});
+			
 			isSearchFocused.value = false;
 			closeSearchPanel();
 		}
 
-		function clearSearch() {
-			searchQuery.value = '';
-			suggestions.value = [];
-			isSearchFocused.value = false;
-		}
 
-		function selectSuggestion(item) {
-			searchQuery.value = item.label;
-			submitSearch();
-		}
 
-		function selectHotSearch(query) {
-			searchQuery.value = query;
-			submitSearch();
-		}
+
 
 		function hideSuggestions() {
 			setTimeout(() => { isSearchFocused.value = false; }, 100);
 		}
 
-		function highlight(text) {
-			const q = searchQuery.value.trim();
-			if (!q) return text;
-			const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')})`, 'ig');
-			return text.replace(re, '<mark>$1</mark>');
-		}
+
 
 		// 新增：预加载常用图片
 		async function preloadCommonImages() {
@@ -927,6 +991,8 @@ export default {
 				console.warn('预加载常用图片失败:', error);
 			}
 		}
+
+
 
 
 		return {
@@ -959,22 +1025,19 @@ export default {
 			handleImageError,
 			searchQuery,
 			isSearchFocused,
-			suggestions,
 			updateSuggestions,
 			submitSearch,
-			clearSearch,
-			selectSuggestion,
 			hideSuggestions,
-			highlight,
 			isSearchPanelOpen,
 			toggleSearchPanel,
 			closeSearchPanel,
-			selectHotSearch,
 			searchInput,
-			currentHotSearchIndex,
-			currentHotSearchTerm,
-			hotSearchTerms,
-			onLoginStatusClick
+			onLoginStatusClick,
+			searchLoading,
+			searchResults,
+			searchProducts,
+			handleSearchImageError,
+			handleSearchImageLoad
 		};
 	}
 };
@@ -1233,36 +1296,7 @@ export default {
 	box-sizing: border-box;
 }
 
-.suggest-item {
-	padding: 8px 10px;
-	border-radius: 8px;
-	color: #333;
-	cursor: pointer;
-}
 
-.suggest-item:hover {
-	background: #f5f5f5;
-}
-
-.suggest-footer {
-	padding: 10px;
-	border-top: 1px dashed #eee;
-	color: #666;
-	cursor: pointer;
-	border-radius: 0 0 12px 12px;
-}
-
-.suggest-footer:hover {
-	background: #f5f5f5;
-	color: #333;
-}
-
-mark {
-	background: #c6ff00;
-	color: #111;
-	border-radius: 4px;
-	padding: 0 2px;
-}
 
 .nav-item {
 	position: relative;
@@ -1613,7 +1647,7 @@ mark {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 16px 24px;
+	padding: 14px 20px;
 	max-width: 1200px;
 	margin: 0 auto;
 	position: relative;
@@ -1624,10 +1658,10 @@ mark {
 	content: '';
 	position: absolute;
 	bottom: 0;
-	left: 24px;
-	right: 24px;
+	left: 20px;
+	right: 20px;
 	height: 1px;
-	background: #ddd;
+	background: #eee;
 }
 
 .search-input-wrapper {
@@ -1648,14 +1682,14 @@ mark {
 
 .search-input {
 	width: 100%;
-	height: 44px;
+	height: 40px;
 	border-radius: 999px;
 	border: 1px solid #ddd;
 	background: #f8f8f8;
 	color: #333;
 	padding: 0 16px 0 44px;
 	outline: none;
-	font-size: 16px;
+	font-size: 15px;
 	transition: border-color .15s ease, background .15s ease;
 	box-sizing: border-box;
 }
@@ -1687,97 +1721,183 @@ mark {
 .search-panel-content {
 	max-width: 1200px;
 	margin: 0 auto;
-	padding: 24px;
+	padding: 20px;
 	box-sizing: border-box;
 }
 
-.hot-searches {
-	margin-bottom: 24px;
+.search-tips {
+	margin-bottom: 20px;
 }
 
-.hot-searches-title {
-	font-size: 16px;
+.search-tips-title {
+	font-size: 14px;
 	color: #333;
-	margin-bottom: 16px;
+	margin-bottom: 12px;
 	font-weight: 600;
 	display: flex;
 	align-items: center;
 }
 
-.hot-searches-title::before {
+.search-tips-title::before {
 	content: '';
-	width: 16px;
-	height: 16px;
+	width: 14px;
+	height: 14px;
 	background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="%23666" stroke-width="2"><circle cx="9" cy="9" r="6"/><path d="M18 18l-4.5-4.5"/></svg>') no-repeat center;
 	background-size: contain;
-	margin-right: 8px;
+	margin-right: 6px;
 }
 
-.hot-searches-tags {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 12px;
+.search-tips-content {
+	color: #666;
+	line-height: 1.4;
 }
 
-.search-tag {
-	background: #f8f8f8;
-	border: 1px solid #eee;
-	border-radius: 20px;
-	padding: 8px 16px;
-	font-size: 14px;
-	color: #333;
-	cursor: pointer;
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	transition: background .15s ease, border-color .15s ease, transform .15s ease;
-	white-space: nowrap;
-}
-
-.search-tag:hover {
-	background: #f0f0f0;
-	border-color: #ddd;
-	transform: translateY(-1px);
+.search-tips-content p {
+	margin: 6px 0;
+	font-size: 13px;
 }
 
 .search-suggestions {
 	position: relative;
 }
 
-.search-suggestions .suggest-item {
-	padding: 12px 0;
-	border-bottom: 1px solid #f5f5f5;
-	color: #333;
+
+
+
+
+/* 搜索结果样式 */
+.search-loading {
+	text-align: center;
+	padding: 40px 20px;
+	color: #666;
+}
+
+.search-loading .loading-spinner {
+	width: 30px;
+	height: 30px;
+	border: 3px solid #f3f3f3;
+	border-top: 3px solid #c6ff00;
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+	margin: 0 auto 16px;
+}
+
+.no-results {
+	text-align: center;
+	padding: 40px 20px;
+	color: #666;
+}
+
+.no-results-tip {
+	font-size: 14px;
+	color: #999;
+	margin-top: 8px;
+}
+
+.search-results {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.search-result-item {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 16px;
+	border: none;
+	border-radius: 6px;
 	cursor: pointer;
-	transition: background .15s ease;
+	transition: all 0.15s ease;
+	background: transparent;
 }
 
-.search-suggestions .suggest-item:last-child {
-	border-bottom: none;
+.search-result-item:hover {
+	background: #f5f5f5;
+	transform: none;
+	box-shadow: none;
 }
 
-.search-suggestions .suggest-item:hover {
-	background: #f8f8f8;
+.result-image {
+	width: 48px;
+	height: 48px;
+	flex-shrink: 0;
+	position: relative;
+	overflow: hidden;
+	border-radius: 4px;
+	background: #f5f5f5;
 }
 
-.search-suggestions .suggest-footer {
-	padding: 16px 0;
+.result-product-image {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.result-placeholder {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 1.2rem;
+	color: #999;
+	background: #f0f0f0;
+	border-radius: 4px;
+}
+
+.result-info {
+	flex: 1;
+	min-width: 0;
+}
+
+.result-name {
+	font-size: 14px;
+	font-weight: 500;
+	color: #333;
+	margin-bottom: 4px;
+	line-height: 1.3;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.result-meta {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 4px;
+}
+
+.result-brand, .result-type {
+	font-size: 11px;
+	color: #666;
+	background: transparent;
+	padding: 0;
+	border-radius: 0;
+}
+
+.result-price {
+	font-size: 14px;
+	font-weight: 600;
+	color: #e74c3c;
+}
+
+.search-footer {
+	padding: 12px 0;
 	border-top: 1px solid #eee;
 	color: #666;
 	cursor: pointer;
-	margin-top: 16px;
-}
-
-.search-suggestions .suggest-footer:hover {
+	margin-top: 12px;
+	text-align: center;
 	background: #f8f8f8;
-	color: #333;
+	border-radius: 6px;
+	transition: background 0.15s ease;
+	font-size: 13px;
 }
 
-.search-panel .suggest-item mark {
-	background: #c6ff00;
-	color: #111;
-	border-radius: 4px;
-	padding: 0 2px;
+.search-footer:hover {
+	background: #f0f0f0;
+	color: #333;
 }
 
 .search-overlay {
