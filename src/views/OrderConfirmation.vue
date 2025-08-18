@@ -407,12 +407,11 @@
          </div>
      </div>
       
-      <!-- 订单详情弹窗 -->
-      <div v-if="showOrderDetailsModal" class="modal-overlay" @click="closeOrderDetailsModal">
-          <div class="modal-content" @click.stop>
+             <!-- 订单详情弹窗 -->
+       <div v-if="showOrderDetailsModal" class="modal-overlay">
+           <div class="modal-content" @click.stop>
               <div class="modal-header">
                   <h3>订单详情</h3>
-                  <button class="close-btn" @click="closeOrderDetailsModal">✕</button>
               </div>
               <div class="modal-body" v-if="orderDetails">
                   <div class="order-meta" style="margin-bottom: 16px;">
@@ -466,7 +465,6 @@
                   </div>
               </div>
               <div class="payment-footer">
-                  <button class="cancel-payment-btn" @click="closeOrderDetailsModal">关闭</button>
                   <button class="confirm-payment-btn" @click="() => { closeOrderDetailsModal(); router.push('/products') }">继续购物</button>
               </div>
           </div>
@@ -578,11 +576,15 @@ const loadOrderData = async () => {
             return
         }
         
-        // 首先尝试恢复保存的订单数据
-        const hasRestoredData = restoreOrderData()
-        
         // 优先处理来自购物车的跳转
         const { productId, sizeId, quantity, fromOrderConfirmation, fromCart, items } = route.query
+        
+        // 如果有来自购物车的跳转，不恢复本地存储的数据
+        // 如果没有来自购物车的跳转，才尝试恢复保存的订单数据
+        let hasRestoredData = false
+        if (!fromCart) {
+            hasRestoredData = restoreOrderData()
+        }
 
         if (fromCart === 'true' && items) {
             try {
@@ -1575,6 +1577,8 @@ const showPaymentSuccessModal = () => {
 
          continueShoppingBtn.addEventListener('click', () => {
          document.body.removeChild(successModal)
+         // 完全清除订单数据，确保不会保留已支付的商品
+         clearOrderData()
          // 跳转到产品列表页面，让用户可以继续选择商品
          router.push('/products')
      })
@@ -1583,6 +1587,8 @@ const showPaymentSuccessModal = () => {
     successModal.addEventListener('click', (e) => {
         if (e.target === successModal) {
             document.body.removeChild(successModal)
+            // 完全清除订单数据，确保不会保留已支付的商品
+            clearOrderData()
             router.push('/products')
         }
     })
@@ -1739,17 +1745,20 @@ const restoreOrderData = () => {
             const dataAge = now - orderData.timestamp
             const maxAge = 24 * 60 * 60 * 1000 // 24小时
             
-            if (dataAge < maxAge) {
+            // 检查是否有商品数据
+            if (dataAge < maxAge && orderData.products && orderData.products.length > 0) {
+                // 检查这些商品是否已经被支付（通过检查是否有订单号或其他标识）
+                // 如果没有特殊标识，我们假设这些是有效的待支付商品
                 products.value = orderData.products || []
                 selectedAddress.value = orderData.selectedAddress || null
                 
-                console.log('恢复订单数据成功')
+                console.log('恢复订单数据成功，商品数量:', products.value.length)
                 
                 return true
             } else {
-                // 数据过期，清除
+                // 数据过期或没有商品，清除
                 localStorage.removeItem(STORAGE_KEY)
-                console.log('订单数据已过期，已清除')
+                console.log('订单数据已过期或没有商品，已清除')
             }
         }
     } catch (error) {
@@ -1761,26 +1770,13 @@ const restoreOrderData = () => {
 
 // 清除本地存储的订单数据
 const clearOrderData = () => {
-    // 只清除订单相关的数据，保留商品列表
-    const currentProducts = products.value
-    const currentAddresses = addresses.value
-    
+    // 支付成功后，完全清除所有订单数据，包括商品列表
     localStorage.removeItem(STORAGE_KEY)
     
-    // 重新保存商品列表，保留尺码和数量信息
-    if (currentProducts.length > 0) {
-        const orderData = {
-            products: currentProducts.map(product => ({
-                ...product,
-                // 保留尺码和数量信息，不清除
-                selectedSize: product.selectedSize,
-                quantity: product.quantity || 1
-            })),
-            selectedAddress: currentAddresses.length > 0 ? currentAddresses[0] : null,
-            timestamp: Date.now()
-        }
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(orderData))
-    }
+    // 清空当前页面的商品列表
+    products.value = []
+    
+    console.log('订单数据已完全清除')
 }
 
 // 添加更多商品
