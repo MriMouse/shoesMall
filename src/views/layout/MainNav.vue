@@ -13,7 +13,7 @@
 							<line x1="8" y1="15" x2="12" y2="15" />
 							<line x1="9" y1="18" x2="11" y2="18" />
 						</svg>
-						<span v-if="isLoggedIn">欢迎来到</span>
+						<span v-if="isLoggedIn">欢迎回来</span>
 						<span v-else>请登录</span>
 					</button>
 				</div>
@@ -205,7 +205,7 @@
 </template>
 
 <script>
-import { reactive, ref, onMounted, onBeforeUnmount, computed } from 'vue';
+import { reactive, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 
@@ -241,9 +241,20 @@ export default {
 		const dynamicCategories = ref([]);
 
 		// 检查登录状态
-		const isLoggedIn = computed(() => {
-			return !!localStorage.getItem('user');
-		});
+		const isLoggedIn = ref(false);
+		
+		// 检查登录状态的函数
+		const checkLoginStatus = () => {
+			const user = localStorage.getItem('user');
+			isLoggedIn.value = !!user;
+		};
+		
+		// 监听 localStorage 变化
+		const handleStorageChange = (e) => {
+			if (e.key === 'user') {
+				checkLoginStatus();
+			}
+		};
 
 		function onLoginStatusClick() {
 			if (isLoggedIn.value) {
@@ -286,6 +297,14 @@ export default {
 
 		onMounted(() => {
 			window.addEventListener('scroll', handleScroll, { passive: true });
+			// 检查初始登录状态
+			checkLoginStatus();
+			// 监听 localStorage 变化
+			window.addEventListener('storage', handleStorageChange);
+			// 监听自定义登录成功事件
+			window.addEventListener('user-login-change', checkLoginStatus);
+			
+			startHotSearchRotation(); // 启动热门搜索词条循环
 			loadCategoriesFromBackend(); // 加载分类数据
 			
 			// 预加载一些常用图片，提升用户体验
@@ -296,6 +315,10 @@ export default {
 
 		onBeforeUnmount(() => {
 			window.removeEventListener('scroll', handleScroll);
+			// 清理事件监听器
+			window.removeEventListener('storage', handleStorageChange);
+			window.removeEventListener('user-login-change', checkLoginStatus);
+			stopHotSearchRotation(); // 停止热门搜索词条循环
 			// 清理定时器
 			if (debounceTimer) {
 				clearTimeout(debounceTimer);
@@ -426,7 +449,7 @@ export default {
 
 		// 新增：预加载函数，在用户悬停导航项时就开始准备数据
 		function preloadMegaMenu() {
-			// 不再自动预选左侧第一个分类；保持初始为通用“热门主推”预览
+			// 不再自动预选左侧第一个分类；保持初始为通用"热门主推"预览
 			// 如需预热图片，可在此处添加仅缓存加载的逻辑，但不要更新 previewProducts
 			return;
 		}
@@ -1069,6 +1092,10 @@ export default {
 	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 	width: 100%;
 	box-sizing: border-box;
+	position: relative;
+	overflow: visible;
+	margin: 0;
+	padding: 0;
 }
 
 .top-bar-inner {
@@ -1080,6 +1107,9 @@ export default {
 	height: 100%;
 	padding: 0 16px;
 	box-sizing: border-box;
+	width: 100%;
+	position: relative;
+	margin-right: 0;
 }
 
 .top-bar-left {
@@ -1089,29 +1119,35 @@ export default {
 .top-bar-right {
 	display: flex;
 	align-items: center;
-	margin-right: -120px;
-	/* 右移登录按钮 (从-32px改为-48px) */
+	justify-content: flex-end;
+	position: absolute;
+	right: 8px;
+	top: 0;
+	bottom: 0;
+	z-index: 10;
+	width: auto;
 }
 
 .login-status {
 	background: transparent;
 	border: 1px solid rgba(255, 255, 255, 0.3);
-	/* 添加白色边框 */
 	color: #fff;
 	font-size: 14px;
 	font-weight: 500;
 	cursor: pointer;
 	padding: 6px 12px;
-	/* 增加水平内边距 */
-	border-radius: 6px;
+	border-radius: 8px;
 	transition: background .15s ease, border-color .15s ease;
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	/* 增加图标和文字的间距 */
 	letter-spacing: 0.5px;
-	/* 增加字间距 */
 	white-space: nowrap;
+	flex-shrink: 0;
+	min-width: 80px;
+	justify-content: center;
+	margin: 0;
+	position: relative;
 }
 
 .login-status:hover {
@@ -1137,6 +1173,7 @@ export default {
 	background: #fff;
 	box-sizing: border-box;
 	width: 100%;
+	position: relative;
 }
 
 .brand {
@@ -1201,7 +1238,7 @@ export default {
 
 .search-box .search-icon {
 	position: absolute;
-	left: 10px;
+	left: 8px;
 	top: 50%;
 	transform: translateY(-50%);
 	color: #666;
@@ -1230,7 +1267,7 @@ export default {
 	border: 1px solid #ddd;
 	background: #f8f8f8;
 	color: #999;
-	padding: 0 14px 0 36px;
+	padding: 0 14px 0 32px;
 	display: flex;
 	align-items: center;
 	font-size: 14px;
@@ -1265,7 +1302,7 @@ export default {
 	border: 1px solid #ddd;
 	background: #f8f8f8;
 	color: #333;
-	padding: 0 14px 0 36px;
+	padding: 0 14px 0 32px;
 	outline: none;
 	z-index: 1;
 	position: relative;
@@ -1377,9 +1414,9 @@ export default {
 }
 
 .mega-menu {
-	position: absolute;
-	top: 100%;
-	/* 紧贴导航栏底部 */
+	position: fixed;
+	top: 120px;
+	/* 使用fixed定位，确保不受父容器限制 */
 	left: 0;
 	right: 0;
 	width: 100vw;
@@ -1404,8 +1441,19 @@ export default {
 	backface-visibility: hidden;
 	transform-style: preserve-3d;
 	/* 确保内容不会溢出 */
-	overflow-x: hidden;
+	overflow-x: visible;
 	overflow-y: auto;
+	/* 强制占满整个视口宽度，消除左右边距 */
+	margin: 0;
+	/* 确保左右边距为0，内容完全占满 */
+	padding-left: 32px;
+	padding-right: 32px;
+	/* 强制占满整个视口宽度 */
+	max-width: 100vw;
+	/* 确保从屏幕最左边开始 */
+	left: 0;
+	/* 确保到屏幕最右边结束 */
+	right: 0;
 }
 
 @keyframes fadeIn {
@@ -1423,18 +1471,30 @@ export default {
 .mega-left {
 	border-right: 1px solid #f0f0f0;
 	padding-right: 16px;
+	/* 确保左侧内容从最左边开始 */
+	padding-left: 0;
+	margin-left: 0;
+	/* 强制占满可用宽度 */
+	width: 100%;
+	box-sizing: border-box;
 }
 
 .mega-title {
 	font-size: 12px;
 	color: #666;
 	margin-bottom: 8px;
+	/* 确保标题从最左边开始 */
+	padding-left: 0;
+	margin-left: 0;
 }
 
 .mega-cat-list {
 	list-style: none;
 	display: grid;
 	gap: 6px;
+	/* 确保列表从最左边开始 */
+	padding-left: 0;
+	margin-left: 0;
 }
 
 .mega-cat-item {
@@ -1447,6 +1507,9 @@ export default {
 	will-change: background, transform;
 	/* 添加悬停状态的边框 */
 	border: 1px solid transparent;
+	/* 确保项目从最左边开始 */
+	padding-left: 10px;
+	margin-left: 0;
 }
 
 .mega-cat-item:hover {
@@ -1457,6 +1520,14 @@ export default {
 
 .mega-right {
 	padding-left: 24px;
+	/* 确保右侧内容不被遮挡 */
+	overflow: visible;
+	width: 100%;
+	box-sizing: border-box;
+	/* 确保右边距足够 */
+	padding-right: 0;
+	/* 强制占满可用宽度 */
+	min-width: 0;
 }
 
 .mega-right-header {
@@ -1485,6 +1556,14 @@ export default {
 	grid-template-columns: repeat(3, 1fr);
 	gap: 0;
 	max-width: 100%;
+	/* 确保网格不被遮挡 */
+	overflow: visible;
+	width: 100%;
+	box-sizing: border-box;
+	/* 确保网格占满整个可用宽度 */
+	min-width: 0;
+	/* 添加右边距确保最后一个产品完全可见 */
+	padding-right: 0;
 }
 
 
@@ -1499,10 +1578,17 @@ export default {
 	gap: 12px;
 	padding: 10px 12px;
 	box-sizing: border-box;
-	overflow: hidden;
+	overflow: visible;
 	/* 添加硬件加速 */
 	transform: translateZ(0);
 	position: relative;
+	/* 确保卡片完全可见 */
+	width: 100%;
+	min-width: 0;
+	/* 确保右边距足够 */
+	margin-right: 0;
+	/* 强制占满网格单元格 */
+	flex: 1;
 }
 
 .preview-card:hover {
@@ -1576,6 +1662,14 @@ export default {
 .preview-meta {
 	padding: 0;
 	min-width: 0;
+	/* 确保文字不被遮挡 */
+	overflow: visible;
+	width: 100%;
+	box-sizing: border-box;
+	/* 确保右边距足够 */
+	padding-right: 0;
+	/* 强制占满可用宽度 */
+	flex: 1;
 }
 
 .preview-name {
@@ -1585,10 +1679,17 @@ export default {
 	line-height: 1.2;
 	letter-spacing: 0;
 	text-transform: none;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	overflow: visible;
+	text-overflow: clip;
+	white-space: normal;
 	min-width: 0;
+	/* 确保文字完全显示 */
+	word-wrap: break-word;
+	word-break: break-word;
+	/* 确保右边距足够 */
+	padding-right: 0;
+	/* 强制占满可用宽度 */
+	width: 100%;
 }
 
 .preview-price {
@@ -1672,7 +1773,7 @@ export default {
 
 .search-input-wrapper .search-icon {
 	position: absolute;
-	left: 12px;
+	left: 8px;
 	top: 50%;
 	transform: translateY(-50%);
 	color: #666;
@@ -1687,7 +1788,7 @@ export default {
 	border: 1px solid #ddd;
 	background: #f8f8f8;
 	color: #333;
-	padding: 0 16px 0 44px;
+	padding: 0 16px 0 32px;
 	outline: none;
 	font-size: 15px;
 	transition: border-color .15s ease, background .15s ease;
@@ -1926,7 +2027,6 @@ export default {
 
 /* 响应式设计 */
 @media (max-width: 1200px) {
-
 	.top-bar-inner,
 	.nav-inner,
 	.search-panel-header,
@@ -1940,9 +2040,32 @@ export default {
 		width: 40%;
 		min-width: 200px;
 	}
+	
+	.top-bar-right {
+		right: 8px;
+	}
 }
 
 @media (max-width: 960px) {
+	.top-bar {
+		height: 36px;
+	}
+	
+	.top-bar-inner {
+		padding: 0 12px;
+	}
+	
+	.login-status {
+		font-size: 13px;
+		padding: 5px 10px;
+		gap: 6px;
+		min-width: 70px;
+	}
+	
+	.top-bar-right {
+		right: 6px;
+	}
+	
 	.nav-inner {
 		height: 70px;
 		padding: 0 12px;
@@ -1991,40 +2114,71 @@ export default {
 	}
 
 	.mega-menu {
-		top: 110px;
+		top: 106px;
 		min-height: 360px;
 		padding: 16px;
 		grid-template-columns: 1fr;
+		/* 确保在小屏幕上完全显示 */
+		overflow-x: visible;
+		width: 100vw;
+		left: 0;
+		right: 0;
+		/* 强制占满整个视口宽度 */
+		max-width: 100vw;
+		/* 确保左右边距足够 */
+		padding-left: 16px;
+		padding-right: 16px;
+		/* 确保从屏幕最左边开始 */
+		margin: 0;
 	}
 
 	.mega-left {
 		border: none;
 		padding-right: 0;
+		/* 确保左侧内容从最左边开始 */
+		padding-left: 0;
+		margin-left: 0;
 	}
 
 	.mega-right {
 		padding-left: 0;
 		margin-top: 12px;
+		/* 确保右侧内容完全显示 */
+		overflow: visible;
+		width: 100%;
+		/* 确保右边距足够 */
+		padding-right: 0;
 	}
 
 	.preview-grid {
 		grid-template-columns: repeat(3, 1fr);
+		/* 确保网格完全显示 */
+		overflow: visible;
+		width: 100%;
+		gap: 8px;
+		/* 确保右边距足够 */
+		padding-right: 0;
 	}
 }
 
 @media (max-width: 768px) {
 	.top-bar {
-		height: 36px;
+		height: 32px;
 	}
 
 	.top-bar-inner {
-		padding: 0 12px;
+		padding: 0 8px;
 	}
 
 	.login-status {
 		font-size: 12px;
 		padding: 4px 8px;
-		gap: 6px;
+		gap: 4px;
+		min-width: 60px;
+	}
+
+	.top-bar-right {
+		right: 4px;
 	}
 
 	.nav-inner {
@@ -2087,20 +2241,60 @@ export default {
 	}
 
 	.mega-menu {
-		top: 96px;
+		top: 92px;
 		min-height: 280px;
 		padding: 12px;
+		/* 确保在中等屏幕上完全显示 */
+		overflow-x: visible;
+		width: 100vw;
+		left: 0;
+		right: 0;
+		grid-template-columns: 1fr;
+		/* 强制占满整个视口宽度 */
+		max-width: 100vw;
+		/* 确保左右边距足够 */
+		padding-left: 12px;
+		padding-right: 12px;
+		/* 确保从屏幕最左边开始 */
+		margin: 0;
+	}
+
+	.preview-grid {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 8px;
+		overflow: visible;
+		width: 100%;
+		/* 确保右边距足够 */
+		padding-right: 0;
 	}
 }
 
 @media (max-width: 480px) {
+	.top-bar {
+		height: 28px;
+	}
+
+	.top-bar-inner {
+		padding: 0 6px;
+	}
+
+	.login-status {
+		font-size: 11px;
+		padding: 3px 6px;
+		gap: 3px;
+		min-width: 50px;
+	}
+
+	.top-bar-right {
+		right: 3px;
+	}
 
 	.top-bar-inner,
 	.nav-inner,
 	.search-panel-header,
 	.search-panel-content {
-		padding-left: 8px;
-		padding-right: 8px;
+		padding-left: 6px;
+		padding-right: 6px;
 	}
 
 	.brand-logo svg {
@@ -2124,7 +2318,7 @@ export default {
 	.search-placeholder {
 		font-size: 12px;
 		height: 32px;
-		padding: 0 12px 0 32px;
+		padding: 0 12px 0 28px;
 	}
 
 	.actions {
@@ -2135,5 +2329,176 @@ export default {
 		width: 32px;
 		height: 32px;
 	}
+
+	.mega-menu {
+		/* 确保在小屏幕上完全显示 */
+		overflow-x: visible;
+		width: 100vw;
+		left: 0;
+		right: 0;
+		padding: 8px;
+		grid-template-columns: 1fr;
+		/* 强制占满整个视口宽度 */
+		max-width: 100vw;
+		/* 确保左右边距足够 */
+		padding-left: 8px;
+		padding-right: 8px;
+		/* 确保从屏幕最左边开始 */
+		margin: 0;
+		top: 88px;
+	}
+
+	.preview-grid {
+		grid-template-columns: 1fr;
+		gap: 8px;
+		overflow: visible;
+		width: 100%;
+		/* 确保右边距足够 */
+		padding-right: 0;
+	}
+
+	.preview-card {
+		padding: 8px;
+		gap: 8px;
+		/* 确保右边距足够 */
+		margin-right: 0;
+	}
+
+	.preview-name {
+		font-size: 13px;
+		/* 确保右边距足够 */
+		padding-right: 0;
+	}
 }
+
+@media (max-width: 360px) {
+	.top-bar {
+		height: 24px;
+	}
+	
+	.top-bar-inner {
+		padding: 0 4px;
+	}
+	
+	.login-status {
+		font-size: 10px;
+		padding: 2px 4px;
+		gap: 2px;
+		min-width: 45px;
+	}
+	
+	.top-bar-right {
+		right: 2px;
+	}
+	
+	.nav-inner {
+		height: 56px;
+		padding: 0 4px;
+	}
+	
+	.brand {
+		margin-left: -4px;
+	}
+	
+	.brand-logo svg {
+		width: 60px;
+		height: 20px;
+	}
+	
+	.primary-nav {
+		margin-left: 8px;
+	}
+	
+	.primary-nav .nav-list {
+		gap: 6px;
+	}
+	
+	.nav-link {
+		font-size: 11px;
+		padding: 2px 1px;
+	}
+	
+	.nav-search {
+		margin-right: 16px;
+		padding: 0 4px 0 2px;
+	}
+	
+	.search-box {
+		margin-right: 4px;
+	}
+	
+	.search-placeholder {
+		font-size: 11px;
+		height: 28px;
+		padding: 0 10px 0 26px;
+	}
+	
+	.actions {
+		margin-right: -4px;
+		gap: 6px;
+	}
+	
+	.icon-btn {
+		width: 28px;
+		height: 28px;
+	}
+	
+	.icon-btn:first-child {
+		margin-left: -4px;
+	}
+}
+
+/* 超小屏幕特殊处理 */
+@media (max-width: 320px) {
+	.top-bar {
+		height: 22px;
+	}
+	
+	.top-bar-inner {
+		padding: 0 2px;
+	}
+	
+	.login-status {
+		font-size: 9px;
+		padding: 1px 3px;
+		gap: 1px;
+		min-width: 40px;
+	}
+	
+	.top-bar-right {
+		right: 1px;
+	}
+	
+	.nav-inner {
+		height: 52px;
+		padding: 0 2px;
+	}
+	
+	.brand-logo svg {
+		width: 50px;
+		height: 18px;
+	}
+	
+	.primary-nav .nav-list {
+		gap: 4px;
+	}
+	
+	.nav-link {
+		font-size: 10px;
+		padding: 1px 1px;
+	}
+	
+	.search-placeholder {
+		font-size: 10px;
+		height: 26px;
+		padding: 0 8px 0 24px;
+	}
+	
+	.icon-btn {
+		width: 26px;
+		height: 26px;
+	}
+}
+
+
 </style>

@@ -170,6 +170,8 @@ export default {
         logout() {
             if (confirm('确定要退出登录吗？')) {
                 localStorage.removeItem('user')
+                // 触发自定义事件，通知其他组件登录状态变化
+                window.dispatchEvent(new CustomEvent('user-login-change'));
                 this.$router.push('/')
             }
         },

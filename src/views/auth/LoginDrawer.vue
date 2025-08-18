@@ -220,6 +220,8 @@ export default {
 
 				if (response.data.code === 200 && response.data.data === true) {
 					localStorage.setItem('user', loginForm.value.username);
+					// 触发自定义事件，通知其他组件登录状态变化
+					window.dispatchEvent(new CustomEvent('user-login-change'));
 					emit('login-success');
 					onClose();
 					// 登录成功后跳转到主页面
