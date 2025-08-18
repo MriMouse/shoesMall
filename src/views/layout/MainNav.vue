@@ -1418,7 +1418,7 @@ export default {
 	left: 0;
 	right: 0;
 	width: 100vw;
-	min-height: 420px;
+	height: auto;
 	background: #fff;
 	color: #000;
 	border-top: 1px solid #eee;
@@ -1426,7 +1426,7 @@ export default {
 	display: grid;
 	grid-template-columns: 280px 1fr;
 	gap: 0;
-	padding: 20px 32px;
+	padding: 20px 32px 20px 32px;
 	animation: fadeIn .2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 	z-index: 999;
 	box-sizing: border-box;
@@ -1440,7 +1440,7 @@ export default {
 	transform-style: preserve-3d;
 	/* 确保内容不会溢出 */
 	overflow-x: visible;
-	overflow-y: auto;
+	overflow-y: visible;
 	/* 强制占满整个视口宽度，消除左右边距 */
 	margin: 0;
 	/* 确保左右边距为0，内容完全占满 */
@@ -1552,7 +1552,7 @@ export default {
 .preview-grid {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
-	gap: 0;
+	gap: 2px;
 	max-width: 100%;
 	/* 确保网格不被遮挡 */
 	overflow: visible;
@@ -2113,11 +2113,12 @@ export default {
 
 	.mega-menu {
 		top: 106px;
-		min-height: 360px;
-		padding: 16px;
+		height: auto;
+		padding: 16px 16px 16px 16px;
 		grid-template-columns: 1fr;
 		/* 确保在小屏幕上完全显示 */
 		overflow-x: visible;
+		overflow-y: visible;
 		width: 100vw;
 		left: 0;
 		right: 0;
@@ -2153,7 +2154,7 @@ export default {
 		/* 确保网格完全显示 */
 		overflow: visible;
 		width: 100%;
-		gap: 8px;
+		gap: 2px;
 		/* 确保右边距足够 */
 		padding-right: 0;
 	}
@@ -2240,10 +2241,11 @@ export default {
 
 	.mega-menu {
 		top: 92px;
-		min-height: 280px;
-		padding: 12px;
+		height: auto;
+		padding: 12px 12px 12px 12px;
 		/* 确保在中等屏幕上完全显示 */
 		overflow-x: visible;
+		overflow-y: visible;
 		width: 100vw;
 		left: 0;
 		right: 0;
@@ -2259,7 +2261,7 @@ export default {
 
 	.preview-grid {
 		grid-template-columns: repeat(2, 1fr);
-		gap: 8px;
+		gap: 2px;
 		overflow: visible;
 		width: 100%;
 		/* 确保右边距足够 */
@@ -2331,10 +2333,11 @@ export default {
 	.mega-menu {
 		/* 确保在小屏幕上完全显示 */
 		overflow-x: visible;
+		overflow-y: visible;
 		width: 100vw;
 		left: 0;
 		right: 0;
-		padding: 8px;
+		padding: 8px 8px 8px 8px;
 		grid-template-columns: 1fr;
 		/* 强制占满整个视口宽度 */
 		max-width: 100vw;
@@ -2344,11 +2347,12 @@ export default {
 		/* 确保从屏幕最左边开始 */
 		margin: 0;
 		top: 88px;
+		height: auto;
 	}
 
 	.preview-grid {
 		grid-template-columns: 1fr;
-		gap: 8px;
+		gap: 2px;
 		overflow: visible;
 		width: 100%;
 		/* 确保右边距足够 */
