@@ -1,17 +1,17 @@
 <template>
-    <div class="cart-page">
+    <div class="cart-page ad-theme">
         <div class="container">
             <!-- 购物车头部 -->
-            <div class="cart-header">
+            <div class="cart-header ad-card">
                 <h1>我的购物车</h1>
                 <div class="cart-summary">
                     <span>共 {{ cartItems.length }} 件商品</span>
-                    <button @click="clearAll" class="clear-all-btn">清空购物车</button>
+                    <button @click="clearAll" class="ad-btn ad-btn--ghost ad-btn--danger">清空购物车</button>
                 </div>
             </div>
 
             <!-- 购物车内容 -->
-            <div v-if="cartItems.length > 0" class="cart-content">
+            <div v-if="cartItems.length > 0" class="cart-content ad-card">
                 <!-- 全选和批量操作 -->
                 <div class="batch-actions">
                     <label class="select-all">
@@ -25,7 +25,7 @@
                     <button 
                         @click="goCheckout" 
                         :disabled="!hasCheckedItems"
-                        class="checkout-btn"
+                        class="ad-btn ad-btn--primary"
                     >
                         结算 ({{ checkedItemsCount }})
                     </button>
@@ -95,8 +95,8 @@
                         </div>
                         
                         <div class="item-actions">
-                            <button @click="removeOrder(item)" class="remove-btn">删除</button>
-                            <button @click="paySingleItem(item)" :disabled="item.shoeDisabled" class="pay-btn">立即购买</button>
+                            <button @click="removeOrder(item)" class="ad-btn ad-btn--ghost ad-btn--danger">删除</button>
+                            <button @click="paySingleItem(item)" :disabled="item.shoeDisabled" class="ad-btn ad-btn--accent">立即购买</button>
                         </div>
                     </div>
                 </div>
@@ -126,9 +126,9 @@
                         </div>
                     </div>
                     <div class="footer-actions">
-                        <router-link to="/products" class="continue-shopping-btn">继续购物</router-link>
+                        <router-link to="/products" class="ad-btn ad-btn--ghost">继续购物</router-link>
                         <button 
-                            class="checkout-btn large" 
+                            class="ad-btn ad-btn--primary large" 
                             :disabled="!hasCheckedItems" 
                             @click="goCheckout"
                         >去结算</button>
@@ -137,11 +137,11 @@
             </div>
 
             <!-- 空购物车 -->
-            <div v-else class="empty-cart">
+            <div v-else class="empty-cart ad-card">
                 <div class="empty-icon">🛒</div>
                 <h3>购物车是空的</h3>
                 <p>快去添加一些商品吧！</p>
-                <router-link to="/home" class="continue-shopping-btn">继续购物</router-link>
+                <router-link to="/home" class="ad-btn ad-btn--primary">继续购物</router-link>
             </div>
         </div>
     </div>
@@ -833,26 +833,8 @@ export default {
     height: 18px;
 }
 
-.checkout-btn {
-    padding: 12px 24px;
-    background: #007bff;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: 500;
-    transition: background 0.3s ease;
-}
-
-.checkout-btn:hover:not(:disabled) {
-    background: #0056b3;
-}
-
-.checkout-btn:disabled {
-    background: #6c757d;
-    cursor: not-allowed;
-}
+/* 兼容旧类名，防止冲突（保持为空或最小化影响） */
+.checkout-btn { /* preserve selector for backwards-compat */ display: inline-flex; }
 
 .cart-items {
     padding: 0;
@@ -1129,20 +1111,7 @@ export default {
     font-size: 1rem;
 }
 
-.continue-shopping-btn {
-    display: inline-block;
-    padding: 12px 24px;
-    background: #007bff;
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    font-weight: 500;
-    transition: background 0.3s ease;
-}
-
-.continue-shopping-btn:hover {
-    background: #0056b3;
-}
+.continue-shopping-btn { display: inline-flex; }
 
 @media (max-width: 1024px) {
     .cart-item {
@@ -1192,6 +1161,196 @@ export default {
         text-align: center;
     }
 }
+
+/* ===== Adidas CN 风格（通用复用版） ===== */
+.ad-theme {
+    --ad-bg: #ffffff;
+    --ad-bg-alt: #f7f7f7;
+    --ad-text: #0a0a0a;
+    --ad-muted: #6b6b6b;
+    --ad-border: #e5e5e5;
+    --ad-primary: #000000;
+    --ad-accent: #b8ff00; /* 荧光绿 */
+    --ad-warning: #ffd400; /* 亮黄 */
+    --ad-danger: #e11900;
+    --ad-success: #00c853;
+    --ad-radius: 12px;
+    --ad-radius-sm: 8px;
+}
+
+.ad-theme, .ad-theme * {
+    font-family: "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--ad-text);
+}
+
+.ad-theme {
+    background: var(--ad-bg-alt);
+}
+
+.ad-card {
+    background: var(--ad-bg) !important;
+    border: 1px solid var(--ad-border);
+    border-radius: var(--ad-radius);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.ad-theme .cart-header h1 {
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+/* 文本与辅助信息 */
+.ad-text-muted { color: var(--ad-muted); }
+
+/* 通用按钮 */
+.ad-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 42px;
+    padding: 0 18px;
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background: #f0f0f0;
+    color: var(--ad-text);
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    transition: all 0.18s ease;
+    cursor: pointer;
+}
+
+.ad-btn:hover:not(:disabled) { transform: translateY(-1px); }
+.ad-btn:active:not(:disabled) { transform: translateY(0); }
+.ad-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.ad-btn--primary {
+    background: var(--ad-primary) !important;
+    color: #ffffff !important;
+    border-color: var(--ad-primary) !important;
+}
+.ad-btn--primary:hover:not(:disabled) {
+    filter: brightness(0.9);
+}
+
+.ad-btn--accent {
+    background: var(--ad-accent) !important;
+    color: #000000 !important;
+    border-color: var(--ad-accent) !important;
+}
+.ad-btn--accent:hover:not(:disabled) {
+    filter: saturate(1.2) brightness(1.02);
+}
+
+.ad-btn--ghost {
+    background: transparent !important;
+    color: var(--ad-text) !important;
+    border-color: var(--ad-primary) !important;
+}
+.ad-btn--ghost:hover:not(:disabled) {
+    background: var(--ad-primary) !important;
+    color: #ffffff !important;
+}
+
+.ad-btn--danger {
+    border-color: var(--ad-danger) !important;
+    color: var(--ad-danger) !important;
+}
+.ad-btn--danger:hover:not(:disabled) {
+    background: var(--ad-danger) !important;
+    color: #ffffff !important;
+}
+
+.ad-btn.large, .ad-btn--xl {
+    height: 48px;
+    padding: 0 24px;
+    font-size: 1rem;
+}
+
+/* 顶部与底部区域 */
+.ad-theme .cart-summary span { color: var(--ad-muted); }
+
+.ad-theme .batch-actions {
+    background: var(--ad-bg-alt);
+    border-bottom: 1px solid var(--ad-border);
+}
+
+/* 列表行与边框 */
+.ad-theme .cart-item {
+    border-bottom: 1px solid var(--ad-border);
+}
+
+/* 价格与积分呈现（黑白主色 + 少量强调色） */
+.ad-theme .current-price { color: #111 !important; }
+.ad-theme .original-price { color: var(--ad-muted) !important; }
+.ad-theme .item-subtotal { color: #111 !important; }
+.ad-theme .totals-line.points, .ad-theme .points-amount { color: var(--ad-accent) !important; }
+.ad-theme .totals-line.savings { color: #111 !important; }
+.ad-theme .totals .amount { color: #000 !important; font-weight: 800; }
+
+/* 数量控件（黑白极简） */
+.ad-theme .item-quantity button {
+    border: 2px solid #000;
+    background: transparent;
+    color: #000;
+}
+.ad-theme .item-quantity button:hover:not(:disabled) {
+    background: #000;
+    color: #fff;
+}
+.ad-theme .item-quantity input {
+    border: 2px solid #000;
+    background: #fff;
+}
+
+/* 复选框（加粗的黑色边框） */
+.ad-theme input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #000; /* 现代浏览器 */
+}
+
+/* 空状态 */
+.ad-theme .empty-cart h3 { text-transform: uppercase; letter-spacing: 0.5px; }
+.ad-theme .empty-cart p { color: var(--ad-muted); }
+
+/* ===== Premium refinements ===== */
+.cart-header { padding: 28px; }
+.cart-header h1 { letter-spacing: 1px; }
+
+.cart-items { background: #fff; }
+.cart-item { background: #fff; }
+.cart-item:hover { background: #fafafa; }
+
+.item-name { font-weight: 800; letter-spacing: 0.3px; }
+.item-meta .brand, .item-meta .type {
+    border: 1px solid #e9e9e9;
+    background: #fff;
+    padding: 2px 10px;
+    border-radius: 999px;
+    color: #333;
+    font-weight: 600;
+}
+
+.current-price { font-size: 1.25rem; font-weight: 800; }
+.original-price { font-size: 0.85rem; }
+
+/* Quantity group as a single control */
+.item-quantity { gap: 0; }
+.item-quantity button, .item-quantity input { height: 36px; }
+.item-quantity button { width: 38px; border: 2px solid #000; background: #fff; color: #000; }
+.item-quantity input { width: 62px; border: 2px solid #000; border-left: 0; border-right: 0; }
+.item-quantity button:first-child { border-right: 0; border-radius: 999px 0 0 999px; }
+.item-quantity button:last-child { border-left: 0; border-radius: 0 999px 999px 0; }
+.item-quantity button:hover:not(:disabled) { background: #000; color: #fff; }
+
+/* Totals block */
+.totals { background: #fff; border: 1px solid #eee; }
+.totals-line { color: #333; }
+.totals-line.total { font-size: 1.25rem; }
+.totals .points-amount { font-weight: 800; }
+.footer-actions { padding-left: 12px; }
 </style>
 
 
