@@ -1,14 +1,8 @@
 <template>
     <div class="product-grid">
-        <div class="product-item" v-for="product in products" :key="product.shoeId">
+        <div class="product-item" v-for="product in products" :key="product.shoeId" :style="(product.images && product.images.length > 0) ? { backgroundImage: 'url(' + '/api/shoeImg/getImage/' + product.images[0].imagePath + ')', backgroundSize: '80%', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}">
             <div class="product-image">
-                <img 
-                    v-if="product.images && product.images.length > 0" 
-                    :src="`/api/shoeImg/getImage/${product.images[0].imagePath}`" 
-                    :alt="product.name"
-                    @error="handleImageError"
-                />
-                <div v-else class="no-image">📷</div>
+                <div v-if="!(product.images && product.images.length > 0)" class="no-image">📷</div>
             </div>
             <div class="product-info">
                 <h3 class="product-name">{{ product.name }}</h3>
@@ -181,15 +175,18 @@ export default {
 
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
+    gap: 10px;
     padding: 20px;
 }
 
 .product-item {
     border: 1px solid var(--color-border);
-    border-radius: 12px;
+    border-radius: 0;
     padding: 16px;
     background: var(--color-bg);
+    background-size: 80%;
+    background-position: center;
+    background-repeat: no-repeat;
     transition: box-shadow .15s ease, transform .1s ease;
 }
 
@@ -200,8 +197,8 @@ export default {
 
 .product-image {
     width: 100%;
-    height: 200px;
-    border-radius: 8px;
+    height: 300px;
+    border-radius: 0;
     overflow: hidden;
     margin-bottom: 16px;
 }

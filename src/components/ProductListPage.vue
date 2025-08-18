@@ -152,23 +152,18 @@
                     :key="product.shoeId" 
                     :data-product-id="product.shoeId"
                     class="product-card"
+                    :style="(product.images && product.images.length > 0) ? { backgroundImage: 'url(' + '/api/shoeImg/getImage/' + product.images[(product.currentImageIndex || 0)].imagePath + ')', backgroundSize: '80%', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}"
                 >
                     <!-- 产品图片 -->
-                    <div class="product-image-container">
+                    <div class="product-image-container" @click="showImageGallery(product)">
                         <div v-if="product.images && product.images.length > 0" class="product-images">
                             <div class="image-carousel">
-                                <img 
-                                    :src="`/api/shoeImg/getImage/${product.images[product.currentImageIndex || 0].imagePath}`"
-                                    :alt="product.name" 
-                                    class="main-product-image"
-                                    loading="lazy"
-                                    @click="showImageGallery(product)"
-                                >
+                                <!-- 使用卡片背景图展示，移除内层 img 以避免重复显示 -->
                                 <!-- 图片切换按钮 -->
                                 <div v-if="product.images.length > 1" class="image-selector">
                                     <button 
                                         class="image-switch-btn" 
-                                        @click="cycleProductImage(product)"
+                                        @click.stop="cycleProductImage(product)"
                                         :title="`切换图片 (${(product.currentImageIndex || 0) + 1}/${product.images.length})`"
                                     >
                                         {{ (product.currentImageIndex || 0) + 1 }}/{{ product.images.length }}
@@ -1132,16 +1127,19 @@ onBeforeUnmount(() => {
 .products-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 24px;
+    gap: 12px;
 }
 
 .product-card {
     background: white;
-    border-radius: 12px;
+    border-radius: 0;
     overflow: hidden;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
     cursor: pointer;
+    background-size: 80%;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 .product-card:hover {
@@ -1151,7 +1149,7 @@ onBeforeUnmount(() => {
 
 .product-image-container {
     position: relative;
-    height: 200px;
+    height: 300px;
     overflow: hidden;
 }
 
