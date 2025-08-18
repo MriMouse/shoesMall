@@ -1173,7 +1173,7 @@ export default {
 
 .search-box .search-icon {
 	position: absolute;
-	left: 10px;
+	left: 8px;
 	top: 50%;
 	transform: translateY(-50%);
 	color: #666;
@@ -1202,7 +1202,7 @@ export default {
 	border: 1px solid #ddd;
 	background: #f8f8f8;
 	color: #999;
-	padding: 0 14px 0 36px;
+	padding: 0 14px 0 32px;
 	display: flex;
 	align-items: center;
 	font-size: 14px;
@@ -1237,7 +1237,7 @@ export default {
 	border: 1px solid #ddd;
 	background: #f8f8f8;
 	color: #333;
-	padding: 0 14px 0 36px;
+	padding: 0 14px 0 32px;
 	outline: none;
 	z-index: 1;
 	position: relative;
@@ -1378,9 +1378,9 @@ mark {
 }
 
 .mega-menu {
-	position: absolute;
-	top: 100%;
-	/* 紧贴导航栏底部 */
+	position: fixed;
+	top: 120px;
+	/* 使用fixed定位，确保不受父容器限制 */
 	left: 0;
 	right: 0;
 	width: 100vw;
@@ -1405,8 +1405,19 @@ mark {
 	backface-visibility: hidden;
 	transform-style: preserve-3d;
 	/* 确保内容不会溢出 */
-	overflow-x: hidden;
+	overflow-x: visible;
 	overflow-y: auto;
+	/* 强制占满整个视口宽度，消除左右边距 */
+	margin: 0;
+	/* 确保左右边距为0，内容完全占满 */
+	padding-left: 32px;
+	padding-right: 32px;
+	/* 强制占满整个视口宽度 */
+	max-width: 100vw;
+	/* 确保从屏幕最左边开始 */
+	left: 0;
+	/* 确保到屏幕最右边结束 */
+	right: 0;
 }
 
 @keyframes fadeIn {
@@ -1424,18 +1435,30 @@ mark {
 .mega-left {
 	border-right: 1px solid #f0f0f0;
 	padding-right: 16px;
+	/* 确保左侧内容从最左边开始 */
+	padding-left: 0;
+	margin-left: 0;
+	/* 强制占满可用宽度 */
+	width: 100%;
+	box-sizing: border-box;
 }
 
 .mega-title {
 	font-size: 12px;
 	color: #666;
 	margin-bottom: 8px;
+	/* 确保标题从最左边开始 */
+	padding-left: 0;
+	margin-left: 0;
 }
 
 .mega-cat-list {
 	list-style: none;
 	display: grid;
 	gap: 6px;
+	/* 确保列表从最左边开始 */
+	padding-left: 0;
+	margin-left: 0;
 }
 
 .mega-cat-item {
@@ -1448,6 +1471,9 @@ mark {
 	will-change: background, transform;
 	/* 添加悬停状态的边框 */
 	border: 1px solid transparent;
+	/* 确保项目从最左边开始 */
+	padding-left: 10px;
+	margin-left: 0;
 }
 
 .mega-cat-item:hover {
@@ -1458,6 +1484,14 @@ mark {
 
 .mega-right {
 	padding-left: 24px;
+	/* 确保右侧内容不被遮挡 */
+	overflow: visible;
+	width: 100%;
+	box-sizing: border-box;
+	/* 确保右边距足够 */
+	padding-right: 0;
+	/* 强制占满可用宽度 */
+	min-width: 0;
 }
 
 .mega-right-header {
@@ -1486,6 +1520,14 @@ mark {
 	grid-template-columns: repeat(3, 1fr);
 	gap: 0;
 	max-width: 100%;
+	/* 确保网格不被遮挡 */
+	overflow: visible;
+	width: 100%;
+	box-sizing: border-box;
+	/* 确保网格占满整个可用宽度 */
+	min-width: 0;
+	/* 添加右边距确保最后一个产品完全可见 */
+	padding-right: 0;
 }
 
 
@@ -1500,10 +1542,17 @@ mark {
 	gap: 12px;
 	padding: 10px 12px;
 	box-sizing: border-box;
-	overflow: hidden;
+	overflow: visible;
 	/* 添加硬件加速 */
 	transform: translateZ(0);
 	position: relative;
+	/* 确保卡片完全可见 */
+	width: 100%;
+	min-width: 0;
+	/* 确保右边距足够 */
+	margin-right: 0;
+	/* 强制占满网格单元格 */
+	flex: 1;
 }
 
 .preview-card:hover {
@@ -1577,6 +1626,14 @@ mark {
 .preview-meta {
 	padding: 0;
 	min-width: 0;
+	/* 确保文字不被遮挡 */
+	overflow: visible;
+	width: 100%;
+	box-sizing: border-box;
+	/* 确保右边距足够 */
+	padding-right: 0;
+	/* 强制占满可用宽度 */
+	flex: 1;
 }
 
 .preview-name {
@@ -1586,10 +1643,17 @@ mark {
 	line-height: 1.2;
 	letter-spacing: 0;
 	text-transform: none;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	overflow: visible;
+	text-overflow: clip;
+	white-space: normal;
 	min-width: 0;
+	/* 确保文字完全显示 */
+	word-wrap: break-word;
+	word-break: break-word;
+	/* 确保右边距足够 */
+	padding-right: 0;
+	/* 强制占满可用宽度 */
+	width: 100%;
 }
 
 .preview-price {
@@ -1673,7 +1737,7 @@ mark {
 
 .search-input-wrapper .search-icon {
 	position: absolute;
-	left: 12px;
+	left: 8px;
 	top: 50%;
 	transform: translateY(-50%);
 	color: #666;
@@ -1688,7 +1752,7 @@ mark {
 	border: 1px solid #ddd;
 	background: #f8f8f8;
 	color: #333;
-	padding: 0 16px 0 44px;
+	padding: 0 16px 0 32px;
 	outline: none;
 	font-size: 16px;
 	transition: border-color .15s ease, background .15s ease;
@@ -1928,24 +1992,50 @@ mark {
 	}
 
 	.mega-menu {
-		top: 110px;
+		top: 106px;
 		min-height: 360px;
 		padding: 16px;
 		grid-template-columns: 1fr;
+		/* 确保在小屏幕上完全显示 */
+		overflow-x: visible;
+		width: 100vw;
+		left: 0;
+		right: 0;
+		/* 强制占满整个视口宽度 */
+		max-width: 100vw;
+		/* 确保左右边距足够 */
+		padding-left: 16px;
+		padding-right: 16px;
+		/* 确保从屏幕最左边开始 */
+		margin: 0;
 	}
 
 	.mega-left {
 		border: none;
 		padding-right: 0;
+		/* 确保左侧内容从最左边开始 */
+		padding-left: 0;
+		margin-left: 0;
 	}
 
 	.mega-right {
 		padding-left: 0;
 		margin-top: 12px;
+		/* 确保右侧内容完全显示 */
+		overflow: visible;
+		width: 100%;
+		/* 确保右边距足够 */
+		padding-right: 0;
 	}
 
 	.preview-grid {
 		grid-template-columns: repeat(3, 1fr);
+		/* 确保网格完全显示 */
+		overflow: visible;
+		width: 100%;
+		gap: 8px;
+		/* 确保右边距足够 */
+		padding-right: 0;
 	}
 }
 
@@ -2029,9 +2119,31 @@ mark {
 	}
 
 	.mega-menu {
-		top: 96px;
+		top: 92px;
 		min-height: 280px;
 		padding: 12px;
+		/* 确保在中等屏幕上完全显示 */
+		overflow-x: visible;
+		width: 100vw;
+		left: 0;
+		right: 0;
+		grid-template-columns: 1fr;
+		/* 强制占满整个视口宽度 */
+		max-width: 100vw;
+		/* 确保左右边距足够 */
+		padding-left: 12px;
+		padding-right: 12px;
+		/* 确保从屏幕最左边开始 */
+		margin: 0;
+	}
+
+	.preview-grid {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 8px;
+		overflow: visible;
+		width: 100%;
+		/* 确保右边距足够 */
+		padding-right: 0;
 	}
 }
 
@@ -2084,7 +2196,7 @@ mark {
 	.search-placeholder {
 		font-size: 12px;
 		height: 32px;
-		padding: 0 12px 0 32px;
+		padding: 0 12px 0 28px;
 	}
 
 	.actions {
@@ -2094,6 +2206,46 @@ mark {
 	.icon-btn {
 		width: 32px;
 		height: 32px;
+	}
+
+	.mega-menu {
+		/* 确保在小屏幕上完全显示 */
+		overflow-x: visible;
+		width: 100vw;
+		left: 0;
+		right: 0;
+		padding: 8px;
+		grid-template-columns: 1fr;
+		/* 强制占满整个视口宽度 */
+		max-width: 100vw;
+		/* 确保左右边距足够 */
+		padding-left: 8px;
+		padding-right: 8px;
+		/* 确保从屏幕最左边开始 */
+		margin: 0;
+		top: 88px;
+	}
+
+	.preview-grid {
+		grid-template-columns: 1fr;
+		gap: 8px;
+		overflow: visible;
+		width: 100%;
+		/* 确保右边距足够 */
+		padding-right: 0;
+	}
+
+	.preview-card {
+		padding: 8px;
+		gap: 8px;
+		/* 确保右边距足够 */
+		margin-right: 0;
+	}
+
+	.preview-name {
+		font-size: 13px;
+		/* 确保右边距足够 */
+		padding-right: 0;
 	}
 }
 
@@ -2156,7 +2308,7 @@ mark {
 	.search-placeholder {
 		font-size: 11px;
 		height: 28px;
-		padding: 0 10px 0 28px;
+		padding: 0 10px 0 26px;
 	}
 	
 	.actions {
@@ -2217,7 +2369,7 @@ mark {
 	.search-placeholder {
 		font-size: 10px;
 		height: 26px;
-		padding: 0 8px 0 26px;
+		padding: 0 8px 0 24px;
 	}
 	
 	.icon-btn {
