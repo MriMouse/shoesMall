@@ -2,20 +2,24 @@
 	<section class="hero">
 		<div class="hero-inner">
 			<div class="slides" :style="{ transform: `translateX(-${activeIndex * 100}%)` }">
-				<div class="slide" v-for="i in 3" :key="i">
-					<div class="slide-media"></div>
+				<div class="slide" v-for="(slide, i) in slides" :key="i">
+					<div class="slide-media" :style="{ backgroundImage: `url(${slide.src})` }"></div>
 					<div class="slide-content">
-						<h2 class="headline">主推产品占位标题 {{ i }}</h2>
+						<h2 class="headline">{{ slide.title }}</h2>
 						<div class="cta-group">
-							<button class="cta primary" @click="$emit('view-all')">查看全部</button>
-							<button class="cta ghost" @click="$emit('view-men')">男鞋</button>
-							<button class="cta ghost" @click="$emit('view-women')">女鞋</button>
+							<button
+								v-for="(cta, idx) in slide.ctas"
+								:key="idx"
+								class="cta"
+								:class="{ primary: !!cta.primary, ghost: !cta.primary }"
+								@click="$emit(cta.event)"
+							>{{ cta.label }}</button>
 						</div>
 					</div>
 				</div>
 			</div>
 			<div class="dots">
-				<button v-for="i in 3" :key="i" class="dot" :class="{ active: activeIndex === i - 1 }" @click="go(i - 1)" />
+				<button v-for="i in slides.length" :key="i" class="dot" :class="{ active: activeIndex === i - 1 }" @click="go(i - 1)" />
 			</div>
 		</div>
 	</section>
@@ -26,8 +30,10 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 
 export default {
 	name: 'HeroCarousel',
-	emits: ['view-all', 'view-men', 'view-women'],
+	emits: ['view-all', 'view-men', 'view-women', 'view-kids'],
 	setup() {
+		const ads = ref(['/ads/ad1.jpg', '/ads/ad2.jpg']);
+		const slides = ref([]);
 		const activeIndex = ref(0);
 		let timer = null;
 
@@ -35,10 +41,55 @@ export default {
 			activeIndex.value = index;
 		}
 
+		function buildSlides() {
+			const images = ads.value || [];
+			const defaultTitles = [
+				'女士潮流穿搭 新季焕新从足下开始',
+				'儿童休闲日常 轻便舒适每一步',
+				'篮球热血开场 稳定防护强力支撑',
+				'网球灵动挥拍 轻盈回弹畅快制胜',
+				'儿童运动加速 活力满格自在奔跑'
+			];
+			const defaultCtas = [
+				[
+					{ label: '女士专区', event: 'view-women', primary: true },
+					{ label: '男士精选', event: 'view-men' },
+					{ label: '全部商品', event: 'view-all' }
+				],
+				[
+					{ label: '儿童专区', event: 'view-kids', primary: true },
+					{ label: '全部商品', event: 'view-all' }
+				],
+				[
+					{ label: '男士运动', event: 'view-men', primary: true },
+					{ label: '女士运动', event: 'view-women' },
+					{ label: '全部商品', event: 'view-all' }
+				],
+				[
+					{ label: '男士网球', event: 'view-men', primary: true },
+					{ label: '女士网球', event: 'view-women' },
+					{ label: '全部商品', event: 'view-all' }
+				],
+				[
+					{ label: '儿童运动', event: 'view-kids', primary: true },
+					{ label: '全部商品', event: 'view-all' }
+				]
+			];
+			slides.value = images.map((src, i) => ({
+				src,
+				title: defaultTitles[i] || '品质好物 焕新出发',
+				ctas: defaultCtas[i] || [
+					{ label: '立即选购', event: 'view-all', primary: true }
+				]
+			}));
+			if (activeIndex.value >= slides.value.length) activeIndex.value = 0;
+		}
+
 		function start() {
 			stop();
 			timer = setInterval(() => {
-				activeIndex.value = (activeIndex.value + 1) % 3;
+				if (!slides.value.length) return;
+				activeIndex.value = (activeIndex.value + 1) % slides.value.length;
 			}, 4000);
 		}
 
@@ -46,10 +97,26 @@ export default {
 			if (timer) clearInterval(timer);
 		}
 
-		onMounted(start);
+		async function loadAdsManifest() {
+			try {
+				const res = await fetch('/ads/manifest.json', { cache: 'no-store' });
+				if (res.ok) {
+					const data = await res.json();
+					if (Array.isArray(data.images) && data.images.length) {
+						ads.value = data.images;
+						activeIndex.value = 0;
+						buildSlides();
+					}
+				}
+			} catch (e) {
+				// ignore, fallback to defaults
+			}
+		}
+
+		onMounted(() => { buildSlides(); loadAdsManifest(); start(); });
 		onBeforeUnmount(stop);
 
-		return { activeIndex, go };
+		return { ads, slides, activeIndex, go };
 	}
 };
 </script>
@@ -93,6 +160,8 @@ export default {
 	height: 70vh; 
 	background: linear-gradient(135deg, #0f0f0f, #1a1a1a); 
 	width: 100%;
+	background-size: cover;
+	background-position: center;
 }
 
 .slide-content { 
