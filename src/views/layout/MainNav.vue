@@ -2252,7 +2252,7 @@ export default {
 	position: fixed;
 	inset: 0;
 	background: rgba(0, 0, 0, 0.5);
-	backdrop-filter: blur(4px);
+	backdrop-filter: blur(8px);
 	z-index: 1000;
 	/* 提高z-index，使其覆盖导航栏 */
 	animation: fadeIn .08s ease;
