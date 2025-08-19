@@ -308,6 +308,7 @@
 import { ref, onMounted, onBeforeUnmount, computed, reactive, nextTick, watch } from 'vue'
 import axios from 'axios'
 import { useRouter, useRoute } from 'vue-router'
+import { imageCache, imagePreloader, imageUtils } from '@/utils/imageOptimizer'
 
 const router = useRouter()
 const route = useRoute()
@@ -341,7 +342,6 @@ const sexOptions = [
 ]
 
 // 资源缓存与并发控制
-const imageCache = new Map()
 const inventoryCache = new Map()
 const inFlightImages = new Set()
 const inFlightInventories = new Set()
@@ -409,6 +409,16 @@ const fetchProducts = async () => {
 
             await nextTick()
             observeCurrentPage()
+            
+            // 使用 imagePreloader 预加载首页可见商品的图片
+            const visibleProductIds = products.value.slice(0, 6).map(p => p.shoeId)
+            if (visibleProductIds.length > 0) {
+                // 预加载首页可见商品的图片
+                imagePreloader.preloadImages(
+                    visibleProductIds.map(id => `/api/shoeImg/list/${id}`),
+                    'high'
+                )
+            }
         } else {
             products.value = []
             filteredProducts.value = []
@@ -448,31 +458,37 @@ function observeCurrentPage() {
     cards.forEach(card => productCardIo.observe(card))
 }
 
-// 按需加载指定产品的图片与库存
-async function ensureProductResources(shoeId) {
-    const product = products.value.find(p => p.shoeId === shoeId)
-    if (!product) return
+        // 按需加载指定产品的图片与库存
+        async function ensureProductResources(shoeId) {
+            const product = products.value.find(p => p.shoeId === shoeId)
+            if (!product) return
 
-    // 加载图片（带缓存与并发保护）
-    if (!product.images || product.images.length === 0) {
-        if (imageCache.has(shoeId)) {
-            product.images = imageCache.get(shoeId)
-            product.currentImageIndex = 0
-        } else if (!inFlightImages.has(shoeId)) {
-            inFlightImages.add(shoeId)
-            try {
-                const imageResponse = await axios.get(`/api/shoeImg/list/${shoeId}`)
-                const imgs = (imageResponse.data && imageResponse.data.data) ? imageResponse.data.data : []
-                product.images = imgs
-                product.currentImageIndex = 0
-                imageCache.set(shoeId, imgs)
-            } catch (e) {
-                product.images = []
-            } finally {
-                inFlightImages.delete(shoeId)
+            // 加载图片（带缓存与并发保护）
+            if (!product.images || product.images.length === 0) {
+                if (imageCache.has(shoeId)) {
+                    product.images = imageCache.get(shoeId)
+                    product.currentImageIndex = 0
+                } else if (!inFlightImages.has(shoeId)) {
+                    inFlightImages.add(shoeId)
+                    try {
+                        const imageResponse = await axios.get(`/api/shoeImg/list/${shoeId}`)
+                        const imgs = (imageResponse.data && imageResponse.data.data) ? imageResponse.data.data : []
+                        product.images = imgs
+                        product.currentImageIndex = 0
+                        imageCache.set(shoeId, imgs)
+                        
+                        // 使用 imageUtils 预加载下一张图片
+                        if (imgs.length > 1) {
+                            const nextImagePath = `/api/shoeImg/getImage/${imgs[1].imagePath}`
+                            imageUtils.preloadImages([nextImagePath])
+                        }
+                    } catch (e) {
+                        product.images = []
+                    } finally {
+                        inFlightImages.delete(shoeId)
+                    }
+                }
             }
-        }
-    }
 
     // 加载库存（带缓存与并发保护）
     if (!product.inventoryData || product.inventoryData.length === 0) {
@@ -735,6 +751,17 @@ const applyFilters = () => {
     filteredProducts.value = filtered
     totalCount.value = filtered.length
     currentPage.value = 1 // 重置到第一页
+    
+    // 使用 imageUtils 预加载筛选后第一页商品的图片
+    if (filtered.length > 0) {
+        const firstPageProducts = filtered.slice(0, pageSize.value)
+        firstPageProducts.forEach(product => {
+            if (product.images && product.images.length > 0) {
+                const imageUrl = `/api/shoeImg/getImage/${product.images[0].imagePath}`
+                imageUtils.preloadImages([imageUrl])
+            }
+        })
+    }
 }
 
 // 图片轮播功能
@@ -743,6 +770,14 @@ const cycleProductImage = async (product) => {
         const currentIndex = product.currentImageIndex || 0
         const nextIndex = (currentIndex + 1) % product.images.length
         product.currentImageIndex = nextIndex
+        
+        // 预加载下一张图片
+        const nextNextIndex = (nextIndex + 1) % product.images.length
+        const nextNextImage = product.images[nextNextIndex]
+        if (nextNextImage) {
+            imagePreloader.preloadImage(`/api/shoeImg/getImage/${nextNextImage.imagePath}`, 'normal')
+        }
+        
         await nextTick()
     }
 }
@@ -753,6 +788,12 @@ const showImageGallery = (product) => {
         galleryProduct.value = product
         galleryCurrentIndex.value = product.currentImageIndex || 0
         showImageGalleryModal.value = true
+        
+        // 使用 imagePreloader 预加载画廊中的所有图片
+        if (product.images.length > 1) {
+            const imageUrls = product.images.map(img => `/api/shoeImg/getImage/${img.imagePath}`)
+            imagePreloader.preloadImages(imageUrls, 'high')
+        }
     }
 }
 
@@ -765,12 +806,26 @@ const closeImageGallery = () => {
 const previousGalleryImage = () => {
     if (galleryProduct.value && galleryProduct.value.images.length > 1) {
         galleryCurrentIndex.value = (galleryCurrentIndex.value - 1 + galleryProduct.value.images.length) % galleryProduct.value.images.length
+        
+        // 预加载上一张图片
+        const prevIndex = (galleryCurrentIndex.value - 1 + galleryProduct.value.images.length) % galleryProduct.value.images.length
+        const prevImage = galleryProduct.value.images[prevIndex]
+        if (prevImage) {
+            imagePreloader.preloadImage(`/api/shoeImg/getImage/${prevImage.imagePath}`, 'normal')
+        }
     }
 }
 
 const nextGalleryImage = () => {
     if (galleryProduct.value && galleryProduct.value.images.length > 1) {
         galleryCurrentIndex.value = (galleryCurrentIndex.value + 1) % galleryProduct.value.images.length
+        
+        // 预加载下一张图片
+        const nextIndex = (galleryCurrentIndex.value + 1) % galleryProduct.value.images.length
+        const nextImage = galleryProduct.value.images[nextIndex]
+        if (nextImage) {
+            imagePreloader.preloadImage(`/api/shoeImg/getImage/${nextImage.imagePath}`, 'normal')
+        }
     }
 }
 
