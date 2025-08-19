@@ -244,6 +244,9 @@
 			</div>
 		</div>
 	</header>
+
+	<!-- 子路由内容区域：在 /products 路径下，仅渲染产品列表页面 -->
+	<router-view />
 </template>
 
 <script>
