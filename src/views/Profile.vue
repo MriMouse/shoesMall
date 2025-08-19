@@ -9,9 +9,6 @@
             <button v-for="item in group.items" :key="item.key" class="side-link"
               :class="{ active: activeTab === item.key }" @click="navigateTo(item.key)">{{ item.label }}</button>
           </section>
-          <section class="side-group">
-            <button class="side-link logout" @click="handleLogout">退出账户</button>
-          </section>
         </nav>
       </div>
 
@@ -19,10 +16,6 @@
         <!-- 顶部结构（问候语 + 会员黑色进度横幅），贴合 adidas 账户页比例 -->
         <div class="profile-header">
           <h1 class="greeting">你好，{{ userName || '会员' }}</h1>
-          <div class="header-actions">
-            <button class="hero-edit" @click="activeTab = 'info'">编辑资料</button>
-            <button class="hero-logout" @click="handleLogout">退出账户</button>
-          </div>
         </div>
 
 
@@ -45,6 +38,8 @@
       </div>
     </div>
 
+    <SiteFooter />
+
     <!-- 确认对话框 -->
     <confirmDialog v-model:visible="showLogoutDialog" title="退出登录" message="确定要退出登录吗？" confirm-text="确定"
       cancel-text="取消" @confirm="confirmLogout" @cancel="showLogoutDialog = false" />
@@ -59,6 +54,7 @@ import AddressManagement from '@/components/profile/AddressManagement.vue'
 import AccountSettings from '@/components/profile/AccountSettings.vue'
 import confirmDialog from '@/views/confirmDialog.vue'
 import userManager from '@/utils/userManager'
+import SiteFooter from '@/views/layout/Footer.vue'
 
 export default {
   name: 'Profile-Page',
@@ -68,7 +64,8 @@ export default {
     OrderManagement,
     AddressManagement,
     AccountSettings,
-    confirmDialog
+    confirmDialog,
+    SiteFooter
   },
   data() {
     return {
