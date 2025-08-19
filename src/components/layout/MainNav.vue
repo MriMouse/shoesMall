@@ -66,7 +66,9 @@
 
 <script>
 import LoginDrawer from '../../views/auth/LoginDrawer.vue'
+// eslint-disable-next-line no-unused-vars
 import { OrderAPI } from '../../api'
+
 import cartManager from '../../utils/cart'
 import userManager from '../../utils/userManager'
 
