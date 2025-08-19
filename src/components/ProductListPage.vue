@@ -4,7 +4,7 @@
         <!-- 面包屑导航 -->
         <div class="breadcrumb-section">
             <div class="breadcrumb-inner">
-                <span class="breadcrumb-item">首页</span>
+                <span class="breadcrumb-item" @click="goHome">首页</span>
                 <span class="breadcrumb-separator">/</span>
                 <span class="breadcrumb-item">{{ currentCategory }}</span>
                 <span v-if="currentSubCategory" class="breadcrumb-separator">/</span>
@@ -113,7 +113,7 @@
                             v-model="searchKeyword" 
                             @input="handleSearchInput"
                             @keydown="handleSearchKeydown"
-                            placeholder="搜索商品、品牌或类型..."
+                            placeholder="快速筛选"
                             class="search-input-field"
                             @focus="handleSearchFocus"
                             @blur="handleSearchBlur"
@@ -277,6 +277,10 @@ import { imageCache, imagePreloader, imageUtils } from '@/utils/imageOptimizer'
 
 const router = useRouter()
 const route = useRoute()
+// 面包屑跳转首页
+const goHome = () => {
+    router.push('/')
+}
 
 // 响应式数据
 const products = ref([])
