@@ -12,7 +12,7 @@
 								:key="idx"
 								class="cta"
 								:class="{ primary: !!cta.primary, ghost: !cta.primary }"
-								@click="$emit(cta.event)"
+								@click="onCtaClick(cta.event)"
 							>{{ cta.label }}</button>
 						</div>
 					</div>
@@ -27,11 +27,13 @@
 
 <script>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { useRouter } from 'vue-router';
 
 export default {
 	name: 'HeroCarousel',
 	emits: ['view-all', 'view-men', 'view-women', 'view-kids'],
 	setup() {
+		const router = useRouter();
 		const ads = ref(['/ads/ad1.jpg', '/ads/ad2.jpg']);
 		const slides = ref([]);
 		const activeIndex = ref(0);
@@ -39,6 +41,26 @@ export default {
 
 		function go(index) {
 			activeIndex.value = index;
+		}
+
+		function onCtaClick(event) {
+			// 将既有事件语义映射到产品列表页路由参数
+			if (event === 'view-women') {
+				router.push({ name: 'ProductListPage', query: { shoeSex: 2 } });
+				return;
+			}
+			if (event === 'view-men') {
+				router.push({ name: 'ProductListPage', query: { shoeSex: 1 } });
+				return;
+			}
+			if (event === 'view-kids') {
+				router.push({ name: 'ProductListPage', query: { shoeSex: 3 } });
+				return;
+			}
+			if (event === 'view-all') {
+				router.push({ name: 'ProductListPage' });
+				return;
+			}
 		}
 
 		function buildSlides() {
@@ -116,7 +138,7 @@ export default {
 		onMounted(() => { buildSlides(); loadAdsManifest(); start(); });
 		onBeforeUnmount(stop);
 
-		return { ads, slides, activeIndex, go };
+		return { ads, slides, activeIndex, go, onCtaClick };
 	}
 };
 </script>
