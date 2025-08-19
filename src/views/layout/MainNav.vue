@@ -920,6 +920,22 @@ export default {
 		const searchHistory = ref([]);
 		const searchHistoryLoading = ref(false);
 
+		// 新增：删除后短时间阻止重新写入的前端防抖（避免刚删除又被详情页/其他地方立刻写回）
+		const HISTORY_BLOCK_MS = 3 * 1000; // 3秒窗口
+		const makeHistoryBlockKey = (userId, shoeId) => `search-history-block:${userId}:${shoeId}`;
+		const markHistoryDeleted = (userId, shoeId) => {
+			try {
+				sessionStorage.setItem(makeHistoryBlockKey(userId, shoeId), String(Date.now()));
+			} catch (_e) { void 0 }
+		};
+		const shouldBlockAddHistory = (userId, shoeId) => {
+			try {
+				const v = sessionStorage.getItem(makeHistoryBlockKey(userId, shoeId));
+				if (!v) return false;
+				return Date.now() - Number(v) < HISTORY_BLOCK_MS;
+			} catch (_) { return false; }
+		};
+
 		// 新增：防抖搜索函数
 		const debouncedSearch = (query) => {
 			if (searchDebounceTimer) {
@@ -939,8 +955,21 @@ export default {
 			if (!isLoggedIn.value) return; // 未登录用户不记录
 
 			try {
-				const resolvedUserId = await getCurrentUserId();
+				const resolvedUserId = Number(await getCurrentUserId());
 				if (!resolvedUserId) return;
+				// 若刚被删除，短时间内不再写入，避免“删不掉”的观感
+				if (shouldBlockAddHistory(resolvedUserId, Number(shoeId))) return;
+
+				// 先查询是否已存在，存在则跳过，避免后端主键冲突
+				const checkParams = new URLSearchParams({ userId: resolvedUserId, shoeId });
+				try {
+					const getResp = await axios.post('/api/searchHistory/get', checkParams, {
+						headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+					});
+					if (getResp?.data?.code === 200 && getResp?.data?.data) {
+						return; // 已存在，直接返回
+					}
+				} catch (_) { /* 查询失败时继续尝试添加 */ console.debug('searchHistory/get 查询失败，继续尝试 add'); }
 				const params = new URLSearchParams({ userId: resolvedUserId, shoeId });
 				await axios.post('/api/searchHistory/add', params, {
 					headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
@@ -1030,7 +1059,7 @@ export default {
 			searchHistory.value = previous.filter(h => (h.shoeId ?? h.shoe_id) !== shoeId);
 
 			try {
-				const resolvedUserId = await getCurrentUserId();
+				const resolvedUserId = Number(await getCurrentUserId());
 				if (!resolvedUserId) { searchHistory.value = previous; return; }
 				const delParams = new URLSearchParams({ userId: resolvedUserId, shoeId });
 				const resp = await axios.post('/api/searchHistory/delete', delParams, {
@@ -1044,6 +1073,10 @@ export default {
 					searchHistory.value = previous;
 					return;
 				}
+				// 标记该项在短时间窗口内不允许重新写入，避免详情页/其他地方立即 add 回来
+				markHistoryDeleted(resolvedUserId, Number(shoeId));
+				// 强制刷新一次，确保与后端一致
+				await loadSearchHistory();
 			} catch (error) {
 				console.error('删除搜索历史失败:', error);
 				// 回滚
@@ -2403,7 +2436,7 @@ export default {
 	position: fixed;
 	inset: 0;
 	background: rgba(0, 0, 0, 0.5);
-	backdrop-filter: blur(4px);
+	backdrop-filter: blur(8px);
 	z-index: 1000;
 	/* 提高z-index，使其覆盖导航栏 */
 	animation: fadeIn .08s ease;
