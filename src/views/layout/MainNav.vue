@@ -169,7 +169,7 @@
 				</div>
 			</div>
 			<div class="actions">
-				<button class="icon-btn" @click="goCart" aria-label="购物车">
+				<button class="icon-btn" :class="{ 'disabled': !isLoggedIn }" @click="goCart" aria-label="购物车">
 					<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"
 						stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<circle cx="9" cy="21" r="1" />
@@ -893,8 +893,8 @@ export default {
 			if (isLoggedIn.value) {
 				router.push({ name: 'Cart' });
 			} else {
-				// 未登录时提示用户登录
-				alert('请先登录后再访问购物车');
+				// 未登录时打开登录抽屉，并展示购物车访问提示
+				emit('open-login', '请先登陆后查看购物车');
 			}
 		}
 
