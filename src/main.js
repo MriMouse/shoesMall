@@ -4,6 +4,7 @@ import router from "./router";
 import axios from 'axios'
 import cartManager from './utils/cart'
 import { UserAPI } from './api'
+import { preloadUserOrders } from './utils/orderPreloader'
 
 // 移除axios基础URL设置，让vue.config.js中的代理配置正常工作
 // axios.defaults.baseURL = 'http://localhost:8081' // 请根据您的后端服务地址修改
@@ -38,6 +39,8 @@ app.mount("#app");
     const resolvedUserId = Number(parsed?.id || parsed?.userId)
     if (resolvedUserId) {
       cartManager.setUserId(resolvedUserId)
+      // 登录态存在时，后台静默预加载订单摘要
+      preloadUserOrders()
       return
     }
     // 回退：只有用户名，无ID，按用户名查询ID
@@ -51,6 +54,8 @@ app.mount("#app");
             cartManager.setUserId(id)
             // 持久化补全ID
             localStorage.setItem('user', JSON.stringify({ ...parsed, id }))
+            // 获取到用户ID后，再预加载订单摘要
+            preloadUserOrders()
           }
         }
       } catch (e) {

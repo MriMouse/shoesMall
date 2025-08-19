@@ -5,143 +5,135 @@
     </div>
 
     <!-- 通知设置 -->
-    <div class="settings-section">
+    <div class="settings-card">
       <h4>通知设置</h4>
-      <div class="settings-list">
-        <div class="setting-item">
-          <div class="setting-info">
-            <div class="setting-label">邮件通知</div>
-            <div class="setting-description">接收订单状态、促销活动等邮件通知</div>
-          </div>
-          <div class="setting-control">
-            <label class="switch">
-              <input type="checkbox" v-model="settings.emailNotification" @change="saveSettings">
-              <span class="slider"></span>
-            </label>
-          </div>
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-label">邮件通知</div>
+          <div class="setting-description">接收订单状态、促销活动等邮件通知</div>
         </div>
-
-        <div class="setting-item">
-          <div class="setting-info">
-            <div class="setting-label">短信通知</div>
-            <div class="setting-description">接收订单状态、物流信息等短信通知</div>
-          </div>
-          <div class="setting-control">
-            <label class="switch">
-              <input type="checkbox" v-model="settings.smsNotification" @change="saveSettings">
-              <span class="slider"></span>
-            </label>
-          </div>
+        <div class="setting-value">
+          <label class="toggle-switch" :class="{ active: settings.emailNotification }">
+            <input type="checkbox" v-model="settings.emailNotification" @change="saveSettings">
+            <span></span>
+          </label>
         </div>
+      </div>
 
-        <div class="setting-item">
-          <div class="setting-info">
-            <div class="setting-label">推送通知</div>
-            <div class="setting-description">接收应用内推送通知</div>
-          </div>
-          <div class="setting-control">
-            <label class="switch">
-              <input type="checkbox" v-model="settings.pushNotification" @change="saveSettings">
-              <span class="slider"></span>
-            </label>
-          </div>
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-label">短信通知</div>
+          <div class="setting-description">接收订单状态、物流信息等短信通知</div>
+        </div>
+        <div class="setting-value">
+          <label class="toggle-switch" :class="{ active: settings.smsNotification }">
+            <input type="checkbox" v-model="settings.smsNotification" @change="saveSettings">
+            <span></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-label">推送通知</div>
+          <div class="setting-description">接收应用内推送通知</div>
+        </div>
+        <div class="setting-value">
+          <label class="toggle-switch" :class="{ active: settings.pushNotification }">
+            <input type="checkbox" v-model="settings.pushNotification" @change="saveSettings">
+            <span></span>
+          </label>
         </div>
       </div>
     </div>
 
     <!-- 隐私设置 -->
-    <div class="settings-section">
+    <div class="settings-card">
       <h4>隐私设置</h4>
-      <div class="settings-list">
-        <div class="setting-item">
-          <div class="setting-info">
-            <div class="setting-label">个人资料可见性</div>
-            <div class="setting-description">允许其他用户查看您的个人资料</div>
-          </div>
-          <div class="setting-control">
-            <select v-model="settings.profileVisibility" @change="saveSettings" class="form-select">
-              <option value="public">公开</option>
-              <option value="friends">仅好友</option>
-              <option value="private">私密</option>
-            </select>
-          </div>
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-label">个人资料可见性</div>
+          <div class="setting-description">允许其他用户查看您的个人资料</div>
         </div>
+        <div class="setting-value">
+          <select v-model="settings.profileVisibility" @change="saveSettings" class="form-select">
+            <option value="public">公开</option>
+            <option value="friends">仅好友</option>
+            <option value="private">私密</option>
+          </select>
+        </div>
+      </div>
 
-        <div class="setting-item">
-          <div class="setting-info">
-            <div class="setting-label">搜索可见性</div>
-            <div class="setting-description">允许其他用户通过搜索找到您</div>
-          </div>
-          <div class="setting-control">
-            <label class="switch">
-              <input type="checkbox" v-model="settings.searchable" @change="saveSettings">
-              <span class="slider"></span>
-            </label>
-          </div>
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-label">搜索可见性</div>
+          <div class="setting-description">允许其他用户通过搜索找到您</div>
+        </div>
+        <div class="setting-value">
+          <label class="toggle-switch" :class="{ active: settings.searchable }">
+            <input type="checkbox" v-model="settings.searchable" @change="saveSettings">
+            <span></span>
+          </label>
         </div>
       </div>
     </div>
 
     <!-- 账户安全 -->
-    <div class="settings-section">
+    <div class="settings-card">
       <h4>账户安全</h4>
-      <div class="settings-list">
-        <div class="setting-item">
-          <div class="setting-info">
-            <div class="setting-label">两步验证</div>
-            <div class="setting-description">启用两步验证以提高账户安全性</div>
-          </div>
-          <div class="setting-control">
-            <button @click="setupTwoFactor" class="btn btn-outline">
-              {{ settings.twoFactorEnabled ? '已启用' : '设置' }}
-            </button>
-          </div>
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-label">两步验证</div>
+          <div class="setting-description">启用两步验证以提高账户安全性</div>
         </div>
-
-        <div class="setting-item">
-          <div class="setting-info">
-            <div class="setting-label">登录设备管理</div>
-            <div class="setting-description">查看和管理已登录的设备</div>
-          </div>
-          <div class="setting-control">
-            <button @click="manageDevices" class="btn btn-outline">管理</button>
-          </div>
+        <div class="setting-value">
+          <button @click="setupTwoFactor" class="btn">
+            {{ settings.twoFactorEnabled ? '已启用' : '设置' }}
+          </button>
         </div>
+      </div>
 
-        <div class="setting-item">
-          <div class="setting-info">
-            <div class="setting-label">登录历史</div>
-            <div class="setting-description">查看账户登录历史记录</div>
-          </div>
-          <div class="setting-control">
-            <button @click="viewLoginHistory" class="btn btn-outline">查看</button>
-          </div>
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-label">登录设备管理</div>
+          <div class="setting-description">查看和管理已登录的设备</div>
+        </div>
+        <div class="setting-value">
+          <button @click="manageDevices" class="btn">管理</button>
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-label">登录历史</div>
+          <div class="setting-description">查看账户登录历史记录</div>
+        </div>
+        <div class="setting-value">
+          <button @click="viewLoginHistory" class="btn">查看</button>
         </div>
       </div>
     </div>
 
     <!-- 数据管理 -->
-    <div class="settings-section">
+    <div class="settings-card">
       <h4>数据管理</h4>
-      <div class="settings-list">
-        <div class="setting-item">
-          <div class="setting-info">
-            <div class="setting-label">数据导出</div>
-            <div class="setting-description">导出您的个人数据</div>
-          </div>
-          <div class="setting-control">
-            <button @click="exportData" class="btn btn-outline">导出</button>
-          </div>
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-label">数据导出</div>
+          <div class="setting-description">导出您的个人数据</div>
         </div>
+        <div class="setting-value">
+          <button @click="exportData" class="btn">导出</button>
+        </div>
+      </div>
 
-        <div class="setting-item">
-          <div class="setting-info">
-            <div class="setting-label">删除账户</div>
-            <div class="setting-description">永久删除您的账户和所有数据</div>
-          </div>
-          <div class="setting-control">
-            <button @click="deleteAccount" class="btn btn-danger">删除</button>
-          </div>
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-label">删除账户</div>
+          <div class="setting-description">永久删除您的账户和所有数据</div>
+        </div>
+        <div class="setting-value">
+          <button @click="deleteAccount" class="btn btn-danger">删除</button>
         </div>
       </div>
     </div>
@@ -349,54 +341,58 @@ export default {
 
 <style scoped>
 .account-settings {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
+/* 头部 */
 .settings-header {
-  margin-bottom: 32px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e1e8ed;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid #e6e6e6;
+  margin-bottom: 1rem;
 }
 
 .settings-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111111;
   margin: 0;
-  color: #2c3e50;
-  font-size: 20px;
-  font-weight: 600;
 }
 
-.settings-section {
-  margin-bottom: 32px;
+/* 设置卡片 */
+.settings-card {
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.settings-section h4 {
-  margin: 0 0 16px 0;
-  color: #2c3e50;
-  font-size: 16px;
-  font-weight: 600;
+.settings-card h4 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111111;
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.settings-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
+/* 设置项 */
 .setting-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px;
-  border: 1px solid #e1e8ed;
-  border-radius: 8px;
-  transition: box-shadow 0.3s;
+  padding: 1rem 0;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.setting-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.setting-item:last-child {
+  border-bottom: none;
 }
 
 .setting-info {
@@ -404,90 +400,143 @@ export default {
 }
 
 .setting-label {
+  font-size: 0.9rem;
   font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 4px;
+  color: #111111;
+  margin-bottom: 0.25rem;
 }
 
 .setting-description {
-  font-size: 14px;
-  color: #7f8c8d;
+  font-size: 0.8rem;
+  color: #666666;
+  line-height: 1.4;
 }
 
-.setting-control {
-  margin-left: 16px;
+.setting-value {
+  font-size: 0.9rem;
+  color: #666666;
+  font-weight: 500;
 }
 
-/* 开关样式 */
-.switch {
+/* 黑白极简 Toggle 开关（带边框） */
+.toggle-switch {
   position: relative;
-  display: inline-block;
-  width: 50px;
-  height: 24px;
-}
-
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider {
-  position: absolute;
+  width: 52px;
+  height: 28px;
+  background: #fff;
+  border: 2px solid #111111;
+  border-radius: 999px;
+  transition: all 0.2s ease;
   cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #ccc;
-  transition: 0.3s;
-  border-radius: 24px;
+  display: inline-block;
 }
 
-.slider:before {
+.toggle-switch input { display: none; }
+
+/* 滑块 */
+.toggle-switch span {
   position: absolute;
-  content: "";
-  height: 18px;
-  width: 18px;
-  left: 3px;
-  bottom: 3px;
-  background-color: white;
-  transition: 0.3s;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  background: #111111;
   border-radius: 50%;
+  transition: transform 0.2s ease;
 }
 
-input:checked + .slider {
-  background-color: #3498db;
+/* 选中态：边框保持黑色，滑块右移 */
+.toggle-switch.active { background: #fff; border-color: #111111; }
+.toggle-switch.active span { transform: translateX(24px); }
+
+/* 小尺寸版本 */
+.toggle-switch.small { width: 44px; height: 24px; }
+.toggle-switch.small span { width: 18px; height: 18px; top: 2px; left: 2px; }
+.toggle-switch.small.active span { transform: translateX(20px); }
+
+/* 按钮样式 */
+.btn {
+  border: 2px solid #111111;
+  background: transparent;
+  color: #111111;
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
 }
 
-input:checked + .slider:before {
-  transform: translateX(26px);
+.btn:hover {
+  background: #111111;
+  color: #fff;
+  transform: translateY(-1px);
 }
 
+.btn-primary {
+  background: #111111;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #000;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #111111;
+}
+
+.btn-danger {
+  border-color: #dc3545;
+  color: #dc3545;
+}
+
+.btn-danger:hover {
+  background: #dc3545;
+  color: #fff;
+}
+
+/* 表单样式 */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111111;
+  margin-bottom: 0.5rem;
+}
+
+.form-input,
 .form-select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  background-color: white;
-  min-width: 120px;
+  width: 100%;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  color: #111111;
+  background: #fff;
+  transition: all 0.2s ease;
 }
 
-.settings-actions {
-  display: flex;
-  gap: 12px;
-  padding-top: 24px;
-  border-top: 1px solid #e1e8ed;
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: #111111;
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.1);
 }
 
-/* 模态框样式 */
+/* 模态框 */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -495,191 +544,136 @@ input:checked + .slider:before {
 }
 
 .modal-content {
-  background: white;
+  background: #fff;
   border-radius: 12px;
   max-width: 500px;
   width: 90%;
   max-height: 80vh;
   overflow-y: auto;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e1e8ed;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e6e6e6;
 }
 
 .modal-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111111;
   margin: 0;
-  color: #2c3e50;
 }
 
 .close-btn {
   background: none;
   border: none;
-  font-size: 24px;
+  font-size: 1.5rem;
   cursor: pointer;
-  color: #7f8c8d;
+  color: #666666;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: #f0f0f0;
+  color: #111111;
 }
 
 .modal-body {
-  padding: 24px;
+  padding: 1.5rem;
 }
 
-.two-factor-setup {
-  text-align: center;
-}
-
-.qr-code {
-  margin-bottom: 24px;
-}
-
-.qr-placeholder {
-  width: 200px;
-  height: 200px;
-  border: 2px dashed #ddd;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto;
-  color: #7f8c8d;
-}
-
-.qr-placeholder span {
-  font-size: 48px;
-  margin-bottom: 8px;
-}
-
-.setup-steps {
-  text-align: left;
-  margin-bottom: 24px;
-}
-
-.setup-steps h4 {
-  margin: 0 0 12px 0;
-  color: #2c3e50;
-}
-
-.setup-steps ol {
-  margin: 0;
-  padding-left: 20px;
-  color: #34495e;
-  line-height: 1.6;
-}
-
-.verification-form {
-  max-width: 300px;
-  margin: 0 auto;
-}
-
-.form-group {
-  margin-bottom: 16px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #34495e;
-}
-
-.form-input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  text-align: center;
-  letter-spacing: 2px;
-}
-
+/* 表单操作 */
 .form-actions {
   display: flex;
-  gap: 12px;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e6e6e6;
 }
 
-.btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  text-decoration: none;
-  display: inline-block;
-  text-align: center;
-  transition: all 0.3s;
-  font-size: 14px;
+/* 警告框 */
+.warning-box {
+  background: #f8f9fa;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
 }
 
-.btn-primary {
-  background-color: #3498db;
-  color: white;
+.warning-box h5 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #111111;
+  margin: 0 0 0.5rem 0;
 }
 
-.btn-primary:hover:not(:disabled) {
-  background-color: #2980b9;
+.warning-box p {
+  font-size: 0.8rem;
+  color: #666666;
+  margin: 0;
+  line-height: 1.4;
 }
 
-.btn-primary:disabled {
-  background-color: #bdc3c7;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background-color: #95a5a6;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background-color: #7f8c8d;
-}
-
-.btn-outline {
-  background-color: transparent;
-  color: #3498db;
-  border: 2px solid #3498db;
-}
-
-.btn-outline:hover {
-  background-color: #3498db;
-  color: white;
-}
-
-.btn-danger {
-  background-color: #e74c3c;
-  color: white;
-}
-
-.btn-danger:hover {
-  background-color: #c0392b;
-}
-
+/* 响应式设计 */
 @media (max-width: 768px) {
-  .account-settings {
-    padding: 16px;
+  .settings-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
   }
   
   .setting-item {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 1rem;
   }
   
-  .setting-control {
-    margin-left: 0;
-    width: 100%;
+  .setting-value {
+    align-self: flex-end;
   }
   
-  .settings-actions {
-    flex-direction: column;
+  .modal-content {
+    width: 95%;
+    margin: 1rem;
+  }
+  
+  .modal-header,
+  .modal-body {
+    padding: 1rem;
   }
   
   .form-actions {
     flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+  }
+  
+  .setting-label {
+    font-size: 0.8rem;
+  }
+  
+  .setting-description {
+    font-size: 0.75rem;
+  }
+  
+  .settings-card {
+    padding: 1rem;
   }
 }
 </style>

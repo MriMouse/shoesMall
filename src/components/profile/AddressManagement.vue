@@ -544,135 +544,175 @@ export default {
 
 <style scoped>
 .address-management {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
+/* 头部 */
 .address-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e1e8ed;
+  padding: 1rem 0;
+  border-bottom: 1px solid #e6e6e6;
+  margin-bottom: 1rem;
 }
 
 .address-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111111;
   margin: 0;
-  color: #2c3e50;
-  font-size: 20px;
+}
+
+/* 按钮样式 */
+.btn {
+  border: 2px solid #111111;
+  background: transparent;
+  color: #111111;
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
   font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
 }
 
-.loading-state {
-  text-align: center;
-  padding: 60px 0;
-  color: #7f8c8d;
+.btn:hover {
+  background: #111111;
+  color: #fff;
+  transform: translateY(-1px);
 }
 
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #3498db;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 16px;
+.btn-primary {
+  background: #111111;
+  color: #fff;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.btn-primary:hover {
+  background: #000;
 }
 
-.empty-state {
-  text-align: center;
-  padding: 60px 0;
-  color: #7f8c8d;
+.btn-secondary {
+  background: transparent;
+  color: #111111;
 }
 
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
+.btn-outline {
+  border: 2px solid #111111;
+  background: transparent;
+  color: #111111;
 }
 
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+}
+
+/* 地址列表 */
 .addresses-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
 }
 
 .address-item {
-  border: 1px solid #e1e8ed;
-  border-radius: 8px;
-  padding: 20px;
-  transition: box-shadow 0.3s;
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  position: relative;
 }
 
 .address-item:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
-.address-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 20px;
+.address-item.default {
+  border-color: #111111;
+  background: #f8f9fa;
 }
 
-.address-info {
-  flex: 1;
-}
-
-.contact-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.name {
-  font-weight: 600;
-  color: #2c3e50;
-  font-size: 16px;
-}
-
-.phone {
-  color: #7f8c8d;
-  font-size: 14px;
-}
-
+/* 默认标签 */
 .default-badge {
-  background-color: #e74c3c;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: #111111;
+  color: #fff;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* 地址信息 */
+.address-info {
+  margin-bottom: 1rem;
+}
+
+.address-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111111;
+  margin-bottom: 0.5rem;
+}
+
+.address-phone {
+  font-size: 0.9rem;
+  color: #666666;
+  margin-bottom: 0.5rem;
 }
 
 .address-detail {
-  color: #34495e;
+  font-size: 0.9rem;
+  color: #666666;
   line-height: 1.5;
 }
 
+/* 地址操作 */
 .address-actions {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 100px;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f0f0f0;
 }
 
-/* 模态框样式 */
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+  color: #666666;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.empty-state p {
+  font-size: 1rem;
+  margin: 0 0 1.5rem 0;
+  color: #666666;
+}
+
+/* 模态框 */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -680,218 +720,171 @@ export default {
 }
 
 .modal-content {
-  background: white;
+  background: #fff;
   border-radius: 12px;
-  max-width: 600px;
+  max-width: 500px;
   width: 90%;
   max-height: 80vh;
   overflow-y: auto;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e1e8ed;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e6e6e6;
 }
 
 .modal-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111111;
   margin: 0;
-  color: #2c3e50;
 }
 
 .close-btn {
   background: none;
   border: none;
-  font-size: 24px;
+  font-size: 1.5rem;
   cursor: pointer;
-  color: #7f8c8d;
+  color: #666666;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: #f0f0f0;
+  color: #111111;
 }
 
 .modal-body {
-  padding: 24px;
+  padding: 1.5rem;
 }
 
-.address-form {
-  max-width: 500px;
+/* 表单样式 */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111111;
+  margin-bottom: 0.5rem;
+}
+
+.form-input,
+.form-select {
+  width: 100%;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  color: #111111;
+  background: #fff;
+  transition: all 0.2s ease;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: #111111;
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.1);
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #34495e;
-}
-
-.form-input,
-.form-select,
-.form-textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  transition: border-color 0.3s;
-}
-
-.form-textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-
-.form-input:focus,
-.form-select:focus,
-.form-textarea:focus {
-  outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-}
-
-.region-inputs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 1rem;
 }
 
 .checkbox-group {
-  margin-bottom: 24px;
-}
-
-.checkbox-label {
   display: flex;
   align-items: center;
-  gap: 8px;
-  cursor: pointer;
+  gap: 0.5rem;
+  margin-top: 1rem;
 }
 
-.form-checkbox {
+.checkbox-group input[type="checkbox"] {
   width: 18px;
   height: 18px;
+  accent-color: #111111;
+}
+
+.checkbox-group label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #111111;
+  margin: 0;
   cursor: pointer;
 }
 
-.checkbox-text {
-  color: #34495e;
-  font-size: 14px;
-}
-
+/* 表单操作 */
 .form-actions {
   display: flex;
-  gap: 12px;
-  margin-top: 24px;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e6e6e6;
 }
 
-.btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  text-align: center;
-  transition: all 0.3s;
-  font-size: 14px;
-}
-
-.btn-primary {
-  background-color: #3498db;
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: #2980b9;
-}
-
-.btn-primary:disabled {
-  background-color: #bdc3c7;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background-color: #95a5a6;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background-color: #7f8c8d;
-}
-
-.btn-outline {
-  background-color: transparent;
-  color: #3498db;
-  border: 2px solid #3498db;
-}
-
-.btn-outline:hover {
-  background-color: #3498db;
-  color: white;
-}
-
-.btn-danger {
-  background-color: #e74c3c;
-  color: white;
-}
-
-.btn-danger:hover {
-  background-color: #c0392b;
-}
-
-.icon {
-  font-size: 16px;
-  font-weight: bold;
-}
-
+/* 响应式设计 */
 @media (max-width: 768px) {
-  .address-management {
-    padding: 16px;
-  }
-  
   .address-header {
     flex-direction: column;
-    gap: 16px;
     align-items: flex-start;
+    gap: 1rem;
   }
   
-  .address-content {
-    flex-direction: column;
-    gap: 16px;
+  .addresses-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .address-item {
+    padding: 1rem;
   }
   
   .address-actions {
-    min-width: auto;
-    flex-direction: row;
     flex-wrap: wrap;
-  }
-  
-  .modal-content {
-    width: 95%;
-    margin: 20px;
   }
   
   .form-row {
     grid-template-columns: 1fr;
   }
   
-  .region-inputs {
-    grid-template-columns: 1fr;
+  .modal-content {
+    width: 95%;
+    margin: 1rem;
   }
   
-  .form-actions {
-    flex-direction: column;
+  .modal-header,
+  .modal-body {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+  }
+  
+  .address-name {
+    font-size: 0.9rem;
+  }
+  
+  .address-phone,
+  .address-detail {
+    font-size: 0.8rem;
   }
 }
 </style>

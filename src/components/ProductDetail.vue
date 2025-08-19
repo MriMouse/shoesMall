@@ -230,6 +230,7 @@ import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import cartManager from '@/utils/cart'
 import userManager from '@/utils/userManager'
+import { ClickLogAPI } from '@/api'
 
 // 路由相关
 const route = useRoute()
@@ -546,6 +547,8 @@ onMounted(() => {
     loadProductDetail()
     // 进入详情页即记录搜索历史（如果从搜索或列表进入）
     recordSearchHistoryOnView()
+    // 进入详情页记录一次点击
+    recordClickOnEnter()
 })
 
 // 进入详情页记录历史（带本地短期阻止，避免刚删又写回）
@@ -569,6 +572,31 @@ async function recordSearchHistoryOnView() {
     } catch (e) {
         // 静默失败即可，不影响详情页
         console.warn('记录搜索历史失败(详情页):', e?.message || e)
+    }
+}
+
+// 进入页面记录一次点击
+async function recordClickOnEnter() {
+    try {
+        const shoeId = route.params.id || route.query.shoeId
+        if (!shoeId) return
+
+        // 获取用户ID（可空）
+        const userId = await userManager.getUserId()
+
+        // 获取公网IP（失败则回退为 0.0.0.0）
+        let ip = '0.0.0.0'
+        try {
+            const ipRes = await axios.get('https://api.ipify.org?format=json')
+            if (ipRes?.data?.ip) ip = ipRes.data.ip
+        } catch (_) {
+            // ignore
+        }
+
+        await ClickLogAPI.recordClick(Number(shoeId), userId ?? undefined, ip)
+    } catch (e) {
+        // 静默失败，不影响正常功能
+        console.warn('记录点击失败:', e?.message || e)
     }
 }
 </script>

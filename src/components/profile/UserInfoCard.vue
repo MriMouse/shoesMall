@@ -487,189 +487,62 @@ export default {
 
 <style scoped>
 .user-info-card {
-  background: white;
+  background: #fff;
+  border: 1px solid #e6e6e6;
   border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  margin-bottom: 24px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e1e8ed;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e6e6e6;
 }
 
 .card-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111111;
   margin: 0;
-  color: #2c3e50;
-  font-size: 20px;
-  font-weight: 600;
 }
 
-.info-item {
+.card-content {
   display: flex;
-  align-items: center;
-  margin-bottom: 16px;
-  padding: 12px 0;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.info-item label {
-  width: 100px;
-  font-weight: 500;
-  color: #34495e;
-  flex-shrink: 0;
-}
-
-.info-value {
-  flex: 1;
-  color: #2c3e50;
-  padding: 8px 12px;
-  background-color: #f8f9fa;
-  border-radius: 6px;
-  border: 1px solid #e1e8ed;
-}
-
-.form-input,
-.form-select {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  transition: border-color 0.3s;
-}
-
-.form-input:focus,
-.form-select:focus {
-  outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-}
-
-.form-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid #e1e8ed;
-}
-
-.password-section {
-  margin-top: 32px;
-  padding-top: 24px;
-  border-top: 1px solid #e1e8ed;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.section-header h4 {
-  margin: 0;
-  color: #2c3e50;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.password-form {
-  background-color: #f8f9fa;
-  padding: 20px;
-  border-radius: 8px;
-  border: 1px solid #e1e8ed;
-}
-
-.form-group {
-  margin-bottom: 16px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 500;
-  color: #34495e;
-}
-
-.btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  text-decoration: none;
-  display: inline-block;
-  text-align: center;
-  transition: all 0.3s;
-  font-size: 14px;
-}
-
-.btn-primary {
-  background-color: #3498db;
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: #2980b9;
-}
-
-.btn-primary:disabled {
-  background-color: #bdc3c7;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background-color: #95a5a6;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background-color: #7f8c8d;
-}
-
-.btn-outline {
-  background-color: transparent;
-  color: #3498db;
-  border: 2px solid #3498db;
-}
-
-.btn-outline:hover {
-  background-color: #3498db;
-  color: white;
-}
-
+/* 头像部分 */
 .avatar-section {
-  text-align: center;
-  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
 }
 
 .avatar-container {
   position: relative;
-  width: 120px;
-  height: 120px;
+  width: 100px;
+  height: 100px;
   border-radius: 50%;
   overflow: hidden;
-  margin: 0 auto 16px;
-  border: 2px solid #e1e8ed;
-  background-color: #f8f9fa;
+  border: 3px solid #e6e6e6;
+  background: #f8f9fa;
 }
 
 .avatar-placeholder {
   width: 100%;
   height: 100%;
   display: flex;
-  justify-content: center;
   align-items: center;
-  background-color: #3498db;
-  color: white;
-  font-size: 48px;
-  font-weight: bold;
-  border-radius: 50%;
+  justify-content: center;
+  background: #f8f9fa;
+  color: #111111;
+  font-size: 2rem;
+  font-weight: 700;
 }
 
 .avatar-image {
@@ -682,14 +555,14 @@ export default {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
   opacity: 0;
-  transition: opacity 0.3s;
+  transition: opacity 0.2s ease;
 }
 
 .avatar-container:hover .avatar-overlay {
@@ -701,52 +574,208 @@ export default {
 }
 
 .avatar-upload-btn {
-  background-color: #3498db;
-  color: white;
-  padding: 8px 16px;
+  background: #fff;
+  color: #111111;
   border: none;
   border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   cursor: pointer;
-  font-weight: 500;
-  text-decoration: none;
-  display: inline-block;
-  text-align: center;
-  transition: all 0.3s;
-  font-size: 14px;
+  transition: all 0.2s ease;
 }
 
 .avatar-upload-btn:hover {
-  background-color: #2980b9;
+  background: #111111;
+  color: #fff;
 }
 
-.avatar-upload-btn:disabled {
-  background-color: #bdc3c7;
+/* 信息项 */
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-item label {
+  min-width: 80px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111111;
+}
+
+.info-value {
+  flex: 1;
+  font-size: 0.9rem;
+  color: #666666;
+  font-weight: 500;
+}
+
+/* 表单输入 */
+.form-input,
+.form-select {
+  flex: 1;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  color: #111111;
+  background: #fff;
+  transition: all 0.2s ease;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: #111111;
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.1);
+}
+
+/* 按钮样式 */
+.btn {
+  border: 2px solid #111111;
+  background: transparent;
+  color: #111111;
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.btn:hover {
+  background: #111111;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background: #111111;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #000;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #111111;
+}
+
+.btn-outline {
+  border: 2px solid #111111;
+  background: transparent;
+  color: #111111;
+}
+
+.btn:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 
+/* 表单操作 */
+.form-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e6e6e6;
+}
+
+/* 密码部分 */
+.password-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e6e6e6;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.section-header h4 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111111;
+  margin: 0;
+}
+
+.password-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111111;
+}
+
+/* 响应式设计 */
 @media (max-width: 768px) {
   .user-info-card {
-    padding: 16px;
+    padding: 1rem;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
   }
   
   .info-item {
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
+    gap: 0.5rem;
   }
   
   .info-item label {
-    width: auto;
+    min-width: auto;
   }
   
   .form-actions {
     flex-direction: column;
   }
   
-  .card-header {
+  .section-header {
     flex-direction: column;
-    gap: 12px;
     align-items: flex-start;
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .avatar-container {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .avatar-placeholder {
+    font-size: 1.5rem;
+  }
+  
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
   }
 }
 </style>

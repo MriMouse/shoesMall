@@ -1,21 +1,29 @@
 <template>
     <nav class="main-nav">
         <div class="nav-container">
+            <!-- 购物车在最左边 -->
             <div class="nav-left">
+                <router-link to="/cart" class="nav-link cart-link">
+                    <i class="cart-icon">🛒</i>
+                    <span class="cart-text">购物车</span>
+                    <span v-if="cartItemCount > 0" class="cart-badge">{{ cartItemCount }}</span>
+                </router-link>
+            </div>
+            
+            <!-- 中间区域包含logo和导航链接 -->
+            <div class="nav-center">
                 <router-link to="/" class="nav-logo">
                     <img src="/src/assets/logo.png" alt="Logo" class="logo-img">
                     <span class="logo-text">鞋城</span>
                 </router-link>
-            </div>
-            
-            <div class="nav-center">
-                <router-link to="/" class="nav-link">首页</router-link>
-                <router-link to="/men" class="nav-link">男鞋</router-link>
-                <router-link to="/women" class="nav-link">女鞋</router-link>
-                <router-link to="/kids" class="nav-link">童鞋</router-link>
-            </div>
-            
-            <div class="nav-right">
+                
+                <div class="nav-links">
+                    <router-link to="/" class="nav-link">首页</router-link>
+                    <router-link to="/men" class="nav-link">男鞋</router-link>
+                    <router-link to="/women" class="nav-link">女鞋</router-link>
+                    <router-link to="/kids" class="nav-link">童鞋</router-link>
+                </div>
+                
                 <div class="search-box">
                     <input 
                         type="text" 
@@ -28,28 +36,23 @@
                         <i class="search-icon">🔍</i>
                     </button>
                 </div>
+            </div>
+            
+            <!-- 个人中心在最右边 -->
+            <div class="nav-right">
+                <div v-if="!isLoggedIn" class="auth-buttons">
+                    <button @click="showLoginDrawer = true" class="login-btn">登录</button>
+                </div>
                 
-                <div class="user-actions">
-                    <router-link to="/cart" class="nav-link cart-link">
-                        <i class="cart-icon">🛒</i>
-                        <span class="cart-text">购物车</span>
-                        <span v-if="cartItemCount > 0" class="cart-badge">{{ cartItemCount }}</span>
-                    </router-link>
-                    
-                    <div v-if="!isLoggedIn" class="auth-buttons">
-                        <button @click="showLoginDrawer = true" class="login-btn">登录</button>
+                <div v-else class="user-menu">
+                    <div class="user-info" @click="toggleUserMenu">
+                        <span class="username">{{ username }}</span>
+                        <i class="dropdown-icon">▼</i>
                     </div>
-                    
-                    <div v-else class="user-menu">
-                        <div class="user-info" @click="toggleUserMenu">
-                            <span class="username">{{ username }}</span>
-                            <i class="dropdown-icon">▼</i>
-                        </div>
-                        <div v-if="showUserMenu" class="user-dropdown">
-                            <router-link to="/profile" class="dropdown-item">个人中心</router-link>
-                            <router-link to="/orders" class="dropdown-item">我的订单</router-link>
-                            <button @click="handleLogout" class="dropdown-item logout-btn">退出登录</button>
-                        </div>
+                    <div v-if="showUserMenu" class="user-dropdown">
+                        <router-link to="/profile" class="dropdown-item">个人中心</router-link>
+                        <router-link to="/orders" class="dropdown-item">我的订单</router-link>
+                        <button @click="handleLogout" class="dropdown-item logout-btn">退出登录</button>
                     </div>
                 </div>
             </div>
@@ -201,9 +204,9 @@ export default {
 }
 
 .nav-container {
-    max-width: 1200px;
+    max-width: 1600px;
     margin: 0 auto;
-    padding: 0 1rem;
+    padding: 0 3rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -213,6 +216,8 @@ export default {
 .nav-left {
     display: flex;
     align-items: center;
+    flex: 0 0 auto;
+    min-width: 120px;
 }
 
 .nav-logo {
@@ -231,6 +236,14 @@ export default {
 }
 
 .nav-center {
+    display: flex;
+    align-items: center;
+    gap: 3rem;
+    flex: 1;
+    justify-content: center;
+}
+
+.nav-links {
     display: flex;
     gap: 2rem;
 }
@@ -252,7 +265,9 @@ export default {
 .nav-right {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    flex: 0 0 auto;
+    min-width: 120px;
+    justify-content: flex-end;
 }
 
 .search-box {
@@ -280,12 +295,6 @@ export default {
 
 .search-icon {
     font-size: 1rem;
-}
-
-.user-actions {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
 }
 
 .cart-link {
