@@ -6,13 +6,8 @@
         <nav class="side-groups">
           <section class="side-group" v-for="group in sideGroups" :key="group.title">
             <div class="side-title">{{ group.title }}</div>
-            <button 
-              v-for="item in group.items" 
-              :key="item.key"
-              class="side-link"
-              :class="{ active: activeTab === item.key }"
-              @click="navigateTo(item.key)"
-            >{{ item.label }}</button>
+            <button v-for="item in group.items" :key="item.key" class="side-link"
+              :class="{ active: activeTab === item.key }" @click="navigateTo(item.key)">{{ item.label }}</button>
           </section>
           <section class="side-group">
             <button class="side-link logout" @click="handleLogout">退出账户</button>
@@ -25,42 +20,34 @@
         <div class="profile-header">
           <h1 class="greeting">你好，{{ userName || '会员' }}</h1>
           <div class="header-actions">
-            <button class="hero-edit" @click="activeTab='info'">编辑资料</button>
+            <button class="hero-edit" @click="activeTab = 'info'">编辑资料</button>
             <button class="hero-logout" @click="handleLogout">退出账户</button>
           </div>
         </div>
 
-        
 
-      <!-- 个人中心概览 -->
-      <ProfileOverview 
-        v-if="activeTab === 'overview'"
-        @navigate="handleNavigation"
-      />
 
-      <!-- 个人信息组件 -->
-      <UserInfoCard 
-        v-if="activeTab === 'info'"
-        @user-updated="handleUserUpdated"
-      />
+        <!-- 个人中心概览 -->
+        <ProfileOverview v-if="activeTab === 'overview'" @navigate="handleNavigation" />
 
-      <!-- 订单管理组件 -->
-      <OrderManagement 
-        v-if="activeTab === 'orders'"
-      />
+        <!-- 个人信息组件 -->
+        <UserInfoCard v-if="activeTab === 'info'" @user-updated="handleUserUpdated" />
 
-      <!-- 地址管理组件 -->
-      <AddressManagement 
-        v-if="activeTab === 'address'"
-      />
+        <!-- 订单管理组件 -->
+        <OrderManagement v-if="activeTab === 'orders'" />
 
-      <!-- 账户设置组件 -->
-      <AccountSettings 
-        v-if="activeTab === 'settings'"
-      />
+        <!-- 地址管理组件 -->
+        <AddressManagement v-if="activeTab === 'address'" />
+
+        <!-- 账户设置组件 -->
+        <AccountSettings v-if="activeTab === 'settings'" />
 
       </div>
     </div>
+
+    <!-- 确认对话框 -->
+    <confirmDialog v-model:visible="showLogoutDialog" title="退出登录" message="确定要退出登录吗？" confirm-text="确定"
+      cancel-text="取消" @confirm="confirmLogout" @cancel="showLogoutDialog = false" />
   </div>
 </template>
 
@@ -70,6 +57,7 @@ import UserInfoCard from '@/components/profile/UserInfoCard.vue'
 import OrderManagement from '@/components/profile/OrderManagement.vue'
 import AddressManagement from '@/components/profile/AddressManagement.vue'
 import AccountSettings from '@/components/profile/AccountSettings.vue'
+import confirmDialog from '@/views/confirmDialog.vue'
 import userManager from '@/utils/userManager'
 
 export default {
@@ -79,11 +67,13 @@ export default {
     UserInfoCard,
     OrderManagement,
     AddressManagement,
-    AccountSettings
+    AccountSettings,
+    confirmDialog
   },
   data() {
     return {
       activeTab: 'overview',
+      showLogoutDialog: false,
       sideGroups: [
         {
           title: '个人中心',
@@ -136,7 +126,7 @@ export default {
           if (res.data?.code === 200 && res.data.data) {
             this.avatarPath = res.data.data
           }
-        }).catch((e)=>{ console.warn('获取头像路径失败:', e) })
+        }).catch((e) => { console.warn('获取头像路径失败:', e) })
       }
     } catch (e) { console.warn('获取头像路径异常:', e) }
     // 优惠/权益可与后端联动，这里先占位
@@ -158,17 +148,20 @@ export default {
     handleNavigation(tab) {
       this.activeTab = tab
     },
-    
+
     handleUserUpdated(user) {
       // 用户信息更新后的处理
       console.log('用户信息已更新:', user)
     },
 
     handleLogout() {
-      if (confirm('确定要退出登录吗？')) {
-        userManager.logoutUser()
-        this.$router.push('/')
-      }
+      this.showLogoutDialog = true
+    },
+
+    confirmLogout() {
+      userManager.logoutUser()
+      this.$router.push('/')
+      this.showLogoutDialog = false
     },
     triggerHeroUpload() {
       if (this.$refs.heroAvatarInput) this.$refs.heroAvatarInput.click()
@@ -244,42 +237,174 @@ export default {
   margin: 0 auto;
   padding: 0 24px;
   display: grid;
-  grid-template-columns: 240px 1fr; /* 左侧窄栏 + 右侧主内容 */
+  grid-template-columns: 240px 1fr;
+  /* 左侧窄栏 + 右侧主内容 */
   gap: 24px;
   justify-content: center;
 }
 
-.profile-sidebar { position: sticky; top: 2rem; height: fit-content; }
+.profile-sidebar {
+  position: sticky;
+  top: 2rem;
+  height: fit-content;
+}
 
-.profile-main { display: flex; flex-direction: column; gap: 16px; }
+.profile-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 
 /* 顶部区域（问候语 + 操作） */
-.profile-header { display: flex; justify-content: space-between; align-items: center; }
-.greeting { font-size: 28px; font-weight: 700; margin: 0; }
-.header-actions { display: flex; gap: 12px; }
-.hero-edit, .hero-logout { border: 1px solid #111; background: #fff; color: #111; border-radius: 999px; padding: 8px 16px; cursor: pointer; }
-.hero-edit:hover, .hero-logout:hover { background: #111; color: #fff; }
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.greeting {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.hero-edit,
+.hero-logout {
+  border: 1px solid #111;
+  background: #fff;
+  color: #111;
+  border-radius: 999px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.hero-edit:hover,
+.hero-logout:hover {
+  background: #111;
+  color: #fff;
+}
 
 /* 会员黑色横幅（比例与留白贴合） */
-.adiclub-banner { background: #0a0a0a; color: #fff; border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; justify-content: center; gap: 64px; }
-.banner-left { display: flex; align-items: center; }
-.progress { position: relative; width: 520px; height: 4px; }
-.progress-track { position: absolute; top: 50%; left: 0; right: 0; height: 4px; background: rgba(255,255,255,.2); transform: translateY(-50%); border-radius: 2px; }
-.progress-step { position: absolute; top: 50%; width: 10px; height: 10px; background: #fff; border-radius: 50%; transform: translate(-50%, -50%); }
-.banner-metrics { display: flex; gap: 64px; }
-.b-metric { text-align: center; min-width: 120px; }
-.b-value { font-size: 24px; font-weight: 800; }
-.b-label { color: #cfcfcf; margin-top: 4px; font-size: 12px; }
+.adiclub-banner {
+  background: #0a0a0a;
+  color: #fff;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 64px;
+}
+
+.banner-left {
+  display: flex;
+  align-items: center;
+}
+
+.progress {
+  position: relative;
+  width: 520px;
+  height: 4px;
+}
+
+.progress-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, .2);
+  transform: translateY(-50%);
+  border-radius: 2px;
+}
+
+.progress-step {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.banner-metrics {
+  display: flex;
+  gap: 64px;
+}
+
+.b-metric {
+  text-align: center;
+  min-width: 120px;
+}
+
+.b-value {
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.b-label {
+  color: #cfcfcf;
+  margin-top: 4px;
+  font-size: 12px;
+}
 
 /* 左侧导航分组样式 */
-.side-groups { display: flex; flex-direction: column; gap: 28px; }
-.side-group { border-left: 1px solid #eee; padding-left: 12px; }
-.side-title { font-size: 12px; color: #777; letter-spacing: .08em; margin-bottom: 8px; }
-.side-link { display: block; width: 100%; text-align: left; background: transparent; border: none; padding: 8px 8px; border-radius: 8px; cursor: pointer; color: #111; font-size: 14px; }
-.side-link:hover { background: #f5f5f5; }
-.side-link.active { background: #111; color: #fff; }
-.side-link.logout { border: 1px solid #111; border-radius: 999px; text-align: center; margin-top: 4px; }
-.hidden-input { display: none; }
+.side-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.side-group {
+  border-left: 1px solid #eee;
+  padding-left: 12px;
+}
+
+.side-title {
+  font-size: 12px;
+  color: #777;
+  letter-spacing: .08em;
+  margin-bottom: 8px;
+}
+
+.side-link {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 8px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #111;
+  font-size: 14px;
+}
+
+.side-link:hover {
+  background: #f5f5f5;
+}
+
+.side-link.active {
+  background: #111;
+  color: #fff;
+}
+
+.side-link.logout {
+  border: 1px solid #111;
+  border-radius: 999px;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.hidden-input {
+  display: none;
+}
 
 /* 顶部黑底会员横幅 */
 .account-hero {
@@ -288,22 +413,89 @@ export default {
   border-radius: 14px;
   padding: 18px 20px;
 }
+
 .account-hero .hero-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 14px;
 }
-.account-hero .hero-left { display:flex; align-items:center; gap:14px; }
-.hero-avatar { position: relative; width: 54px; height: 54px; }
-.hero-avatar-img { width:100%; height:100%; border-radius:50%; object-fit:cover; border:1px solid rgba(255,255,255,.4); }
-.hero-avatar-placeholder { width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#1a1a1a; color:#fff; font-weight:800; border:1px solid rgba(255,255,255,.4); }
-.hero-avatar-edit { position:absolute; bottom:-6px; left:50%; transform:translateX(-50%); background:transparent; color:#fff; border:1px solid #fff; border-radius:10px; padding:2px 6px; font-size:12px; opacity:0; transition:opacity .15s ease; }
-.hero-avatar-edit.show { opacity:1; }
-.hidden-input { display:none; }
-.hero-actions { display:flex; align-items:center; gap:8px; }
-.hero-edit { background:transparent; color:#fff; border:1px solid #fff; border-radius:10px; padding:8px 12px; }
-.account-hero .hello { font-size: 22px; font-weight: 700; }
+
+.account-hero .hero-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.hero-avatar {
+  position: relative;
+  width: 54px;
+  height: 54px;
+}
+
+.hero-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, .4);
+}
+
+.hero-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1a1a1a;
+  color: #fff;
+  font-weight: 800;
+  border: 1px solid rgba(255, 255, 255, .4);
+}
+
+.hero-avatar-edit {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: transparent;
+  color: #fff;
+  border: 1px solid #fff;
+  border-radius: 10px;
+  padding: 2px 6px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+
+.hero-avatar-edit.show {
+  opacity: 1;
+}
+
+.hidden-input {
+  display: none;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hero-edit {
+  background: transparent;
+  color: #fff;
+  border: 1px solid #fff;
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.account-hero .hello {
+  font-size: 22px;
+  font-weight: 700;
+}
+
 .account-hero .hero-logout {
   background: transparent;
   color: #fff;
@@ -312,15 +504,34 @@ export default {
   padding: 8px 12px;
   cursor: pointer;
 }
-.account-hero .hero-logout:hover { background: #fff; color: #000; }
+
+.account-hero .hero-logout:hover {
+  background: #fff;
+  color: #000;
+}
+
 .account-hero .hero-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
-.account-hero .metric { text-align: center; }
-.account-hero .metric-value { font-size: 26px; font-weight: 800; line-height: 1; }
-.account-hero .metric-label { color: #cfcfcf; margin-top: 6px; font-size: 12px; letter-spacing: .05em; }
+
+.account-hero .metric {
+  text-align: center;
+}
+
+.account-hero .metric-value {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.account-hero .metric-label {
+  color: #cfcfcf;
+  margin-top: 6px;
+  font-size: 12px;
+  letter-spacing: .05em;
+}
 
 .sidebar-nav {
   background: var(--surface);
@@ -350,7 +561,7 @@ export default {
 }
 
 .nav-item:hover {
-  background-color: rgba(0,0,0,0.03);
+  background-color: rgba(0, 0, 0, 0.03);
 }
 
 .nav-item.active {
@@ -377,7 +588,9 @@ export default {
 }
 
 /* 移除前置UI图标占位，统一左对齐 */
-.nav-icon { display: none; }
+.nav-icon {
+  display: none;
+}
 
 .nav-label {
   font-size: 14px;
@@ -399,14 +612,17 @@ export default {
   padding: 10px 18px !important;
   transition: background .15s ease, color .15s ease, border-color .15s ease;
 }
+
 :deep(.btn:hover) {
   background: var(--text) !important;
   color: #fff !important;
 }
+
 :deep(.btn.btn-primary) {
   background: var(--text) !important;
   color: #fff !important;
 }
+
 :deep(.btn.btn-secondary) {
   background: transparent !important;
   color: var(--text) !important;
@@ -466,18 +682,18 @@ export default {
     grid-template-columns: 1fr;
     gap: 16px;
   }
-  
+
   .profile-sidebar {
     position: static;
     order: -1;
   }
-  
+
   .sidebar-nav {
     display: flex;
     overflow-x: auto;
     padding: 12px;
   }
-  
+
   .nav-item {
     flex-shrink: 0;
     min-width: 120px;
@@ -490,24 +706,24 @@ export default {
   .profile {
     padding: 1rem 0;
   }
-  
+
   .profile-container {
     padding: 0 0.5rem;
   }
-  
+
   .sidebar-nav {
     padding: 8px;
   }
-  
+
   .nav-item {
     padding: 10px 12px;
     min-width: 100px;
   }
-  
+
   .nav-icon {
     font-size: 16px;
   }
-  
+
   .nav-label {
     font-size: 12px;
   }
@@ -517,16 +733,16 @@ export default {
   .profile-container {
     padding: 0 0.25rem;
   }
-  
+
   .nav-item {
     min-width: 80px;
     padding: 8px 10px;
   }
-  
+
   .nav-icon {
     font-size: 14px;
   }
-  
+
   .nav-label {
     font-size: 11px;
   }
