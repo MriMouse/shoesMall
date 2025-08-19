@@ -40,26 +40,48 @@
                     </ul>
                 </nav>
                 <div class="nav-search">
-                    <div class="search-box" :class="{ focus: isSearchFocused }">
-                        <div class="search-placeholder">
-                            <svg class="search-icon" viewBox="0 0 20 20" width="20" height="20" fill="none"
+                    <div class="search-container" :class="{ 'search-focused': isSearchFocused }">
+                        <div class="search-input-wrapper">
+                            <svg class="search-icon" viewBox="0 0 24 24" width="20" height="20" fill="none"
                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                aria-hidden="true" shape-rendering="geometricPrecision">
-                                <circle cx="9" cy="9" r="6" vector-effect="non-scaling-stroke" />
-                                <path d="M18 18l-4.5-4.5" vector-effect="non-scaling-stroke" />
+                                aria-hidden="true">
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="m21 21-4.35-4.35" />
                             </svg>
-                            <span v-if="!isSearchFocused">搜索商品、品牌或类型</span>
                             <input 
-                                v-else
                                 type="text" 
                                 v-model="searchKeyword" 
-                                @input="handleSearch"
+                                @input="handleSearchInput"
                                 @keydown="handleSearchKeydown"
-                                placeholder="搜索商品、品牌或类型"
-                                class="search-input"
-                                @focus="isSearchFocused = true"
-                                @blur="isSearchFocused = false"
+                                placeholder="搜索商品、品牌或类型..."
+                                class="search-input-field"
+                                @focus="handleSearchFocus"
+                                @blur="handleSearchBlur"
+                                autocomplete="off"
+                                spellcheck="false"
                             >
+                            <button 
+                                v-if="searchKeyword.trim()" 
+                                @click.stop="clearSearch" 
+                                class="clear-search-button"
+                                type="button"
+                                aria-label="清除搜索"
+                                title="清除搜索"
+                            >
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div v-if="isSearchFocused && searchKeyword.trim()" class="search-suggestions">
+                            <div class="suggestion-item" @click="submitSearch">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8" />
+                                    <path d="m21 21-4.35-4.35" />
+                                </svg>
+                                <span>搜索 "{{ searchKeyword }}"</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -97,7 +119,12 @@
         <!-- 页面标题 -->
         <div class="page-title-section">
             <h1 class="page-title">{{ currentCategory }}{{ currentSubCategory ? ' - ' + currentSubCategory : '' }}</h1>
-            <div class="product-count">总计: {{ totalCount }} 种商品</div>
+            <div class="product-count">
+                总计: {{ totalCount }} 种商品
+                <span v-if="searchKeyword.trim()" class="search-status">
+                    (搜索: "{{ searchKeyword }}")
+                </span>
+            </div>
         </div>
 
         <!-- 筛选和排序区域 -->
@@ -482,6 +509,7 @@ const fetchOptions = async () => {
 
 // 搜索功能
 const handleSearch = () => {
+    // 实时搜索，不需要防抖
     applyFilters()
 }
 
@@ -504,13 +532,46 @@ const submitSearch = () => {
     isSearchFocused.value = false
 }
 
+// 新增：防抖搜索函数
+let searchDebounceTimer = null
+const debouncedSearch = () => {
+    if (searchDebounceTimer) {
+        clearTimeout(searchDebounceTimer)
+    }
+    searchDebounceTimer = setTimeout(() => {
+        // 无论是否有搜索关键字，都应用筛选
+        applyFilters()
+    }, 300) // 300ms 防抖延迟
+}
+
+// 新增：处理搜索输入
+const handleSearchInput = () => {
+    debouncedSearch()
+}
+
+// 新增：处理搜索焦点
+const handleSearchFocus = () => {
+    isSearchFocused.value = true
+}
+
+// 新增：处理搜索失焦
+const handleSearchBlur = () => {
+    // 延迟失焦，让清除按钮能够被点击
+    setTimeout(() => {
+        isSearchFocused.value = false
+    }, 200)
+}
+
 const searchProducts = (products) => {
     if (!searchKeyword.value.trim()) {
+        console.log('搜索关键词为空，返回所有产品')
         return products
     }
 
     const keyword = searchKeyword.value.toLowerCase().trim()
-    return products.filter(product => {
+    console.log('开始搜索，关键词:', keyword)
+    
+    const filtered = products.filter(product => {
         // 搜索商品名称
         if (product.name && product.name.toLowerCase().includes(keyword)) {
             return true
@@ -537,6 +598,9 @@ const searchProducts = (products) => {
         }
         return false
     })
+    
+    console.log('搜索完成，匹配产品数量:', filtered.length)
+    return filtered
 }
 
 // 筛选功能
@@ -601,38 +665,46 @@ const filterBySex = (sexValue) => {
 // 应用筛选和排序
 const applyFilters = () => {
     let filtered = [...products.value]
-
+    
+    console.log('开始应用筛选，当前搜索关键词:', searchKeyword.value)
+    console.log('筛选前产品数量:', filtered.length)
+    
     // 应用搜索
     filtered = searchProducts(filtered)
-
+    console.log('搜索后产品数量:', filtered.length)
+    
     // 品牌筛选
     if (selectedBrands.value.length > 0) {
         filtered = filtered.filter(product => 
             selectedBrands.value.includes(product.brand?.brandId)
         )
+        console.log('品牌筛选后产品数量:', filtered.length)
     }
-
+    
     // 版型筛选
     if (selectedTypes.value.length > 0) {
         filtered = filtered.filter(product => 
             selectedTypes.value.includes(product.shoesType?.typeId)
         )
+        console.log('类型筛选后产品数量:', filtered.length)
     }
-
+    
     // 性别筛选
     if (selectedSexes.value.length > 0) {
         filtered = filtered.filter(product => 
             selectedSexes.value.includes(product.shoeSex)
         )
+        console.log('性别筛选后产品数量:', filtered.length)
     }
-
+    
     // 颜色筛选
     if (selectedColors.value.length > 0) {
         filtered = filtered.filter(product => 
             selectedColors.value.includes(product.color?.colorId)
         )
+        console.log('颜色筛选后产品数量:', filtered.length)
     }
-
+    
     // 尺码筛选
     if (selectedSizes.value.length > 0) {
         filtered = filtered.filter(product => {
@@ -641,14 +713,17 @@ const applyFilters = () => {
                 selectedSizes.value.includes(inv.sizeId)
             )
         })
+        console.log('尺码筛选后产品数量:', filtered.length)
     }
-
+    
     // 应用排序
     filtered = applySorting(filtered)
-
+    
     filteredProducts.value = filtered
     totalCount.value = filtered.length
     currentPage.value = 1
+    
+    console.log('最终筛选结果:', filtered.length, '个产品')
 }
 
 // 排序功能
@@ -750,6 +825,13 @@ const goToPage = (page) => {
 const handlePageSizeChange = () => {
     currentPage.value = 1
 }
+
+// 清除搜索
+const clearSearch = () => {
+    searchKeyword.value = ''
+    applyFilters() // 应用筛选以更新产品列表
+}
+
 
 // 初始化并配置 IntersectionObserver
 function initIntersectionObserver() {
@@ -954,6 +1036,11 @@ onBeforeUnmount(() => {
         productCardIo = null
     }
     document.removeEventListener('click', closeDropdowns)
+    // 清理防抖定时器
+    if (searchDebounceTimer) {
+        clearTimeout(searchDebounceTimer)
+        searchDebounceTimer = null
+    }
 })
 </script>
 
@@ -1060,83 +1147,129 @@ onBeforeUnmount(() => {
     min-width: 0;
 }
 
-.search-box {
+.search-container {
     width: 36%;
     max-width: 380px;
     min-width: 220px;
     position: relative;
     margin-right: 16px;
-    cursor: pointer;
     flex-shrink: 0;
 }
 
-.search-box .search-icon {
+.search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+
+.search-container:hover .search-input-wrapper {
+    border-color: #bbb;
+    background: #f5f5f5;
+}
+
+.search-container.search-focused .search-input-wrapper {
+    border-color: #000;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+}
+
+.search-icon {
     position: absolute;
-    left: 8px;
+    left: 12px;
     top: 50%;
     transform: translateY(-50%);
     color: #666;
-    filter: none;
-    z-index: 3;
+    z-index: 2;
     pointer-events: none;
+    transition: color 0.2s ease;
 }
 
-.search-placeholder {
+.search-container.search-focused .search-icon {
+    color: #000;
+}
+
+.search-input-field {
     width: 100%;
-    height: 36px;
-    border-radius: 999px;
-    border: 1px solid #ddd;
-    background: #f8f8f8;
+    height: 40px;
+    padding: 0 40px 0 40px;
+    border: none;
+    background: transparent;
+    color: #333;
+    font-size: 14px;
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+}
+
+.search-input-field::placeholder {
     color: #999;
-    padding: 0 14px 0 32px;
+    transition: color 0.2s ease;
+}
+
+.search-container.search-focused .search-input-field::placeholder {
+    color: #666;
+}
+
+.clear-search-button {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
     display: flex;
     align-items: center;
-    font-size: 14px;
-    z-index: 1;
-    position: relative;
-    transition: border-color .1s ease, background .1s ease;
-    box-sizing: border-box;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    transform: translateZ(0);
-    will-change: border-color, background;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 3;
 }
 
-.search-placeholder .search-icon {
-    position: static;
-    transform: none;
-    margin-right: 8px;
-    flex-shrink: 0;
+.clear-search-button:hover {
+    background: #f0f0f0;
+    color: #666;
 }
 
-.search-box:hover .search-placeholder {
-    border-color: #000;
-    background: #fff;
-}
-
-.search-input {
+.search-suggestions {
     position: absolute;
-    top: 0;
+    top: 100%;
     left: 0;
-    width: 100%;
-    height: 36px;
-    border-radius: 999px;
+    right: 0;
+    background: #fff;
     border: 1px solid #ddd;
-    background: #f8f8f8;
-    color: #333;
-    padding: 0 14px 0 32px;
-    outline: none;
-    z-index: 2;
-    transition: border-color .1s ease, background .1s ease;
-    box-sizing: border-box;
-    transform: translateZ(0);
-    will-change: border-color, background;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    margin-top: -1px;
 }
 
-.search-box.focus .search-input {
-    border-color: #000;
-    background: #fff;
+.suggestion-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    color: #333;
+    font-size: 14px;
+}
+
+.suggestion-item:hover {
+    background: #f5f5f5;
+}
+
+.suggestion-item svg {
+    color: #666;
+    flex-shrink: 0;
 }
 
 .actions {
@@ -1223,6 +1356,14 @@ onBeforeUnmount(() => {
     font-size: 14px;
     color: #666;
     font-weight: 500;
+}
+
+.search-status {
+    font-size: 12px;
+    color: #666;
+    font-weight: 400;
+    margin-left: 8px;
+    font-style: italic;
 }
 
 /* 筛选和排序区域样式 */
@@ -1666,6 +1807,75 @@ onBeforeUnmount(() => {
     color: #fff;
     font-weight: 600;
     border-color: #000;
+}
+
+/* 搜索框响应式设计 */
+@media (max-width: 768px) {
+    .nav-search {
+        margin-right: 16px;
+        padding: 0 12px 0 8px;
+    }
+    
+    .search-container {
+        width: 100%;
+        max-width: none;
+        min-width: 200px;
+    }
+    
+    .search-input-field {
+        height: 36px;
+        padding: 0 36px 0 36px;
+        font-size: 13px;
+    }
+    
+    .search-icon {
+        left: 10px;
+        width: 16px;
+        height: 16px;
+    }
+    
+    .clear-search-button {
+        right: 6px;
+        padding: 3px;
+    }
+    
+    .clear-search-button svg {
+        width: 14px;
+        height: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .nav-search {
+        margin-right: 8px;
+        padding: 0 8px 0 4px;
+    }
+    
+    .search-container {
+        min-width: 160px;
+    }
+    
+    .search-input-field {
+        height: 32px;
+        padding: 0 32px 0 32px;
+        font-size: 12px;
+    }
+    
+    .search-icon {
+        left: 8px;
+        width: 14px;
+        height: 14px;
+    }
+    
+    .clear-search-button {
+        right: 4px;
+        padding: 2px;
+    }
+    
+    .clear-search-button svg {
+        width: 12px;
+        height: 12px;
+    }
 }
 
 /* 响应式设计 */
