@@ -255,21 +255,29 @@
 
 	<!-- 页面底部（仅在 /products 下显示） -->
 	<SiteFooter v-if="showFooterForProducts" />
+
+	<!-- 全局登录抽屉：导航栏内部自管理，保证所有使用导航的页面行为一致 -->
+	<LoginDrawer 
+		v-model="showLoginDrawer" 
+		:show-profile-access-message="showProfileAccessMessage"
+		:access-message="loginAccessMessage"
+		@login-success="handleLoginSuccess" 
+	/>
 </template>
 
 <script>
 import { reactive, ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { UserAPI } from '@/api';
+import LoginDrawer from '../auth/LoginDrawer.vue';
 import axios from 'axios';
 import userManager from '../../utils/userManager';
 import SiteFooter from './Footer.vue';
 
 export default {
 	name: 'MainNav',
-	components: { SiteFooter },
-	emits: ['open-login'],
-	setup(props, { emit }) {
+	components: { SiteFooter, LoginDrawer },
+	setup() {
 		const router = useRouter();
 		const route = useRoute();
 		// 用户下拉菜单
@@ -367,12 +375,38 @@ export default {
 			}
 		};
 
+		// 登录抽屉控制：统一在导航内部处理
+		const showLoginDrawer = ref(false);
+		const showProfileAccessMessage = ref(false);
+		const loginAccessMessage = ref('');
+
+		function openLoginDrawer(messageOrProfileFlag) {
+			if (typeof messageOrProfileFlag === 'string') {
+				loginAccessMessage.value = messageOrProfileFlag;
+				showProfileAccessMessage.value = false;
+			} else if (messageOrProfileFlag === true) {
+				loginAccessMessage.value = '';
+				showProfileAccessMessage.value = true;
+			} else {
+				loginAccessMessage.value = '';
+				showProfileAccessMessage.value = false;
+			}
+			showLoginDrawer.value = true;
+		}
+
+		function handleLoginSuccess() {
+			isLoggedIn.value = true;
+			showLoginDrawer.value = false;
+			showProfileAccessMessage.value = false;
+			loginAccessMessage.value = '';
+		}
+
 		function onLoginStatusClick() {
 			if (isLoggedIn.value) {
 				// 已登录时直接跳转到个人中心页面
 				router.push('/profile');
 			} else {
-				emit('open-login');
+				openLoginDrawer(false);
 			}
 		}
 
@@ -884,7 +918,7 @@ export default {
 				router.push('/profile');
 			} else {
 				// 未登录时打开登录抽屉，并标识来自个人中心
-				emit('open-login', true);
+				openLoginDrawer(true);
 			}
 		}
 
@@ -894,7 +928,7 @@ export default {
 				router.push({ name: 'Cart' });
 			} else {
 				// 未登录时打开登录抽屉，并展示购物车访问提示
-				emit('open-login', '请先登陆后查看购物车');
+				openLoginDrawer('请先登陆后查看购物车');
 			}
 		}
 
@@ -1458,7 +1492,12 @@ export default {
 			avatarUrl,
 			avatarInput,
 			triggerUpload,
-			handleAvatarChange
+			handleAvatarChange,
+			// 登录抽屉控制
+			showLoginDrawer,
+			showProfileAccessMessage,
+			loginAccessMessage,
+			handleLoginSuccess
 		};
 	}
 };
