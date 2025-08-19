@@ -12,7 +12,6 @@
           <option value="4">已取消</option>
           <option value="5">退货中</option>
           <option value="6">已退货</option>
-          <option value="10">购物车</option>
           <option value="11">已支付-退款中</option>
           <option value="12">已发货-退款中</option>
           <option value="13">已完成-退款中</option>
@@ -43,14 +42,14 @@
       <p>正在加载订单...</p>
     </div>
 
-    <div v-else-if="filteredOrders.length === 0" class="empty-state">
+    <div v-else-if="visibleOrders.length === 0" class="empty-state">
       <div class="empty-icon">📦</div>
       <p>{{ statusFilter ? '没有符合条件的订单' : '暂无订单记录' }}</p>
       <router-link to="/products" class="btn btn-primary">去购物</router-link>
     </div>
 
     <div v-else class="orders-list">
-      <div v-for="order in filteredOrders" :key="order.orderId" class="order-item">
+      <div v-for="order in visibleOrders" :key="order.orderId" class="order-item">
         <!-- 订单选择框 -->
         <div class="order-select">
           <input 
@@ -162,6 +161,20 @@
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 自定义退款确认浮层 -->
+    <div v-if="showRefundConfirm" class="confirm-overlay" @click.self="cancelRefund">
+      <div class="confirm-dialog">
+        <div class="confirm-title">确认操作</div>
+        <div class="confirm-message">
+          确定要申请退款吗？订单状态将从“{{ getOrderStatus(refundTarget?.status) }}”变为“{{ getOrderStatus(String(Number(refundTarget?.status) + 10)) }}”。
+        </div>
+        <div class="confirm-actions">
+          <button class="btn btn-secondary btn-compact" @click="cancelRefund">取消</button>
+          <button class="btn btn-primary btn-compact" @click="confirmRefund">确定</button>
         </div>
       </div>
     </div>
@@ -284,6 +297,21 @@ import { OrderAPI, ShoeAPI, OrderShoeNumAPI, AddressAPI, PointsAPI } from '@/api
 import userManager from '@/utils/userManager'
 import { orderCache } from '@/utils/orderPreloader'
 
+// 简易中文Toast
+function showToast(message) {
+  const el = document.createElement('div')
+  el.className = 'simple-toast'
+  el.textContent = message
+  document.body.appendChild(el)
+  setTimeout(() => {
+    el.classList.add('show')
+  }, 10)
+  setTimeout(() => {
+    el.classList.remove('show')
+    setTimeout(() => document.body.removeChild(el), 300)
+  }, 2000)
+}
+
 export default {
   name: 'OrderManagement',
   data() {
@@ -298,13 +326,19 @@ export default {
       returnReason: '',
       returnDescription: '',
       submittingReturn: false,
-      selectedCount: 0 // 新增：选中的订单数量
+      selectedCount: 0, // 新增：选中的订单数量
+      showRefundConfirm: false,
+      refundTarget: null
     }
   },
   computed: {
     // 新增：判断是否全选
     isAllSelected() {
-      return this.filteredOrders.length > 0 && this.filteredOrders.every(order => order.selected)
+      return this.visibleOrders.length > 0 && this.visibleOrders.every(order => order.selected)
+    },
+    // 仅展示非购物车状态的订单
+    visibleOrders() {
+      return this.filteredOrders.filter(o => String(o.status) !== '10')
     }
   },
   mounted() {
@@ -582,9 +616,18 @@ export default {
     
     // 新增：申请退款
     requestRefund(order) {
-      if (confirm(`确定要申请退款吗？订单状态将从"${this.getOrderStatus(order.status)}"变为"${this.getOrderStatus(String(Number(order.status) + 10))}"`)) {
-        this.submitRefundRequest(order)
-      }
+      this.refundTarget = order
+      this.showRefundConfirm = true
+    },
+    cancelRefund() {
+      this.showRefundConfirm = false
+      this.refundTarget = null
+    },
+    async confirmRefund() {
+      const target = this.refundTarget
+      this.showRefundConfirm = false
+      if (target) await this.submitRefundRequest(target)
+      this.refundTarget = null
     },
     
     // 新增：提交退款申请
@@ -599,13 +642,13 @@ export default {
           order.status = newStatus
           order.updatedAt = new Date().toISOString()
           this.filterOrders()
-          alert(`退款申请已提交，订单状态已更新为"${this.getOrderStatus(newStatus)}"`)
+          showToast(`退款申请已提交，订单状态已更新为“${this.getOrderStatus(newStatus)}”`)
         } else {
-          alert('提交退款申请失败，请重试')
+          showToast('提交退款申请失败，请重试')
         }
       } catch (error) {
         console.error('提交退款申请失败:', error)
-        alert('提交退款申请失败，请重试')
+        showToast('提交退款申请失败，请重试')
       }
     },
     
@@ -613,7 +656,7 @@ export default {
     viewRefundStatus(order) {
       const originalStatus = String(Number(order.status) - 10)
       const originalStatusText = this.getOrderStatus(originalStatus)
-      alert(`退款状态：订单从"${originalStatusText}"申请退款，正在处理中，预计3-5个工作日完成`)
+      showToast(`退款状态：订单从“${originalStatusText}”申请退款，正在处理中，预计3-5个工作日完成`)
     },
     
     async submitReturnRequest() {
@@ -718,12 +761,12 @@ export default {
 
     // 新增：更新选择框状态
     updateSelection() {
-      this.selectedCount = this.filteredOrders.filter(order => order.selected).length
+      this.selectedCount = this.visibleOrders.filter(order => order.selected).length
     },
 
     // 新增：切换全选/取消全选
     toggleSelectAll() {
-      this.filteredOrders.forEach(order => {
+      this.visibleOrders.forEach(order => {
         order.selected = !this.isAllSelected
       })
       this.updateSelection()
@@ -1479,11 +1522,13 @@ export default {
 /* 订单操作 */
 .order-actions {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #f0f0f0;
+  gap: 12px;
+  margin-top: 8px;
+  align-items: center;
+  flex-direction: row;      /* 强制横向 */
+  flex-wrap: nowrap;        /* 不换行 */
 }
+.action-buttons { display: flex; flex-direction: row; gap: 12px; }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
@@ -1526,7 +1571,7 @@ export default {
   }
   
   .order-actions {
-    flex-wrap: wrap;
+    flex-wrap: wrap; /* 小屏才允许换行 */
   }
 }
 
@@ -1560,10 +1605,10 @@ export default {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 96px;
-  height: 36px;
+  min-width: 120px; /* 统一宽度，便于对齐 */
+  height: 40px;     /* 统一高度 */
   padding: 0 !important;
-  line-height: 36px;
+  line-height: 40px;
   border-radius: 8px;
   font-size: 0.9rem;
 }
@@ -1597,7 +1642,7 @@ export default {
 .product-meta { font-size: 12px; color: #666; }
 
 /* 右侧信息更紧凑 */
-.order-right { display: flex; flex-direction: column; gap: 8px; }
+.order-right { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .order-info { gap: 4px; }
 .info-row { margin-bottom: 6px; }
 
@@ -1640,4 +1685,14 @@ export default {
 .select-all input[type="checkbox"]:focus-visible {
   box-shadow: 0 0 0 3px rgba(17,17,17,0.12);
 }
+
+.simple-toast { position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%); background: rgba(33,33,33,.92); color: #fff; padding: 10px 14px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .3s ease, transform .3s ease; z-index: 9999; }
+.simple-toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+
+/* 自定义确认浮层 */
+.confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; z-index: 9998; }
+.confirm-dialog { width: 420px; max-width: 90vw; background: #fff; border-radius: 12px; box-shadow: 0 12px 28px rgba(0,0,0,.18); padding: 18px 20px; }
+.confirm-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: #111; }
+.confirm-message { font-size: 14px; color: #444; line-height: 1.6; margin-bottom: 14px; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
 </style>

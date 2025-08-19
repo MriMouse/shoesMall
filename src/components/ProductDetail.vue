@@ -220,6 +220,8 @@
 
         <!-- Toast 提示组件 -->
         <!-- <BasicToast ref="toast" :message="toastMessage" :type="toastType" /> -->
+        <!-- 页面底部 -->
+        <SiteFooter />
     </div>
 </template>
 
@@ -231,6 +233,7 @@ import axios from 'axios'
 import cartManager from '@/utils/cart'
 import userManager from '@/utils/userManager'
 import { ClickLogAPI } from '@/api'
+import SiteFooter from '@/views/layout/Footer.vue'
 
 // 路由相关
 const route = useRoute()
