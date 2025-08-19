@@ -2164,11 +2164,12 @@ const addMoreProducts = () => {
 }
 
 // 返回商品列表
-const goBack = () => {
-    // 保存当前订单数据
-    saveOrderData()
-    // 设置标记，表示从订单确认页面跳转
-    sessionStorage.setItem('fromOrderConfirmation', 'true')
+const goBack = async () => {
+    // 清空当前订单数据与商品清单
+    clearOrderData()
+    // 刷新购物车角标数量
+    await cartManager.refreshCartCount()
+    // 跳转到产品展示页面
     router.push('/products')
 }
 
