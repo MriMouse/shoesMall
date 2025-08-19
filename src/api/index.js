@@ -1,13 +1,34 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'http://localhost:8081',
+  baseURL: '/api',
   headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
 })
 
 export const UserAPI = {
   getAllUsers() {
     return api.post('/users/getAllUsers')
+  },
+  // 修改密码 - 使用验证码/令牌
+  resetPassword(username, newPassword, code, token) {
+    const params = new URLSearchParams({ username, newPassword, code, token })
+    return api.post('/usersLogin/resetPassword', params)
+  },
+  // 直接修改密码（不走验证码）——若后端提供
+  directUpdatePassword(username, newPassword) {
+    const params = new URLSearchParams({ username, newPassword })
+    return api.post('/usersLogin/userRegister', params) // 占位：如果你有 /users/updatePassword 接口请替换为正确路径
+  },
+  // 申请重置密码验证码
+  getResetCode(username, email) {
+    const params = new URLSearchParams({ username, email })
+    return api.get('/usersLogin/getCode', { params })
+  },
+  // 直接修改密码（推荐你将此路径改为后端实际的修改密码接口）
+  updatePassword(username, newPassword) {
+    const params = new URLSearchParams({ username, newPassword })
+    // TODO: 将下面的路径替换为你后端“直接修改密码”的真实地址，如 /users/updatePassword 或 /usersLogin/updatePassword
+    return api.post('/usersLogin/updatePassword', params)
   },
   getUserIdByUsername(username) {
     const params = new URLSearchParams({ username })
@@ -16,6 +37,32 @@ export const UserAPI = {
   getPersonalInfo(username) {
     const params = new URLSearchParams({ username })
     return api.post('/personal/info', params)
+  },
+  
+  // 上传头像
+  uploadAvatar(formData) {
+    return api.post('/users/uploadAvatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+  },
+  
+  // 更新用户头像
+  updateAvatar(username, avatarPath) {
+    const params = new URLSearchParams({ username, avatarPath })
+    return api.post('/users/updateAvatar', params)
+  },
+  // 通过用户ID更新头像（与数据库 user.avatar_path 字段对应）
+  updateAvatarById(userId, avatarPath) {
+    const params = new URLSearchParams({ userId, avatarPath })
+    return api.post('/users/updateAvatarById', params)
+  },
+  
+  // 获取用户头像路径
+  getAvatarPath(username) {
+    const params = new URLSearchParams({ username })
+    return api.post('/users/getAvatarPath', params)
   },
   getAddresses(username) {
     const params = new URLSearchParams({ username })
@@ -46,6 +93,11 @@ export const OrderAPI = {
   // 获取所有订单（用于通过唯一 orderNumber 找回刚创建的订单ID）
   getAll() {
     return api.post('/order/getAll')
+  },
+  
+  // 新增：获取包含完整商品和收货信息的订单数据
+  getAllWithFullDetails() {
+    return api.post('/order/getAllWithFullDetails')
   },
   insertOrder(order) {
     return api.post('/order/insertOrder', order, { headers: { 'Content-Type': 'application/json' } })
@@ -322,3 +374,27 @@ export default api
 
 
 
+
+// 新增：积分相关API（不改后端既有接口，新增独立接口）
+export const PointsAPI = {
+  accrueByOrder({ userId, orderId, orderNumber } = {}) {
+    const params = new URLSearchParams()
+    if (userId != null) params.append('userId', userId)
+    if (orderId != null) params.append('orderId', String(orderId))
+    if (orderNumber) params.append('orderNumber', orderNumber)
+    return api.post('/points/accrueByOrder', params)
+  },
+  deductByOrder({ userId, orderId, orderNumber } = {}) {
+    const params = new URLSearchParams()
+    if (userId != null) params.append('userId', userId)
+    if (orderId != null) params.append('orderId', String(orderId))
+    if (orderNumber) params.append('orderNumber', orderNumber)
+    return api.post('/points/deductByOrder', params)
+  },
+  adjust({ userId, delta }) {
+    const params = new URLSearchParams()
+    params.append('userId', userId)
+    params.append('delta', String(delta))
+    return api.post('/points/adjust', params)
+  }
+}
