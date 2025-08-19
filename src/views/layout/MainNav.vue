@@ -1577,20 +1577,20 @@ export default {
 	flex: 1;
 	display: flex;
 	justify-content: flex-end;
-	padding: 0 24px 0 8px;
+	padding: 0 8px 0 8px;
 	position: relative;
-	margin-right: 64px;
+	margin-right: 40px;
 	min-width: 0;
 }
 
 /* 左移搜索栏 (从32px改为64px) */
 
 .search-box {
-	width: 36%;
+	width: 34%;
 	max-width: 380px;
 	min-width: 220px;
 	position: relative;
-	margin-right: 16px;
+	margin-right: 8px;
 	cursor: pointer;
 	flex-shrink: 0;
 }
@@ -1700,7 +1700,7 @@ export default {
 .actions {
 	display: flex;
 	align-items: center;
-	gap: 32px;
+	gap: 36px;
 	/* 增大两个按钮间距 */
 	margin-right: -24px;
 	flex-shrink: 0;
