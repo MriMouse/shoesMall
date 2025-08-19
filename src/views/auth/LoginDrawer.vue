@@ -26,8 +26,8 @@
 						<button class="link-btn" @click="currentView = 'register'">注册新账号</button>
 						<button class="link-btn" @click="currentView = 'forgot'">忘记密码？</button>
 					</div>
-					<!-- 个人中心访问提示 -->
-					<p v-if="showProfileAccessMessage && !loginError" class="profile-access-message">请先登陆后查看个人中心</p>
+					<!-- 访问受限提示（支持自定义文案） -->
+					<p v-if="(accessMessage || showProfileAccessMessage) && !loginError" class="profile-access-message">{{ accessMessage || '请先登陆后查看个人中心' }}</p>
 					<p v-if="loginError" class="error-message">{{ loginError }}</p>
 				</div>
 
@@ -128,6 +128,11 @@ export default {
 		showProfileAccessMessage: {
 			type: Boolean,
 			default: false
+		},
+		// 通用访问提示信息，用于如“请先登陆后查看购物车”等自定义提示
+		accessMessage: {
+			type: String,
+			default: ''
 		}
 	},
 	emits: ['update:modelValue', 'login-success'],

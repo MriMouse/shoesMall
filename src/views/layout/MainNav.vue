@@ -169,7 +169,7 @@
 				</div>
 			</div>
 			<div class="actions">
-				<button class="icon-btn" @click="goCart" aria-label="购物车">
+				<button class="icon-btn" :class="{ 'disabled': !isLoggedIn }" @click="goCart" aria-label="购物车">
 					<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"
 						stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<circle cx="9" cy="21" r="1" />
@@ -252,20 +252,26 @@
 
 	<!-- 子路由内容区域：在 /products 路径下，仅渲染产品列表页面 -->
 	<router-view />
+
+	<!-- 页面底部（仅在 /products 下显示） -->
+	<SiteFooter v-if="showFooterForProducts" />
 </template>
 
 <script>
 import { reactive, ref, onMounted, onBeforeUnmount, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { UserAPI } from '@/api';
 import axios from 'axios';
 import userManager from '../../utils/userManager';
+import SiteFooter from './Footer.vue';
 
 export default {
 	name: 'MainNav',
+	components: { SiteFooter },
 	emits: ['open-login'],
 	setup(props, { emit }) {
 		const router = useRouter();
+		const route = useRoute();
 		// 用户下拉菜单
 		const showUserMenu = ref(false);
 		let userMenuTimer = null;
@@ -887,8 +893,8 @@ export default {
 			if (isLoggedIn.value) {
 				router.push({ name: 'Cart' });
 			} else {
-				// 未登录时提示用户登录
-				alert('请先登录后再访问购物车');
+				// 未登录时打开登录抽屉，并展示购物车访问提示
+				emit('open-login', '请先登陆后查看购物车');
 			}
 		}
 
@@ -1386,8 +1392,11 @@ export default {
 			}
 		}
 
+		const showFooterForProducts = computed(() => route.path.startsWith('/products'));
+
 		return {
 			router,
+			showFooterForProducts,
 			isSticky,
 			activeMenuIndex,
 			currentGroup,
