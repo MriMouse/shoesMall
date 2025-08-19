@@ -1,114 +1,10 @@
 <template>
     <div class="product-display-container">
-        <!-- 顶部导航栏 -->
-        <header class="main-nav">
-            <div class="nav-inner">
-                <div class="brand" @click="goHome" aria-label="ShoesMall Home">
-                    <div class="brand-logo" role="img" aria-label="Shoes Logo">
-                        <svg viewBox="0 0 140 44" width="112" height="40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                <path
-                                    d="M10 30c8 0 16-2.5 24-8 3.5-2.6 5.5-6.5 8.5-6.5 4 0 9.5 7.5 18 10 7 2 12 2.5 17 6.5 2.8 2.2 4.8 5 4.8 7.2 0 2.2-2.4 3.8-6.8 3.8H26c-9.5 0-14-1-16.8-2.6-2.4-1.4-3.4-3-3.4-5.2 0-2.7 2.7-4.9 5-5.2z"
-                                    stroke="#111" stroke-width="3" />
-                                <path
-                                    d="M10 30c8 0 16-2.5 24-8 3.5-2.6 5.5-6.5 8.5-6.5 4 0 9.5 7.5 18 10 7 2 12 2.5 17 6.5 2.8 2.2 4.8 5 4.8 7.2 0 2.2-2.4 3.8-6.8 3.8H26c-9.5 0-14-1-16.8-2.6-2.4-1.4-3.4-3-3.4-5.2 0-2.7 2.7-4.9 5-5.2z"
-                                    stroke="#0a0a0a" stroke-width="1.5" />
-                                <path d="M61 16c2.8 1.6 6.5 3.9 9 5.5" stroke="#111" stroke-width="3" />
-                                <path d="M61 16c2.8 1.6 6.5 3.9 9 5.5" stroke="#0a0a0a" stroke-width="1.5" />
-                                <path d="M49 22h10M43 26h11M36 30h11" stroke="#111" stroke-width="3" />
-                                <path d="M49 22h10M43 26h11M36 30h11" stroke="#0a0a0a" stroke-width="1.6" />
-                                <path d="M24 40.5h84" stroke="#111" stroke-width="2" />
-                                <path d="M24 40.5h84" stroke="#0a0a0a" stroke-width="1" />
-                            </g>
-                        </svg>
-                    </div>
-                </div>
-                <nav class="primary-nav">
-                    <ul class="nav-list">
-                        <li class="nav-item">
-                            <span class="nav-link" @click="goHome">首页</span>
-                        </li>
-                        <li class="nav-item">
-                            <span class="nav-link" @click="filterBySex(1)">男鞋</span>
-                        </li>
-                        <li class="nav-item">
-                            <span class="nav-link" @click="filterBySex(2)">女鞋</span>
-                        </li>
-                        <li class="nav-item">
-                            <span class="nav-link" @click="filterBySex(3)">童鞋</span>
-                        </li>
-                    </ul>
-                </nav>
-                <div class="nav-search">
-                    <div class="search-container" :class="{ 'search-focused': isSearchFocused }">
-                        <div class="search-input-wrapper">
-                            <svg class="search-icon" viewBox="0 0 24 24" width="20" height="20" fill="none"
-                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                aria-hidden="true">
-                                <circle cx="11" cy="11" r="8" />
-                                <path d="m21 21-4.35-4.35" />
-                            </svg>
-                            <input 
-                                type="text" 
-                                v-model="searchKeyword" 
-                                @input="handleSearchInput"
-                                @keydown="handleSearchKeydown"
-                                placeholder="搜索商品、品牌或类型..."
-                                class="search-input-field"
-                                @focus="handleSearchFocus"
-                                @blur="handleSearchBlur"
-                                autocomplete="off"
-                                spellcheck="false"
-                            >
-                            <button 
-                                v-if="searchKeyword.trim()" 
-                                @click.stop="clearSearch" 
-                                class="clear-search-button"
-                                type="button"
-                                aria-label="清除搜索"
-                                title="清除搜索"
-                            >
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                </svg>
-                            </button>
-                        </div>
-                        <div v-if="isSearchFocused && searchKeyword.trim()" class="search-suggestions">
-                            <div class="suggestion-item" @click="submitSearch">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="11" cy="11" r="8" />
-                                    <path d="m21 21-4.35-4.35" />
-                                </svg>
-                                <span>搜索 "{{ searchKeyword }}"</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="actions">
-                    <button class="icon-btn" @click="goCart" aria-label="购物车">
-                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <circle cx="9" cy="21" r="1" />
-                            <circle cx="20" cy="21" r="1" />
-                            <path d="M1 1h4l2.68 12.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-                        </svg>
-                    </button>
-                    <button class="icon-btn" @click="goProfile" aria-label="个人中心">
-                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <circle cx="12" cy="8" r="3" />
-                            <path d="M4 20c0-3.314 3.582-6 8-6s8 2.686 8 6" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        </header>
 
         <!-- 面包屑导航 -->
         <div class="breadcrumb-section">
             <div class="breadcrumb-inner">
-                <span class="breadcrumb-item" @click="goHome">首页</span>
+                <span class="breadcrumb-item">首页</span>
                 <span class="breadcrumb-separator">/</span>
                 <span class="breadcrumb-item">{{ currentCategory }}</span>
                 <span v-if="currentSubCategory" class="breadcrumb-separator">/</span>
@@ -199,6 +95,52 @@
                             >
                                 {{ size.size }}
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 搜索框 -->
+                <div class="search-container" :class="{ 'search-focused': isSearchFocused }">
+                    <div class="search-input-wrapper">
+                        <svg class="search-icon" viewBox="0 0 24 24" width="20" height="20" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            aria-hidden="true">
+                            <circle cx="11" cy="11" r="8" />
+                            <path d="m21 21-4.35-4.35" />
+                        </svg>
+                        <input 
+                            type="text" 
+                            v-model="searchKeyword" 
+                            @input="handleSearchInput"
+                            @keydown="handleSearchKeydown"
+                            placeholder="搜索商品、品牌或类型..."
+                            class="search-input-field"
+                            @focus="handleSearchFocus"
+                            @blur="handleSearchBlur"
+                            autocomplete="off"
+                            spellcheck="false"
+                        >
+                        <button 
+                            v-if="searchKeyword.trim()" 
+                            @click.stop="clearSearch" 
+                            class="clear-search-button"
+                            type="button"
+                            aria-label="清除搜索"
+                            title="清除搜索"
+                        >
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <div v-if="isSearchFocused && searchKeyword.trim()" class="search-suggestions">
+                        <div class="suggestion-item" @click="submitSearch">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="m21 21-4.35-4.35" />
+                            </svg>
+                            <span>搜索 "{{ searchKeyword }}"</span>
                         </div>
                     </div>
                 </div>
@@ -902,18 +844,7 @@ const getProductCardStyle = (product) => {
     return { backgroundColor: '#eaeeef' }
 }
 
-// 导航功能
-const goHome = () => {
-    router.push('/')
-}
 
-const goCart = () => {
-    router.push('/cart')
-}
-
-const goProfile = () => {
-    router.push('/profile')
-}
 
 // 产品操作
 const viewProductDetails = (product) => {
@@ -1081,104 +1012,15 @@ onBeforeUnmount(() => {
     color: #000;
 }
 
-/* 顶部导航栏样式 */
-.main-nav {
-    position: sticky;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 1000;
-    background: #fff;
-    color: #000;
-    border-bottom: 1px solid #eee;
-}
 
-.nav-inner {
-    max-width: 1200px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 80px;
-    padding: 0 16px;
-    background: #fff;
-    box-sizing: border-box;
-    width: 100%;
-    position: relative;
-}
 
-.brand {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    margin-left: -42px;
-    flex-shrink: 0;
-}
 
-.brand-logo {
-    padding: 2px 0;
-    flex-shrink: 0;
-}
-
-.brand-logo svg {
-    display: block;
-    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.08));
-    max-width: 100%;
-    height: auto;
-}
-
-.primary-nav {
-    margin-left: 40px;
-    flex-shrink: 0;
-}
-
-.primary-nav .nav-list {
-    list-style: none;
-    display: flex;
-    gap: 24px;
-    align-items: center;
-    flex-wrap: nowrap;
-}
-
-.nav-item {
-    position: relative;
-    flex-shrink: 0;
-}
-
-.nav-link {
-    font-family: Helvetica Neue, Arial, sans-serif;
-    font-weight: 600;
-    font-size: 16px;
-    padding: 8px 4px;
-    color: #000;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: border-color .15s ease;
-    white-space: nowrap;
-    transform: translateZ(0);
-    will-change: border-color;
-}
-
-.nav-item:hover .nav-link {
-    border-color: #c6ff00;
-}
-
-.nav-search {
-    flex: 1;
-    display: flex;
-    justify-content: flex-end;
-    padding: 0 24px 0 8px;
-    position: relative;
-    margin-right: 64px;
-    min-width: 0;
-}
 
 .search-container {
-    width: 36%;
-    max-width: 380px;
-    min-width: 220px;
+    width: 300px;
+    max-width: 300px;
+    min-width: 250px;
     position: relative;
-    margin-right: 16px;
     flex-shrink: 0;
 }
 
@@ -1298,41 +1140,7 @@ onBeforeUnmount(() => {
     flex-shrink: 0;
 }
 
-.actions {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    margin-right: -42px;
-    flex-shrink: 0;
-}
 
-.icon-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: transparent;
-    border: 1.5px solid #000;
-    color: #000;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: background .1s ease, transform .1s ease, color .1s ease, border-color .1s ease;
-    flex-shrink: 0;
-    transform: translateZ(0);
-    will-change: background, transform, color, border-color;
-}
-
-.icon-btn:first-child {
-    margin-left: -32px;
-}
-
-.icon-btn:hover {
-    background: #000;
-    color: #fff;
-    border-color: #000;
-    transform: translateY(-1px) translateZ(0);
-}
 
 /* 面包屑导航样式 */
 .breadcrumb-section {
@@ -1406,6 +1214,7 @@ onBeforeUnmount(() => {
     justify-content: space-between;
     align-items: center;
     gap: 16px;
+    flex-wrap: wrap;
 }
 
 .filter-dropdowns {
@@ -1837,15 +1646,27 @@ onBeforeUnmount(() => {
 
 /* 搜索框响应式设计 */
 @media (max-width: 768px) {
-    .nav-search {
-        margin-right: 16px;
-        padding: 0 12px 0 8px;
+    .filter-sort-inner {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
     }
     
     .search-container {
         width: 100%;
         max-width: none;
         min-width: 200px;
+        order: 1;
+    }
+    
+    .filter-dropdowns {
+        order: 2;
+        justify-content: flex-start;
+    }
+    
+    .sort-options {
+        order: 3;
+        justify-content: center;
     }
     
     .search-input-field {
@@ -1872,11 +1693,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 480px) {
-    .nav-search {
-        margin-right: 8px;
-        padding: 0 8px 0 4px;
-    }
-    
     .search-container {
         min-width: 160px;
     }

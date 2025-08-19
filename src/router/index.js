@@ -5,6 +5,7 @@ import MenShoes from "../views/MenShoes.vue";
 import WomenShoes from "../views/WomenShoes.vue";
 import KidsShoes from "../views/KidsShoes.vue";
 import ProductListPage from "../components/ProductListPage.vue";
+import MainNav from "../views/layout/MainNav.vue";
 import ProductDetail from "../components/ProductDetail.vue";
 import OrderConfirmation from "../views/OrderConfirmation.vue";
 import Cart from "../views/Cart.vue";
@@ -52,9 +53,15 @@ const routes = [
     component: KidsShoes,
   },
   {
-    path: "/products",  // 修改为 /products
-    name: "ProductListPage",
-    component: ProductListPage,
+    path: "/products",
+    component: MainNav,
+    children: [
+      {
+        path: "",
+        name: "ProductListPage",
+        component: ProductListPage,
+      },
+    ],
   },
   {
     path: "/product/:id",
