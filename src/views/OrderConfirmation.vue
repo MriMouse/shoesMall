@@ -1841,6 +1841,18 @@ const confirmPayment = async () => {
                 
                 // 清除保存的订单数据（但保留商品列表和选择信息）
                 clearOrderData()
+                
+                // 将积分累计到后端用户表（integrel）
+                try {
+                    const userId = await userManager.getUserId()
+                    const username = userManager.getCurrentUsername()
+                    const pointsToAdd = totalPoints.value || 0
+                    if (userId && pointsToAdd > 0) {
+                        await UserAPI.addIntegralSmart({ userId, username, delta: pointsToAdd })
+                    }
+                } catch (e) {
+                    console.warn('累计积分到用户失败(不影响支付成功):', e?.message || e)
+                }
                 showPaymentSuccessModal()
             } else {
                 alert('库存更新失败，请联系客服处理')
@@ -2152,11 +2164,12 @@ const addMoreProducts = () => {
 }
 
 // 返回商品列表
-const goBack = () => {
-    // 保存当前订单数据
-    saveOrderData()
-    // 设置标记，表示从订单确认页面跳转
-    sessionStorage.setItem('fromOrderConfirmation', 'true')
+const goBack = async () => {
+    // 清空当前订单数据与商品清单
+    clearOrderData()
+    // 刷新购物车角标数量
+    await cartManager.refreshCartCount()
+    // 跳转到产品展示页面
     router.push('/products')
 }
 

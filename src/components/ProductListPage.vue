@@ -549,11 +549,6 @@ const fetchOptions = async () => {
     }
 }
 
-// 搜索功能
-const handleSearch = () => {
-    // 实时搜索，不需要防抖
-    applyFilters()
-}
 
 const handleSearchKeydown = (event) => {
     if (event.key === 'Enter') {
@@ -696,13 +691,6 @@ const toggleSexFilter = (value) => {
     applyFilters()
 }
 
-// 根据性别筛选
-const filterBySex = (sexValue) => {
-    selectedSexes.value = [sexValue]
-    currentCategory.value = sexValue === 1 ? '男鞋' : sexValue === 2 ? '女鞋' : '童鞋'
-    currentSubCategory.value = ''
-    applyFilters()
-}
 
 // 应用筛选和排序
 const applyFilters = () => {
@@ -761,6 +749,16 @@ const applyFilters = () => {
     // 应用排序
     filtered = applySorting(filtered)
     
+    // 同步页头分类显示：当性别筛选为空恢复默认，当只有一个性别时显示对应文案
+    if (selectedSexes.value.length === 0) {
+        currentCategory.value = '产品展示'
+        currentSubCategory.value = ''
+    } else if (selectedSexes.value.length === 1) {
+        const sex = selectedSexes.value[0]
+        currentCategory.value = sex === 1 ? '男鞋' : sex === 2 ? '女鞋' : '童鞋'
+        // 子分类不在此处设置，由其他筛选控制
+    }
+
     filteredProducts.value = filtered
     totalCount.value = filtered.length
     currentPage.value = 1 // 重置到第一页
@@ -953,6 +951,56 @@ const clearAllFilters = () => {
     applyFilters()
 }
 
+// 根据路由参数同步筛选
+function syncFiltersFromRoute() {
+    const q = route.query || {}
+
+    // 先清空已选筛选，避免遗留状态影响
+    selectedBrands.value = []
+    selectedTypes.value = []
+    selectedColors.value = []
+    selectedSizes.value = []
+    selectedSexes.value = []
+
+    // 1) 性别：支持 shoeSex 或 group(men/women/kids)
+    if (q.shoeSex) {
+        const sex = parseInt(q.shoeSex)
+        if (!isNaN(sex) && sex >= 1 && sex <= 4) {
+            selectedSexes.value = [sex]
+            currentCategory.value = sex === 1 ? '男鞋' : sex === 2 ? '女鞋' : '童鞋'
+        }
+    } else if (typeof q.group === 'string') {
+        const key = String(q.group).toLowerCase()
+        if (key === 'men') { selectedSexes.value = [1]; currentCategory.value = '男鞋' }
+        else if (key === 'women') { selectedSexes.value = [2]; currentCategory.value = '女鞋' }
+        else if (key === 'kids') { selectedSexes.value = [3]; currentCategory.value = '童鞋' }
+    }
+
+    // 2) 品牌与类型精确筛选（来自导航栏点击分类/品牌）
+    if (q.brandId) {
+        const bid = parseInt(q.brandId)
+        if (!isNaN(bid)) selectedBrands.value = [bid]
+    }
+    if (q.typeId) {
+        const tid = parseInt(q.typeId)
+        if (!isNaN(tid)) selectedTypes.value = [tid]
+    }
+
+    // 3) 搜索关键词：若为“男鞋/女鞋/童鞋”，自动转换为性别筛选
+    if (typeof q.q === 'string' && q.q.trim()) {
+        const kw = q.q.trim()
+        searchKeyword.value = kw
+        if (kw === '男鞋') { selectedSexes.value = [1]; currentCategory.value = '男鞋' }
+        if (kw === '女鞋') { selectedSexes.value = [2]; currentCategory.value = '女鞋' }
+        if (kw === '童鞋' || kw === '儿童鞋') { selectedSexes.value = [3]; currentCategory.value = '童鞋' }
+    } else {
+        searchKeyword.value = ''
+    }
+
+    // 应用所有条件
+    applyFilters()
+}
+
 // 生命周期钩子
 onMounted(async () => {
     try {
@@ -960,22 +1008,9 @@ onMounted(async () => {
         await fetchProducts()
         initIntersectionObserver()
         observeCurrentPage()
-        
-        // 从路由参数获取初始筛选值
-        if (route.query && route.query.shoeSex) {
-            const shoeSex = parseInt(route.query.shoeSex)
-            if (!isNaN(shoeSex) && shoeSex >= 1 && shoeSex <= 4) {
-                filterBySex(shoeSex)
-            }
-        }
-        
-        // 从路由参数获取搜索关键字
-        if (route.query && route.query.q) {
-            searchKeyword.value = route.query.q
-            setTimeout(() => {
-                handleSearch()
-            }, 100)
-        }
+
+        // 首次根据路由同步筛选
+        syncFiltersFromRoute()
 
         // 添加点击外部关闭下拉菜单的事件监听
         document.addEventListener('click', closeDropdowns)
@@ -989,6 +1024,11 @@ onMounted(async () => {
 watch([paginatedProducts, currentPage, pageSize], async () => {
     await nextTick()
     observeCurrentPage()
+})
+
+// 监听路由参数变化（从导航栏跳转/切换分类/品牌）
+watch(() => route.query, () => {
+    syncFiltersFromRoute()
 })
 
 onBeforeUnmount(() => {
