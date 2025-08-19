@@ -1,139 +1,231 @@
 <template>
     <div class="product-display-container">
-        <!-- 页面头部 -->
-        <div class="product-header">
-            <h2 class="title">
-                <span class="icon">👟</span>
-                产品展示
-            </h2>
+        <!-- 顶部导航栏 -->
+        <header class="main-nav">
+            <div class="nav-inner">
+                <div class="brand" @click="goHome" aria-label="ShoesMall Home">
+                    <div class="brand-logo" role="img" aria-label="Shoes Logo">
+                        <svg viewBox="0 0 140 44" width="112" height="40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <path
+                                    d="M10 30c8 0 16-2.5 24-8 3.5-2.6 5.5-6.5 8.5-6.5 4 0 9.5 7.5 18 10 7 2 12 2.5 17 6.5 2.8 2.2 4.8 5 4.8 7.2 0 2.2-2.4 3.8-6.8 3.8H26c-9.5 0-14-1-16.8-2.6-2.4-1.4-3.4-3-3.4-5.2 0-2.7 2.7-4.9 5-5.2z"
+                                    stroke="#111" stroke-width="3" />
+                                <path
+                                    d="M10 30c8 0 16-2.5 24-8 3.5-2.6 5.5-6.5 8.5-6.5 4 0 9.5 7.5 18 10 7 2 12 2.5 17 6.5 2.8 2.2 4.8 5 4.8 7.2 0 2.2-2.4 3.8-6.8 3.8H26c-9.5 0-14-1-16.8-2.6-2.4-1.4-3.4-3-3.4-5.2 0-2.7 2.7-4.9 5-5.2z"
+                                    stroke="#0a0a0a" stroke-width="1.5" />
+                                <path d="M61 16c2.8 1.6 6.5 3.9 9 5.5" stroke="#111" stroke-width="3" />
+                                <path d="M61 16c2.8 1.6 6.5 3.9 9 5.5" stroke="#0a0a0a" stroke-width="1.5" />
+                                <path d="M49 22h10M43 26h11M36 30h11" stroke="#111" stroke-width="3" />
+                                <path d="M49 22h10M43 26h11M36 30h11" stroke="#0a0a0a" stroke-width="1.6" />
+                                <path d="M24 40.5h84" stroke="#111" stroke-width="2" />
+                                <path d="M24 40.5h84" stroke="#0a0a0a" stroke-width="1" />
+                            </g>
+                        </svg>
+                    </div>
+                </div>
+                <nav class="primary-nav">
+                    <ul class="nav-list">
+                        <li class="nav-item">
+                            <span class="nav-link" @click="goHome">首页</span>
+                        </li>
+                        <li class="nav-item">
+                            <span class="nav-link" @click="filterBySex(1)">男鞋</span>
+                        </li>
+                        <li class="nav-item">
+                            <span class="nav-link" @click="filterBySex(2)">女鞋</span>
+                        </li>
+                        <li class="nav-item">
+                            <span class="nav-link" @click="filterBySex(3)">童鞋</span>
+                        </li>
+                    </ul>
+                </nav>
+                <div class="nav-search">
+                    <div class="search-box" :class="{ focus: isSearchFocused }">
+                        <div class="search-placeholder">
+                            <svg class="search-icon" viewBox="0 0 20 20" width="20" height="20" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                aria-hidden="true" shape-rendering="geometricPrecision">
+                                <circle cx="9" cy="9" r="6" vector-effect="non-scaling-stroke" />
+                                <path d="M18 18l-4.5-4.5" vector-effect="non-scaling-stroke" />
+                            </svg>
+                            <span v-if="!isSearchFocused">搜索商品、品牌或类型</span>
+                            <input 
+                                v-else
+                                type="text" 
+                                v-model="searchKeyword" 
+                                @input="handleSearch"
+                                @keydown="handleSearchKeydown"
+                                placeholder="搜索商品、品牌或类型"
+                                class="search-input"
+                                @focus="isSearchFocused = true"
+                                @blur="isSearchFocused = false"
+                            >
+                        </div>
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="icon-btn" @click="goCart" aria-label="购物车">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="9" cy="21" r="1" />
+                            <circle cx="20" cy="21" r="1" />
+                            <path d="M1 1h4l2.68 12.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                        </svg>
+                    </button>
+                    <button class="icon-btn" @click="goProfile" aria-label="个人中心">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="8" r="3" />
+                            <path d="M4 20c0-3.314 3.582-6 8-6s8 2.686 8 6" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 面包屑导航 -->
+        <div class="breadcrumb-section">
+            <div class="breadcrumb-inner">
+                <span class="breadcrumb-item" @click="goHome">首页</span>
+                <span class="breadcrumb-separator">/</span>
+                <span class="breadcrumb-item">{{ currentCategory }}</span>
+                <span v-if="currentSubCategory" class="breadcrumb-separator">/</span>
+                <span v-if="currentSubCategory" class="breadcrumb-item">{{ currentSubCategory }}</span>
+            </div>
+        </div>
+
+        <!-- 页面标题 -->
+        <div class="page-title-section">
+            <h1 class="page-title">{{ currentCategory }}{{ currentSubCategory ? ' - ' + currentSubCategory : '' }}</h1>
             <div class="product-count">总计: {{ totalCount }} 种商品</div>
         </div>
 
-        <!-- 搜索区域 -->
-        <div class="search-section">
-            <div class="search-container">
-                <div class="search-input-group">
-                    <input 
-                        type="text" 
-                        v-model="searchKeyword" 
-                        @input="handleSearch"
-                        placeholder="搜索产品名称、序列号或描述..."
-                        class="search-input"
-                    >
-                    <button class="search-btn" @click="handleSearch">
-                        🔍
-                    </button>
+        <!-- 筛选和排序区域 -->
+        <div class="filter-sort-section">
+            <div class="filter-sort-inner">
+                <!-- 筛选下拉菜单 -->
+                <div class="filter-dropdowns">
+                    <div class="filter-dropdown" @click.stop="toggleDropdown('gender')" v-if="!isSexFiltered">
+                        <span class="dropdown-label">性别</span>
+                        <span class="dropdown-arrow">▼</span>
+                        <div v-if="activeDropdown === 'gender'" class="dropdown-menu" @click.stop>
+                            <div class="dropdown-item" @click="toggleSexFilter(1)">男鞋</div>
+                            <div class="dropdown-item" @click="toggleSexFilter(2)">女鞋</div>
+                            <div class="dropdown-item" @click="toggleSexFilter(3)">童鞋</div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-dropdown" @click.stop="toggleDropdown('category')">
+                        <span class="dropdown-label">产品分类</span>
+                        <span class="dropdown-arrow">▼</span>
+                        <div v-if="activeDropdown === 'category'" class="dropdown-menu" @click.stop>
+                            <div 
+                                v-for="type in types" 
+                                :key="type.typeId"
+                                class="dropdown-item"
+                                @click="toggleTypeFilter(type.typeId)"
+                            >
+                                {{ type.typeName }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-dropdown" @click.stop="toggleDropdown('brand')">
+                        <span class="dropdown-label">品牌</span>
+                        <span class="dropdown-arrow">▼</span>
+                        <div v-if="activeDropdown === 'brand'" class="dropdown-menu" @click.stop>
+                            <div 
+                                v-for="brand in brands" 
+                                :key="brand.brandId"
+                                class="dropdown-item"
+                                @click="toggleBrandFilter(brand.brandId)"
+                            >
+                                {{ brand.brandName }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-dropdown" @click.stop="toggleDropdown('color')">
+                        <span class="dropdown-label">颜色</span>
+                        <span class="dropdown-arrow">▼</span>
+                        <div v-if="activeDropdown === 'color'" class="dropdown-menu" @click.stop>
+                            <div 
+                                v-for="color in colors" 
+                                :key="color.colorId"
+                                class="dropdown-item"
+                                @click="toggleColorFilter(color.colorId)"
+                            >
+                                {{ color.colorName }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-dropdown" @click.stop="toggleDropdown('size')">
+                        <span class="dropdown-label">尺码</span>
+                        <span class="dropdown-arrow">▼</span>
+                        <div v-if="activeDropdown === 'size'" class="dropdown-menu" @click.stop>
+                            <div 
+                                v-for="size in sizes" 
+                                :key="size.sizeId"
+                                class="dropdown-item"
+                                @click="toggleSizeFilter(size.sizeId)"
+                            >
+                                {{ size.size }}
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="search-options">
-                    <label class="search-option">
-                        <input type="checkbox" v-model="searchInName" @change="handleSearch">
-                        产品名称
-                    </label>
-                    <label class="search-option">
-                        <input type="checkbox" v-model="searchInSerial" @change="handleSearch">
-                        序列号
-                    </label>
-                    <label class="search-option">
-                        <input type="checkbox" v-model="searchInDescription" @change="handleSearch">
-                        描述
-                    </label>
+
+                <!-- 排序选项 -->
+                <div class="sort-options">
+                    <div class="sort-button" @click="togglePriceSort">
+                        <span>价格</span>
+                        <span class="price-arrow">{{ priceSortDirection === 'asc' ? '↑' : '↓' }}</span>
+                    </div>
+                    
+                    <div class="sort-button" @click="setSort('new')">
+                        <span>新品</span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- 筛选区域 -->
-        <div class="filter-section">
-            <h3 class="filter-title">条件筛选</h3>
-            <div class="filter-container">
-                <!-- 品牌筛选 -->
-                <div class="filter-group">
-                    <label class="filter-label">品牌:</label>
-                    <div class="filter-options">
-                        <button 
-                            v-for="brand in brands" 
-                            :key="brand.brandId"
-                            @click="toggleBrandFilter(brand.brandId)"
-                            class="filter-option"
-                            :class="{ 'active': selectedBrands.includes(brand.brandId) }"
-                        >
-                            {{ brand.brandName }}
-                        </button>
+        <!-- 筛选选项显示 -->
+        <div v-if="hasActiveFilters" class="active-filters-section">
+            <div class="active-filters-inner">
+                <span class="filters-label">已选筛选：</span>
+                <div class="filter-tags">
+                    <!-- 性别筛选标签 -->
+                    <div v-for="sex in selectedSexes" :key="`sex-${sex}`" class="filter-tag">
+                        <span>{{ getSexText(sex) }}</span>
+                        <button @click="removeSexFilter(sex)" class="tag-close">×</button>
+                    </div>
+                    
+                    <!-- 品牌筛选标签 -->
+                    <div v-for="brandId in selectedBrands" :key="`brand-${brandId}`" class="filter-tag">
+                        <span>{{ getBrandName(brandId) }}</span>
+                        <button @click="removeBrandFilter(brandId)" class="tag-close">×</button>
+                    </div>
+                    
+                    <!-- 类型筛选标签 -->
+                    <div v-for="typeId in selectedTypes" :key="`type-${typeId}`" class="filter-tag">
+                        <span>{{ getTypeName(typeId) }}</span>
+                        <button @click="removeTypeFilter(typeId)" class="tag-close">×</button>
+                    </div>
+                    
+                    <!-- 颜色筛选标签 -->
+                    <div v-for="colorId in selectedColors" :key="`color-${colorId}`" class="filter-tag">
+                        <span>{{ getColorName(colorId) }}</span>
+                        <button @click="removeColorFilter(colorId)" class="tag-close">×</button>
+                    </div>
+                    
+                    <!-- 尺码筛选标签 -->
+                    <div v-for="sizeId in selectedSizes" :key="`size-${sizeId}`" class="filter-tag">
+                        <span>{{ getSizeName(sizeId) }}</span>
+                        <button @click="removeSizeFilter(sizeId)" class="tag-close">×</button>
                     </div>
                 </div>
-
-                <!-- 版型筛选 -->
-                <div class="filter-group">
-                    <label class="filter-label">版型:</label>
-                    <div class="filter-options">
-                        <button 
-                            v-for="type in types" 
-                            :key="type.typeId"
-                            @click="toggleTypeFilter(type.typeId)"
-                            class="filter-option"
-                            :class="{ 'active': selectedTypes.includes(type.typeId) }"
-                        >
-                            {{ type.typeName }}
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 性别筛选 -->
-                <div class="filter-group">
-                    <label class="filter-label">性别:</label>
-                    <div class="filter-options">
-                        <button 
-                            v-for="sex in sexOptions" 
-                            :key="sex.value"
-                            @click="toggleSexFilter(sex.value)"
-                            class="filter-option"
-                            :class="{ 'active': selectedSexes.includes(sex.value) }"
-                            :title="`选择${sex.label}`"
-                        >
-                            {{ sex.label }}
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 颜色筛选 -->
-                <div class="filter-group">
-                    <label class="filter-label">颜色:</label>
-                    <div class="filter-options">
-                        <button 
-                            v-for="color in colors" 
-                            :key="color.colorId"
-                            @click="toggleColorFilter(color.colorId)"
-                            class="filter-option"
-                            :class="{ 'active': selectedColors.includes(color.colorId) }"
-                        >
-                            {{ color.colorName }}
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 尺码筛选 - 显示所有尺码，不显示库存状态 -->
-                <div class="filter-group">
-                    <label class="filter-label">尺码:</label>
-                    <div class="filter-options">
-                        <button 
-                            v-for="size in sizes" 
-                            :key="size.sizeId"
-                            @click="toggleSizeFilter(size.sizeId)"
-                            class="filter-option"
-                            :class="{ 'active': selectedSizes.includes(size.sizeId) }"
-                            :title="`选择尺码 ${size.size}`"
-                        >
-                            {{ size.size }}
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 清除筛选按钮 -->
-            <div class="filter-actions">
-                <button @click="clearAllFilters" class="clear-filters-btn">
-                    <span class="btn-icon">🗑️</span>
-                    清除所有筛选
-                </button>
+                <button @click="clearAllFilters" class="clear-filters-btn">清除全部</button>
             </div>
         </div>
 
@@ -152,80 +244,19 @@
                     :key="product.shoeId" 
                     :data-product-id="product.shoeId"
                     class="product-card"
-                    :style="(product.images && product.images.length > 0) ? { backgroundImage: 'url(' + '/api/shoeImg/getImage/' + product.images[(product.currentImageIndex || 0)].imagePath + ')', backgroundSize: '80%', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}"
+                    @click="viewProductDetails(product)"
+                    :style="getProductCardStyle(product)"
                 >
-                    <!-- 产品图片 -->
-                    <div class="product-image-container" @click="showImageGallery(product)">
-                        <div v-if="product.images && product.images.length > 0" class="product-images">
-                            <div class="image-carousel">
-                                <!-- 使用卡片背景图展示，移除内层 img 以避免重复显示 -->
-                                <!-- 图片切换按钮 -->
-                                <div v-if="product.images.length > 1" class="image-selector">
-                                    <button 
-                                        class="image-switch-btn" 
-                                        @click.stop="cycleProductImage(product)"
-                                        :title="`切换图片 (${(product.currentImageIndex || 0) + 1}/${product.images.length})`"
-                                    >
-                                        {{ (product.currentImageIndex || 0) + 1 }}/{{ product.images.length }}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div v-else class="no-image">
-                            📷
-                        </div>
+                    <div class="badge" v-if="product.discountPrice && product.discountPrice < product.price">限时直降</div>
+                    <div class="card-media">
+                        <div v-if="!getProductImage(product)" class="no-image">📷</div>
                     </div>
-
-                    <!-- 产品信息 -->
-                    <div class="product-info">
-                        <h4 class="product-name" :title="product.name">{{ product.name }}</h4>
-                        <p class="product-serial">{{ product.serialNumber }}</p>
-                        
-                        <div class="product-details">
-                            <span class="brand-tag">{{ product.brand?.brandName || 'N/A' }}</span>
-                            <span class="type-tag">{{ product.shoesType?.typeName || 'N/A' }}</span>
-                            <span class="color-tag">{{ product.color?.colorName || 'N/A' }}</span>
-                            <span class="sex-tag">{{ getShoeSexText(product.shoeSex) }}</span>
+                    <div class="card-body">
+                        <div class="price-row">
+                            <span class="current">¥{{ product.discountPrice || product.price }}</span>
+                            <span v-if="product.discountPrice && product.discountPrice < product.price" class="original">¥{{ product.price }}</span>
                         </div>
-
-                        <div class="price-section">
-                            <span class="original-price">¥{{ product.price }}</span>
-                            <span v-if="product.discountPrice" class="discount-price">¥{{ product.discountPrice }}</span>
-                        </div>
-
-                        <div class="product-meta">
-                            <span class="sales-info">销量: {{ product.salesVolume || 0 }}</span>
-                            <span class="points-info">积分: {{ product.points || 0 }}</span>
-                        </div>
-
-                        <!-- 显示产品所有尺码 - 修复尺码显示问题 -->
-                        <div class="available-sizes">
-                            <span class="sizes-label">可用尺码:</span>
-                            <div class="size-tags">
-                                <span 
-                                    v-for="size in getProductAllSizes(product.shoeId)" 
-                                    :key="size.sizeId"
-                                    class="size-tag"
-                                    :class="{ 'no-stock': size.inventoryNumber === 0 }"
-                                    :title="`尺码 ${size.size}: ${size.inventoryNumber > 0 ? size.inventoryNumber + ' 双库存' : '无库存'}`"
-                                >
-                                    {{ size.size }}
-                                </span>
-                                <!-- 如果没有尺码数据，显示提示信息 -->
-                                <span v-if="getProductAllSizes(product.shoeId).length === 0" class="no-sizes-info">
-                                    暂无尺码信息
-                                </span>
-                            </div>
-                        </div>
-
-                        <div class="product-actions">
-                            <button class="view-details-btn" @click="viewProductDetails(product)">
-                                查看详情
-                            </button>
-                            <button class="add-to-cart-btn" @click="addToCart(product)">
-                                加入购物车
-                            </button>
-                        </div>
+                        <div class="name" :title="product.name">{{ product.name }}</div>
                     </div>
                 </div>
             </div>
@@ -266,41 +297,6 @@
                 <button class="page-btn" @click="goToPage(totalPages)" :disabled="currentPage === totalPages">末页</button>
             </div>
         </div>
-
-        <!-- 图片画廊模态框 -->
-        <div v-if="showImageGalleryModal" class="dialog-overlay" @click="closeImageGallery">
-            <div class="dialog image-gallery-dialog" @click.stop>
-                <div class="dialog-header">
-                    <h3>{{ galleryProduct?.name }} - 图片展示</h3>
-                    <button class="close-btn" @click="closeImageGallery">✕</button>
-                </div>
-                <div class="dialog-content">
-                    <div class="gallery-main-image">
-                        <img 
-                            v-if="galleryProduct?.images?.length > 0"
-                            :src="`/api/shoeImg/getImage/${galleryProduct.images[galleryCurrentIndex].imagePath}`"
-                            :alt="galleryProduct.name" 
-                            class="main-gallery-image"
-                        >
-                        <div v-if="galleryProduct?.images?.length > 1" class="gallery-controls">
-                            <button @click="previousGalleryImage" class="gallery-nav-btn prev">‹</button>
-                            <button @click="nextGalleryImage" class="gallery-nav-btn next">›</button>
-                        </div>
-                    </div>
-                    <div v-if="galleryProduct?.images?.length > 1" class="gallery-thumbnails">
-                        <img 
-                            v-for="(image, index) in galleryProduct.images" 
-                            :key="image.imgId"
-                            :src="`/api/shoeImg/getImage/${image.imagePath}`"
-                            :alt="`${galleryProduct.name} ${index + 1}`" 
-                            class="gallery-thumbnail"
-                            :class="{ 'active': index === galleryCurrentIndex }" 
-                            @click="galleryCurrentIndex = index"
-                        >
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 </template>
 
@@ -324,7 +320,6 @@ const types = ref([])
 const colors = ref([])
 const sizes = ref([])
 
-
 // 筛选状态
 const selectedBrands = ref([])
 const selectedTypes = ref([])
@@ -332,13 +327,25 @@ const selectedColors = ref([])
 const selectedSizes = ref([])
 const selectedSexes = ref([])
 
-// 性别选项
-const sexOptions = [
-    { value: 1, label: '男鞋' },
-    { value: 2, label: '女鞋' },
-    { value: 3, label: '童鞋' },
-    { value: 4, label: '其他' }
-]
+// 搜索功能
+const searchKeyword = ref('')
+const isSearchFocused = ref(false)
+
+// 分页数据
+const currentPage = ref(1)
+const pageSize = ref(20)
+const totalCount = ref(0)
+
+// 下拉菜单状态
+const activeDropdown = ref(null)
+
+// 排序状态
+const currentSort = ref('default')
+const priceSortDirection = ref('desc')
+
+// 当前分类信息
+const currentCategory = ref('产品展示')
+const currentSubCategory = ref('')
 
 // 资源缓存与并发控制
 const imageCache = new Map()
@@ -346,22 +353,6 @@ const inventoryCache = new Map()
 const inFlightImages = new Set()
 const inFlightInventories = new Set()
 let productCardIo = null
-
-// 搜索功能
-const searchKeyword = ref('')
-const searchInName = ref(true)
-const searchInSerial = ref(true)
-const searchInDescription = ref(false)
-
-// 分页数据
-const currentPage = ref(1)
-const pageSize = ref(20) // 每页20条产品
-const totalCount = ref(0)
-
-// 图片画廊
-const showImageGalleryModal = ref(false)
-const galleryProduct = ref(null)
-const galleryCurrentIndex = ref(0)
 
 // 计算属性
 const totalPages = computed(() => {
@@ -385,7 +376,20 @@ const paginatedProducts = computed(() => {
     return filteredProducts.value.slice(start, end)
 })
 
-// 优化后的 fetchProducts：仅获取产品基本信息，其它资源按需懒加载
+// 新增：筛选相关计算属性
+const hasActiveFilters = computed(() => {
+    return selectedBrands.value.length > 0 || 
+           selectedTypes.value.length > 0 || 
+           selectedColors.value.length > 0 || 
+           selectedSizes.value.length > 0 || 
+           selectedSexes.value.length > 0
+})
+
+const isSexFiltered = computed(() => {
+    return selectedSexes.value.length > 0
+})
+
+// 获取产品数据
 const fetchProducts = async () => {
     loading.value = true
     error.value = ''
@@ -397,7 +401,6 @@ const fetchProducts = async () => {
         if (productResponse.data && productResponse.data.data) {
             const productList = productResponse.data.data.map(p => {
                 const item = reactive({ ...p })
-                // 占位字段，避免模板初次渲染抖动
                 item.images = Array.isArray(item.images) ? item.images : []
                 item.currentImageIndex = 0
                 item.inventoryData = Array.isArray(item.inventoryData) ? item.inventoryData : []
@@ -423,91 +426,11 @@ const fetchProducts = async () => {
     }
 }
 
-// 初始化并配置 IntersectionObserver
-function initIntersectionObserver() {
-    if (productCardIo) {
-        productCardIo.disconnect()
-    }
-    productCardIo = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const id = Number(entry.target.getAttribute('data-product-id'))
-                ensureProductResources(id)
-                productCardIo && productCardIo.unobserve(entry.target)
-            }
-        })
-    }, { root: null, rootMargin: '300px 0px', threshold: 0.01 })
-}
-
-// 观察当前分页中的卡片
-function observeCurrentPage() {
-    if (!productCardIo) initIntersectionObserver()
-    const container = document.querySelector('.products-grid')
-    if (!container) return
-    const cards = container.querySelectorAll('.product-card')
-    cards.forEach(card => productCardIo.observe(card))
-}
-
-// 按需加载指定产品的图片与库存
-async function ensureProductResources(shoeId) {
-    const product = products.value.find(p => p.shoeId === shoeId)
-    if (!product) return
-
-    // 加载图片（带缓存与并发保护）
-    if (!product.images || product.images.length === 0) {
-        if (imageCache.has(shoeId)) {
-            product.images = imageCache.get(shoeId)
-            product.currentImageIndex = 0
-        } else if (!inFlightImages.has(shoeId)) {
-            inFlightImages.add(shoeId)
-            try {
-                const imageResponse = await axios.get(`/api/shoeImg/list/${shoeId}`)
-                const imgs = (imageResponse.data && imageResponse.data.data) ? imageResponse.data.data : []
-                product.images = imgs
-                product.currentImageIndex = 0
-                imageCache.set(shoeId, imgs)
-            } catch (e) {
-                product.images = []
-            } finally {
-                inFlightImages.delete(shoeId)
-            }
-        }
-    }
-
-    // 加载库存（带缓存与并发保护）
-    if (!product.inventoryData || product.inventoryData.length === 0) {
-        if (inventoryCache.has(shoeId)) {
-            product.inventoryData = inventoryCache.get(shoeId)
-        } else if (!inFlightInventories.has(shoeId)) {
-            inFlightInventories.add(shoeId)
-            try {
-                const inventoryResponse = await axios.get(`/api/inventory/getInventoryByShoeId/${shoeId}`)
-                let inventoryArray = []
-                const data = inventoryResponse.data?.data
-                if (Array.isArray(data)) {
-                    inventoryArray = data
-                } else if (data?.inventories) {
-                    inventoryArray = data.inventories
-                } else if (data?.sizeInventories) {
-                    inventoryArray = data.sizeInventories
-                } else if (data) {
-                    inventoryArray = [data]
-                }
-                product.inventoryData = inventoryArray
-                inventoryCache.set(shoeId, inventoryArray)
-            } catch (e) {
-                product.inventoryData = []
-            } finally {
-                inFlightInventories.delete(shoeId)
-            }
-        }
-    }
-}
-
 // 获取筛选选项数据
 const fetchOptions = async () => {
     try {
-        // 并行请求所有筛选选项，提高加载速度
+        console.log('开始获取筛选选项数据...')
+        
         const [brandResponse, typeResponse, colorResponse, sizeResponse] = await Promise.all([
             axios.post('/api/brand/getAll', {}, {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
@@ -523,81 +446,62 @@ const fetchOptions = async () => {
             })
         ])
 
-        // 处理品牌数据
+        console.log('品牌响应:', brandResponse.data)
+        console.log('类型响应:', typeResponse.data)
+        console.log('颜色响应:', colorResponse.data)
+        console.log('尺码响应:', sizeResponse.data)
+
         if (brandResponse.data && brandResponse.data.data) {
             brands.value = brandResponse.data.data.filter(brand => !brand.brandDisabled)
+            console.log('加载品牌数据:', brands.value.length, '个')
         }
 
-        // 处理版型数据
         if (typeResponse.data && typeResponse.data.data) {
             types.value = typeResponse.data.data.filter(type => !type.typeDisabled)
+            console.log('加载类型数据:', types.value.length, '个')
         }
 
-        // 处理颜色数据
         if (colorResponse.data && colorResponse.data.data) {
             colors.value = colorResponse.data.data.filter(color => !color.colorDisabled)
+            console.log('加载颜色数据:', colors.value.length, '个')
         }
 
-        // 处理尺码数据
         if (sizeResponse.data && sizeResponse.data.data) {
             sizes.value = sizeResponse.data.data.filter(size => !size.sizeDisabled)
+            console.log('加载尺码数据:', sizes.value.length, '个')
         }
     } catch (error) {
         console.error('获取筛选选项失败:', error)
-    }
-}
-
-// 修复后的 getProductAllSizes 函数 - 使用 ProductDetail 的库存调用方式
-const getProductAllSizes = (shoeId) => {
-    // 从产品对象中获取库存数据
-    const product = products.value.find(p => p.shoeId === shoeId)
-    if (!product || !product.inventoryData || !Array.isArray(product.inventoryData)) {
-        console.log(`产品 ${shoeId} 没有库存数据`)
-        return []
-    }
-    
-    console.log(`产品 ${shoeId} 的库存数据:`, product.inventoryData)
-    
-    // 直接使用库存数据，因为已经通过 ProductDetail 的方式处理过了
-    const result = product.inventoryData
-        .map(inv => ({
-            sizeId: inv.sizeId,
-            size: inv.size,
-            inventoryNumber: inv.inventoryNumber || 0
-        }))
-        .filter(item => item.size && item.size !== 'undefined') // 过滤掉无效的尺码
-        .sort((a, b) => {
-            // 按尺码大小排序，处理数字和字符串混合的情况
-            const aSize = parseInt(a.size) || 0
-            const bSize = parseInt(b.size) || 0
-            return aSize - bSize
-        })
-    
-    console.log(`产品 ${shoeId} 的最终尺码结果:`, result)
-    return result
-}
-
-// 获取鞋子性别文本
-const getShoeSexText = (shoeSex) => {
-    if (!shoeSex) return 'N/A'
-    
-    switch (Number(shoeSex)) {
-        case 1:
-            return '男鞋'
-        case 2:
-            return '女鞋'
-        case 3:
-            return '童鞋'
-        case 4:
-            return '其他'
-        default:
-            return '未知'
+        // 设置默认值，避免页面崩溃
+        brands.value = []
+        types.value = []
+        colors.value = []
+        sizes.value = []
     }
 }
 
 // 搜索功能
 const handleSearch = () => {
     applyFilters()
+}
+
+const handleSearchKeydown = (event) => {
+    if (event.key === 'Enter') {
+        event.preventDefault()
+        submitSearch()
+    }
+}
+
+const submitSearch = () => {
+    if (!searchKeyword.value.trim()) return
+    
+    // 跳转到产品列表页面，传递搜索关键字
+    router.push({ 
+        name: 'ProductListPage', 
+        query: { q: searchKeyword.value.trim() } 
+    })
+    
+    isSearchFocused.value = false
 }
 
 const searchProducts = (products) => {
@@ -607,21 +511,30 @@ const searchProducts = (products) => {
 
     const keyword = searchKeyword.value.toLowerCase().trim()
     return products.filter(product => {
-        // 检查产品名称
-        if (searchInName.value && product.name && product.name.toLowerCase().includes(keyword)) {
+        // 搜索商品名称
+        if (product.name && product.name.toLowerCase().includes(keyword)) {
             return true
         }
-        
-        // 检查序列号
-        if (searchInSerial.value && product.serialNumber && product.serialNumber.toLowerCase().includes(keyword)) {
+        // 搜索品牌名称
+        if (product.brand?.brandName && product.brand.brandName.toLowerCase().includes(keyword)) {
             return true
         }
-        
-        // 检查描述
-        if (searchInDescription.value && product.description && product.description.toLowerCase().includes(keyword)) {
+        // 搜索商品类型
+        if (product.shoesType?.typeName && product.shoesType.typeName.toLowerCase().includes(keyword)) {
             return true
         }
-        
+        // 搜索颜色
+        if (product.color?.colorName && product.color.colorName.toLowerCase().includes(keyword)) {
+            return true
+        }
+        // 搜索产品编号
+        if (product.serialNumber && product.serialNumber.toLowerCase().includes(keyword)) {
+            return true
+        }
+        // 搜索描述
+        if (product.description && product.description.toLowerCase().includes(keyword)) {
+            return true
+        }
         return false
     })
 }
@@ -677,20 +590,19 @@ const toggleSexFilter = (value) => {
     applyFilters()
 }
 
-const clearAllFilters = () => {
-    selectedBrands.value = []
-    selectedTypes.value = []
-    selectedColors.value = []
-    selectedSizes.value = []
-    selectedSexes.value = []
-    searchKeyword.value = ''
+// 根据性别筛选
+const filterBySex = (sexValue) => {
+    selectedSexes.value = [sexValue]
+    currentCategory.value = sexValue === 1 ? '男鞋' : sexValue === 2 ? '女鞋' : '童鞋'
+    currentSubCategory.value = ''
     applyFilters()
 }
 
+// 应用筛选和排序
 const applyFilters = () => {
     let filtered = [...products.value]
 
-    // 先应用搜索
+    // 应用搜索
     filtered = searchProducts(filtered)
 
     // 品牌筛选
@@ -721,67 +633,110 @@ const applyFilters = () => {
         )
     }
 
-    // 尺码筛选 - 修复：只要该产品有该尺码记录就显示
+    // 尺码筛选
     if (selectedSizes.value.length > 0) {
         filtered = filtered.filter(product => {
             const productInventory = product.inventoryData || []
-            // 只要该产品有选中尺码的库存记录就显示，不管库存数量
             return productInventory.some(inv => 
                 selectedSizes.value.includes(inv.sizeId)
             )
         })
     }
 
+    // 应用排序
+    filtered = applySorting(filtered)
+
     filteredProducts.value = filtered
     totalCount.value = filtered.length
-    currentPage.value = 1 // 重置到第一页
+    currentPage.value = 1
 }
 
-// 图片轮播功能
-const cycleProductImage = async (product) => {
-    if (product.images && product.images.length > 1) {
-        const currentIndex = product.currentImageIndex || 0
-        const nextIndex = (currentIndex + 1) % product.images.length
-        product.currentImageIndex = nextIndex
-        await nextTick()
+// 排序功能
+const applySorting = (products) => {
+    const sorted = [...products]
+    
+    switch (currentSort.value) {
+        case 'price-asc':
+            return sorted.sort((a, b) => (a.discountPrice || a.price) - (b.discountPrice || b.price))
+        case 'price-desc':
+            return sorted.sort((a, b) => (b.discountPrice || b.price) - (a.discountPrice || a.price))
+        case 'name':
+            return sorted.sort((a, b) => a.name.localeCompare(b.name))
+        case 'new':
+            return sorted.sort((a, b) => b.shoeId - a.shoeId) // 假设ID越大越新
+        default:
+            return sorted
     }
 }
 
-// 图片画廊功能
-const showImageGallery = (product) => {
+const setSort = (sortType) => {
+    currentSort.value = sortType
+    if (sortType === 'price-asc' || sortType === 'price-desc') {
+        priceSortDirection.value = sortType === 'price-asc' ? 'asc' : 'desc'
+    }
+    applyFilters()
+    activeDropdown.value = null
+}
+
+const togglePriceSort = () => {
+    priceSortDirection.value = priceSortDirection.value === 'asc' ? 'desc' : 'asc'
+    currentSort.value = priceSortDirection.value === 'asc' ? 'price-asc' : 'price-desc'
+    applyFilters()
+}
+
+// 下拉菜单控制
+const toggleDropdown = (dropdownName) => {
+    if (activeDropdown.value === dropdownName) {
+        activeDropdown.value = null
+    } else {
+        activeDropdown.value = dropdownName
+    }
+}
+
+// 点击外部关闭下拉菜单
+const closeDropdowns = () => {
+    activeDropdown.value = null
+}
+
+// 获取产品图片
+const getProductImage = (product) => {
     if (product.images && product.images.length > 0) {
-        galleryProduct.value = product
-        galleryCurrentIndex.value = product.currentImageIndex || 0
-        showImageGalleryModal.value = true
+        const currentIndex = product.currentImageIndex || 0
+        return `/api/shoeImg/getImage/${product.images[currentIndex].imagePath}`
     }
+    return null
 }
 
-const closeImageGallery = () => {
-    showImageGalleryModal.value = false
-    galleryProduct.value = null
-    galleryCurrentIndex.value = 0
+// 获取产品卡片样式
+const getProductCardStyle = (product) => {
+    const imageUrl = getProductImage(product)
+    if (imageUrl) {
+        return {
+            backgroundImage: `url(${imageUrl})`,
+            backgroundSize: '80%',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            backgroundColor: '#eaeeef'
+        }
+    }
+    return { backgroundColor: '#eaeeef' }
 }
 
-const previousGalleryImage = () => {
-    if (galleryProduct.value && galleryProduct.value.images.length > 1) {
-        galleryCurrentIndex.value = (galleryCurrentIndex.value - 1 + galleryProduct.value.images.length) % galleryProduct.value.images.length
-    }
+// 导航功能
+const goHome = () => {
+    router.push('/')
 }
 
-const nextGalleryImage = () => {
-    if (galleryProduct.value && galleryProduct.value.images.length > 1) {
-        galleryCurrentIndex.value = (galleryCurrentIndex.value + 1) % galleryProduct.value.images.length
-    }
+const goCart = () => {
+    router.push('/cart')
+}
+
+const goProfile = () => {
+    router.push('/profile')
 }
 
 // 产品操作
 const viewProductDetails = (product) => {
-    // 跳转到产品详情页面
-    router.push(`/product/${product.shoeId}`)
-}
-
-const addToCart = async (product) => {
-    // 跳转到商品详情页面，让用户在详情页面选择尺码后再加入购物车
     router.push(`/product/${product.shoeId}`)
 }
 
@@ -796,39 +751,195 @@ const handlePageSizeChange = () => {
     currentPage.value = 1
 }
 
+// 初始化并配置 IntersectionObserver
+function initIntersectionObserver() {
+    if (productCardIo) {
+        productCardIo.disconnect()
+    }
+    productCardIo = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const id = Number(entry.target.getAttribute('data-product-id'))
+                ensureProductResources(id)
+                productCardIo && productCardIo.unobserve(entry.target)
+            }
+        })
+    }, { root: null, rootMargin: '300px 0px', threshold: 0.01 })
+}
+
+// 观察当前分页中的卡片
+function observeCurrentPage() {
+    if (!productCardIo) initIntersectionObserver()
+    const container = document.querySelector('.products-grid')
+    if (!container) return
+    const cards = container.querySelectorAll('.product-card')
+    cards.forEach(card => productCardIo.observe(card))
+}
+
+// 按需加载指定产品的图片与库存
+async function ensureProductResources(shoeId) {
+    const product = products.value.find(p => p.shoeId === shoeId)
+    if (!product) return
+
+    // 加载图片
+    if (!product.images || product.images.length === 0) {
+        if (imageCache.has(shoeId)) {
+            product.images = imageCache.get(shoeId)
+            product.currentImageIndex = 0
+        } else if (!inFlightImages.has(shoeId)) {
+            inFlightImages.add(shoeId)
+            try {
+                const imageResponse = await axios.get(`/api/shoeImg/list/${shoeId}`)
+                const imgs = (imageResponse.data && imageResponse.data.data) ? imageResponse.data.data : []
+                product.images = imgs
+                product.currentImageIndex = 0
+                imageCache.set(shoeId, imgs)
+            } catch (e) {
+                product.images = []
+            } finally {
+                inFlightImages.delete(shoeId)
+            }
+        }
+    }
+
+    // 加载库存
+    if (!product.inventoryData || product.inventoryData.length === 0) {
+        if (inventoryCache.has(shoeId)) {
+            product.inventoryData = inventoryCache.get(shoeId)
+        } else if (!inFlightInventories.has(shoeId)) {
+            inFlightInventories.add(shoeId)
+            try {
+                const inventoryResponse = await axios.get(`/api/inventory/getInventoryByShoeId/${shoeId}`)
+                let inventoryArray = []
+                const data = inventoryResponse.data?.data
+                if (Array.isArray(data)) {
+                    inventoryArray = data
+                } else if (data?.inventories) {
+                    inventoryArray = data.inventories
+                } else if (data?.sizeInventories) {
+                    inventoryArray = data.sizeInventories
+                } else if (data) {
+                    inventoryArray = [data]
+                }
+                product.inventoryData = inventoryArray
+                inventoryCache.set(shoeId, inventoryArray)
+            } catch (e) {
+                product.inventoryData = []
+            } finally {
+                inFlightInventories.delete(shoeId)
+            }
+        }
+    }
+}
+
+// 筛选选项显示相关
+const getSexText = (value) => {
+    if (value === 1) return '男鞋'
+    if (value === 2) return '女鞋'
+    if (value === 3) return '童鞋'
+    return '其他'
+}
+
+const getBrandName = (brandId) => {
+    const brand = brands.value.find(b => b.brandId === brandId)
+    return brand ? brand.brandName : '未知品牌'
+}
+
+const getTypeName = (typeId) => {
+    const type = types.value.find(t => t.typeId === typeId)
+    return type ? type.typeName : '未知类型'
+}
+
+const getColorName = (colorId) => {
+    const color = colors.value.find(c => c.colorId === colorId)
+    return color ? color.colorName : '未知颜色'
+}
+
+const getSizeName = (sizeId) => {
+    const size = sizes.value.find(s => s.sizeId === sizeId)
+    return size ? size.size : '未知尺码'
+}
+
+// 移除筛选的方法
+const removeSexFilter = (sex) => {
+    const index = selectedSexes.value.indexOf(sex)
+    if (index > -1) {
+        selectedSexes.value.splice(index, 1)
+        applyFilters()
+    }
+}
+
+const removeBrandFilter = (brandId) => {
+    const index = selectedBrands.value.indexOf(brandId)
+    if (index > -1) {
+        selectedBrands.value.splice(index, 1)
+        applyFilters()
+    }
+}
+
+const removeTypeFilter = (typeId) => {
+    const index = selectedTypes.value.indexOf(typeId)
+    if (index > -1) {
+        selectedTypes.value.splice(index, 1)
+        applyFilters()
+    }
+}
+
+const removeColorFilter = (colorId) => {
+    const index = selectedColors.value.indexOf(colorId)
+    if (index > -1) {
+        selectedColors.value.splice(index, 1)
+        applyFilters()
+    }
+}
+
+const removeSizeFilter = (sizeId) => {
+    const index = selectedSizes.value.indexOf(sizeId)
+    if (index > -1) {
+        selectedSizes.value.splice(index, 1)
+        applyFilters()
+    }
+}
+
+const clearAllFilters = () => {
+    selectedBrands.value = []
+    selectedTypes.value = []
+    selectedColors.value = []
+    selectedSizes.value = []
+    selectedSexes.value = []
+    applyFilters()
+}
+
 // 生命周期钩子
 onMounted(async () => {
-	try {
-		// 先获取筛选选项，再获取产品数据
-		console.log('开始获取筛选选项...')
-		await fetchOptions()
-		console.log('筛选选项获取完成，开始获取产品数据...')
-		await fetchProducts()
-		console.log('产品数据获取完成')
-		initIntersectionObserver()
-		observeCurrentPage()
-		
-		// 从路由参数获取初始筛选值
-		if (route.query && route.query.shoeSex) {
-			const shoeSex = parseInt(route.query.shoeSex)
-			if (!isNaN(shoeSex) && shoeSex >= 1 && shoeSex <= 4) {
-				selectedSexes.value = [shoeSex]
-				applyFilters()
-			}
-		}
-		
-		// 从路由参数获取搜索关键字并自动搜索
-		if (route.query && route.query.q) {
-			searchKeyword.value = route.query.q
-			// 延迟一下执行搜索，确保产品数据已加载
-			setTimeout(() => {
-				handleSearch()
-			}, 100)
-		}
-	} catch (error) {
-		console.error('初始化失败:', error)
-		error.value = '初始化失败，请刷新页面重试'
-	}
+    try {
+        await fetchOptions()
+        await fetchProducts()
+        initIntersectionObserver()
+        observeCurrentPage()
+        
+        // 从路由参数获取初始筛选值
+        if (route.query && route.query.shoeSex) {
+            const shoeSex = parseInt(route.query.shoeSex)
+            if (!isNaN(shoeSex) && shoeSex >= 1 && shoeSex <= 4) {
+                filterBySex(shoeSex)
+            }
+        }
+        
+        // 从路由参数获取搜索关键字
+        if (route.query && route.query.q) {
+            searchKeyword.value = route.query.q
+            setTimeout(() => {
+                handleSearch()
+            }, 100)
+        }
+
+        // 添加点击外部关闭下拉菜单的事件监听
+        document.addEventListener('click', closeDropdowns)
+    } catch (error) {
+        console.error('初始化失败:', error)
+        error.value = '初始化失败，请刷新页面重试'
+    }
 })
 
 // 在分页或筛选变更后重新观察
@@ -842,277 +953,517 @@ onBeforeUnmount(() => {
         productCardIo.disconnect()
         productCardIo = null
     }
+    document.removeEventListener('click', closeDropdowns)
 })
 </script>
 
 <style scoped>
 .product-display-container {
-    max-width: 1600px;
-    width: 98%;
-    margin: 20px auto;
-    padding: 24px;
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    font-family: 'Playfair Display', 'Georgia', serif;
-    /* 确保容器可以滚动 */
-    overflow-y: auto;
-    max-height: calc(100vh - 40px);
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0;
+    background: #fff;
+    font-family: Helvetica Neue, Arial, sans-serif;
+    color: #000;
 }
 
-.product-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid rgb(211, 169, 101);
-}
-
-.title {
-    font-size: 2rem;
-    font-weight: 600;
-    color: rgb(211, 169, 101);
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.icon {
-    font-size: 2.2rem;
-}
-
-.product-count {
-    font-size: 1.1rem;
-    color: #666;
-    font-weight: 500;
-    background: rgba(211, 169, 101, 0.1);
-    padding: 8px 16px;
-    border-radius: 20px;
-}
-
-/* 搜索区域样式 */
-.search-section {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 24px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
-}
-
-.search-container {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.search-input-group {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-}
-
-.search-input {
-    flex: 1;
-    padding: 12px 16px;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    font-family: 'Lora', 'Georgia', serif;
-}
-
-.search-input:focus {
-    outline: none;
-    border-color: rgb(211, 169, 101);
-    box-shadow: 0 0 0 3px rgba(211, 169, 101, 0.1);
-}
-
-.search-btn {
-    padding: 12px 20px;
-    background: linear-gradient(135deg, rgb(211, 169, 101), #d4af37);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 1.1rem;
-    font-weight: 600;
-}
-
-.search-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(211, 169, 101, 0.3);
-}
-
-.search-options {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-}
-
-.search-option {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    color: #666;
-    font-weight: 500;
-}
-
-.search-option input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    accent-color: rgb(211, 169, 101);
-    cursor: pointer;
-}
-
-/* 筛选区域样式 */
-.filter-section {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 24px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
-}
-
-.filter-title {
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: rgb(211, 169, 101);
-    margin: 0 0 16px 0;
-    padding-bottom: 8px;
+/* 顶部导航栏样式 */
+.main-nav {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: #fff;
+    color: #000;
     border-bottom: 1px solid #eee;
 }
 
-.filter-container {
+.nav-inner {
+    max-width: 1200px;
+    margin: 0 auto;
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    height: 80px;
+    padding: 0 16px;
+    background: #fff;
+    box-sizing: border-box;
+    width: 100%;
+    position: relative;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    margin-left: -42px;
+    flex-shrink: 0;
+}
+
+.brand-logo {
+    padding: 2px 0;
+    flex-shrink: 0;
+}
+
+.brand-logo svg {
+    display: block;
+    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.08));
+    max-width: 100%;
+    height: auto;
+}
+
+.primary-nav {
+    margin-left: 40px;
+    flex-shrink: 0;
+}
+
+.primary-nav .nav-list {
+    list-style: none;
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+.nav-item {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.nav-link {
+    font-family: Helvetica Neue, Arial, sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    padding: 8px 4px;
+    color: #000;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: border-color .15s ease;
+    white-space: nowrap;
+    transform: translateZ(0);
+    will-change: border-color;
+}
+
+.nav-item:hover .nav-link {
+    border-color: #c6ff00;
+}
+
+.nav-search {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 24px 0 8px;
+    position: relative;
+    margin-right: 64px;
+    min-width: 0;
+}
+
+.search-box {
+    width: 36%;
+    max-width: 380px;
+    min-width: 220px;
+    position: relative;
+    margin-right: 16px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.search-box .search-icon {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+    filter: none;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.search-placeholder {
+    width: 100%;
+    height: 36px;
+    border-radius: 999px;
+    border: 1px solid #ddd;
+    background: #f8f8f8;
+    color: #999;
+    padding: 0 14px 0 32px;
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    z-index: 1;
+    position: relative;
+    transition: border-color .1s ease, background .1s ease;
+    box-sizing: border-box;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transform: translateZ(0);
+    will-change: border-color, background;
+}
+
+.search-placeholder .search-icon {
+    position: static;
+    transform: none;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.search-box:hover .search-placeholder {
+    border-color: #000;
+    background: #fff;
+}
+
+.search-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 36px;
+    border-radius: 999px;
+    border: 1px solid #ddd;
+    background: #f8f8f8;
+    color: #333;
+    padding: 0 14px 0 32px;
+    outline: none;
+    z-index: 2;
+    transition: border-color .1s ease, background .1s ease;
+    box-sizing: border-box;
+    transform: translateZ(0);
+    will-change: border-color, background;
+}
+
+.search-box.focus .search-input {
+    border-color: #000;
+    background: #fff;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-right: -42px;
+    flex-shrink: 0;
+}
+
+.icon-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1.5px solid #000;
+    color: #000;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background .1s ease, transform .1s ease, color .1s ease, border-color .1s ease;
+    flex-shrink: 0;
+    transform: translateZ(0);
+    will-change: background, transform, color, border-color;
+}
+
+.icon-btn:first-child {
+    margin-left: -32px;
+}
+
+.icon-btn:hover {
+    background: #000;
+    color: #fff;
+    border-color: #000;
+    transform: translateY(-1px) translateZ(0);
+}
+
+/* 面包屑导航样式 */
+.breadcrumb-section {
+    background: #fff;
+    padding: 12px 16px;
+    border-bottom: 1px solid #eee;
+}
+
+.breadcrumb-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #666;
+}
+
+.breadcrumb-item {
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+.breadcrumb-item:hover {
+    color: #000;
+}
+
+.breadcrumb-separator {
+    color: #ccc;
+}
+
+/* 页面标题样式 */
+.page-title-section {
+    background: #fff;
+    padding: 20px 16px;
+    border-bottom: 1px solid #eee;
+}
+
+.page-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: #000;
+    margin: 0 0 8px 0;
+}
+
+.product-count {
+    font-size: 14px;
+    color: #666;
+    font-weight: 500;
+}
+
+/* 筛选和排序区域样式 */
+.filter-sort-section {
+    background: #fff;
+    padding: 16px;
+    border-bottom: 1px solid #eee;
+}
+
+.filter-sort-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     gap: 16px;
 }
 
-.filter-group {
+.filter-dropdowns {
     display: flex;
-    align-items: flex-start;
     gap: 12px;
-}
-
-.filter-label {
-    min-width: 60px;
-    font-weight: 600;
-    color: #333;
-    padding-top: 8px;
-}
-
-.filter-options {
-    display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    flex: 1;
-    /* 添加滚动功能 */
-    max-height: 120px;
-    overflow-y: auto;
-    padding-right: 8px;
 }
 
-/* 自定义滚动条样式 */
-.filter-options::-webkit-scrollbar {
-    width: 6px;
-}
-
-.filter-options::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-}
-
-.filter-options::-webkit-scrollbar-thumb {
-    background: rgb(211, 169, 101);
-    border-radius: 3px;
-}
-
-.filter-options::-webkit-scrollbar-thumb:hover {
-    background: #d4af37;
-}
-
-.filter-option {
-    padding: 8px 16px;
-    border: 1px solid #ddd;
-    border-radius: 20px;
-    background: white;
-    color: #666;
+.filter-dropdown {
+    position: relative;
     cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 0.9rem;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 100px;
+}
+
+.filter-dropdown:hover {
+    border-color: #000;
+}
+
+.dropdown-label {
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+}
+
+.dropdown-arrow {
+    font-size: 12px;
+    color: #666;
+    transition: transform 0.15s ease;
+}
+
+.filter-dropdown:hover .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 4px;
+}
+
+.dropdown-item {
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.dropdown-item:hover {
+    background: #f5f5f5;
+}
+
+.sort-options {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.sort-dropdown {
+    position: relative;
+    cursor: pointer;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sort-dropdown:hover {
+    border-color: #000;
+}
+
+.sort-button {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 14px;
+    color: #333;
+}
+
+.sort-button:hover {
+    border-color: #000;
+    background: #f5f5f5;
+}
+
+.price-arrow {
+    font-size: 12px;
+    color: #666;
+}
+
+/* 筛选选项显示样式 */
+.active-filters-section {
+    background: #fff;
+    padding: 12px 16px;
+    border-bottom: 1px solid #eee;
+}
+
+.active-filters-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.filters-label {
+    font-size: 14px;
+    color: #666;
     font-weight: 500;
     white-space: nowrap;
 }
 
-.filter-option:hover {
-    border-color: rgb(211, 169, 101);
-    color: rgb(211, 169, 101);
-    transform: translateY(-1px);
-}
-
-.filter-option.active {
-    background: rgb(211, 169, 101);
-    color: white;
-    border-color: rgb(211, 169, 101);
-}
-
-.filter-actions {
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid #eee;
+.filter-tags {
     display: flex;
-    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.filter-tag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #333;
+    transition: all 0.15s ease;
+}
+
+.filter-tag:hover {
+    background: #e8e8e8;
+    border-color: #ccc;
+}
+
+.tag-close {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.15s ease;
+}
+
+.tag-close:hover {
+    background: #ddd;
+    color: #666;
 }
 
 .clear-filters-btn {
-    border: none;
-    padding: 10px 20px;
-    border-radius: 25px;
-    font-size: 0.9rem;
-    font-weight: 600;
+    background: none;
+    border: 1px solid #ddd;
+    color: #666;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
     cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: linear-gradient(135deg, #6c757d, #5a6268);
-    color: white;
+    transition: all 0.15s ease;
+    white-space: nowrap;
 }
 
 .clear-filters-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.btn-icon {
-    font-size: 1rem;
+    background: #f5f5f5;
+    border-color: #ccc;
+    color: #333;
 }
 
 /* 产品列表样式 */
 .products-section {
-    margin-bottom: 24px;
+    margin-bottom: 20px;
+    padding: 0 16px;
 }
 
 .loading, .error, .no-products {
     text-align: center;
     padding: 40px;
-    font-size: 1.1rem;
+    font-size: 14px;
     font-weight: 500;
+    color: #666;
 }
 
 .loading {
-    color: rgb(211, 169, 101);
+    color: #000;
 }
 
 .error {
     color: #dc3545;
     background: rgba(220, 53, 69, 0.1);
-    border-radius: 8px;
+    border-radius: 6px;
 }
 
 .no-products {
@@ -1120,84 +1471,43 @@ onBeforeUnmount(() => {
 }
 
 .no-products-icon {
-    font-size: 3rem;
+    font-size: 48px;
     margin-bottom: 16px;
 }
 
 .products-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    background: #fff;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .product-card {
-    background: white;
+    border: 1px solid #eee;
     border-radius: 0;
     overflow: hidden;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
+    background: #fff;
+    transition: transform .15s ease, box-shadow .15s ease;
+    box-sizing: border-box;
+    width: 100%;
     cursor: pointer;
-    background-size: 80%;
-    background-position: center;
-    background-repeat: no-repeat;
+    position: relative;
 }
 
 .product-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.08);
 }
 
-.product-image-container {
-    position: relative;
-    height: 300px;
-    overflow: hidden;
-}
-
-.product-images {
+.card-media {
+    background: transparent;
+    aspect-ratio: 1/1;
     width: 100%;
-    height: 100%;
-    position: relative;
-}
-
-.image-carousel {
-    position: relative;
-    width: 100%;
-    height: 100%;
-}
-
-.main-product-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.main-product-image:hover {
-    transform: scale(1.05);
-}
-
-.image-selector {
-    position: absolute;
-    bottom: 8px;
-    right: 8px;
-}
-
-.image-switch-btn {
-    background: rgba(211, 169, 101, 0.9);
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 4px 8px;
-    font-size: 0.7rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: 500;
-}
-
-.image-switch-btn:hover {
-    background: rgb(211, 169, 101);
-    transform: scale(1.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .no-image {
@@ -1206,172 +1516,62 @@ onBeforeUnmount(() => {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f8f9fa;
-    border: 2px solid #ddd;
-    font-size: 2rem;
+    font-size: 28px;
     color: #999;
 }
 
-.product-info {
-    padding: 16px;
+.card-body {
+    padding: 12px;
+    box-sizing: border-box;
 }
 
-.product-name {
-    font-size: 1.1rem;
-    font-weight: 600;
+.price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.current {
+    font-weight: 800;
+    color: #111;
+}
+
+.original {
+    color: #999;
+    text-decoration: line-through;
+}
+
+.name {
+    font-size: 14px;
     color: #333;
-    margin: 0 0 8px 0;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
-.product-serial {
-    color: #666;
-    font-size: 0.8rem;
-    margin: 0 0 12px 0;
-}
-
-.product-details {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 12px;
-}
-
-.brand-tag, .type-tag, .color-tag, .sex-tag {
+.badge {
+    position: absolute;
+    margin: 8px;
     padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 500;
-    background: rgba(211, 169, 101, 0.1);
-    color: rgb(211, 169, 101);
-}
-
-/* 性别标签特殊样式 */
-.sex-tag {
-    background: rgba(231, 76, 60, 0.1);
-    color: #e74c3c;
-}
-
-.price-section {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.original-price {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: #333;
-}
-
-.discount-price {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #e74c3c;
-}
-
-.product-meta {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 16px;
-    font-size: 0.8rem;
-    color: #666;
-}
-
-/* 可用尺码样式 */
-.available-sizes {
-    margin-bottom: 16px;
-}
-
-.sizes-label {
-    display: block;
-    font-size: 0.8rem;
-    color: #666;
-    margin-bottom: 8px;
-    font-weight: 500;
-}
-
-.size-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.size-tag {
-    padding: 4px 8px;
-    border-radius: 8px;
-    font-size: 0.7rem;
-    font-weight: 500;
-    background: rgba(40, 167, 69, 0.1);
-    color: #28a745;
-    border: 1px solid rgba(40, 167, 69, 0.2);
-}
-
-/* 新增：无库存尺码的样式 */
-.size-tag.no-stock {
-    background: rgba(220, 53, 69, 0.1);
-    color: #dc3545;
-    border-color: rgba(220, 53, 69, 0.2);
-}
-
-/* 新增：无尺码信息的提示样式 */
-.no-sizes-info {
-    padding: 4px 8px;
-    border-radius: 8px;
-    font-size: 0.7rem;
-    font-weight: 500;
-    background: rgba(108, 117, 125, 0.1);
-    color: #6c757d;
-    border: 1px solid rgba(108, 117, 125, 0.2);
-    font-style: italic;
-}
-
-.product-actions {
-    display: flex;
-    gap: 8px;
-}
-
-.view-details-btn, .add-to-cart-btn {
-    flex: 1;
-    padding: 8px 12px;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.view-details-btn {
-    background: linear-gradient(135deg, #007bff, #0056b3);
-    color: white;
-}
-
-.add-to-cart-btn {
-    background: linear-gradient(135deg, #28a745, #20c997);
-    color: white;
-}
-
-.view-details-btn:hover, .add-to-cart-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    background: #111;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 12px;
 }
 
 /* 分页样式 */
 .pagination-container {
-    margin-top: 24px;
+    margin-top: 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
     gap: 16px;
-    padding: 20px;
-    background: rgba(243, 242, 234, 0.3);
-    border-radius: 12px;
-    font-family: 'Lora', 'Georgia', serif;
+    padding: 20px 16px;
+    background: #fff;
+    border-top: 1px solid #eee;
+    font-family: Helvetica Neue, Arial, sans-serif;
 }
 
 .pagination-info {
@@ -1380,6 +1580,7 @@ onBeforeUnmount(() => {
     gap: 20px;
     color: #666;
     font-weight: 500;
+    font-size: 13px;
 }
 
 .page-size-control {
@@ -1392,15 +1593,15 @@ onBeforeUnmount(() => {
     width: 60px;
     padding: 4px 8px;
     border: 1px solid #ddd;
-    border-radius: 6px;
-    font-size: 0.9rem;
+    border-radius: 4px;
+    font-size: 13px;
     text-align: center;
-    transition: border-color 0.3s ease;
+    transition: border-color 0.15s ease;
 }
 
 .page-size-input:focus {
     outline: none;
-    border-color: rgb(211, 169, 101);
+    border-color: #000;
 }
 
 .pagination-controls {
@@ -1410,21 +1611,22 @@ onBeforeUnmount(() => {
 }
 
 .page-btn {
-    background: white;
-    color: rgb(211, 169, 101);
-    border: 1px solid rgb(211, 169, 101);
+    background: #fff;
+    color: #000;
+    border: 1px solid #ddd;
     padding: 8px 16px;
-    border-radius: 6px;
+    border-radius: 4px;
     cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 0.9rem;
+    transition: all 0.15s ease;
+    font-size: 13px;
     font-weight: 500;
-    font-family: 'Lora', serif;
+    font-family: Helvetica Neue, Arial, sans-serif;
 }
 
 .page-btn:hover:not(:disabled) {
-    background: rgb(211, 169, 101);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    background: #000;
+    color: #fff;
+    border-color: #000;
 }
 
 .page-btn:disabled {
@@ -1441,202 +1643,87 @@ onBeforeUnmount(() => {
 }
 
 .page-number-btn {
-    background: white;
-    color: rgb(211, 169, 101);
-    border: 1px solid rgb(211, 169, 101);
+    background: #fff;
+    color: #000;
+    border: 1px solid #ddd;
     padding: 8px 12px;
-    border-radius: 6px;
+    border-radius: 4px;
     cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 0.9rem;
+    transition: all 0.15s ease;
+    font-size: 13px;
     font-weight: 500;
     min-width: 40px;
-    font-family: 'Lora', serif;
+    font-family: Helvetica Neue, Arial, sans-serif;
 }
 
 .page-number-btn:hover {
-    background: rgba(211, 169, 101, 0.1);
-    transform: translateY(-1px);
+    background: #f5f5f5;
+    border-color: #000;
 }
 
 .page-number-btn.active {
-    background: rgb(211, 169, 101);
-    color: white;
+    background: #000;
+    color: #fff;
     font-weight: 600;
-}
-
-/* 图片画廊模态框样式 */
-.dialog-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.dialog {
-    background: white;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 800px;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-}
-
-.image-gallery-dialog {
-    max-width: 800px;
-    max-height: 90vh;
-}
-
-.dialog-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 24px;
-    border-bottom: 1px solid #eee;
-    background: linear-gradient(135deg, rgb(211, 169, 101), #d4af37);
-    color: white;
-    border-radius: 12px 12px 0 0;
-}
-
-.dialog-header h3 {
-    margin: 0;
-    font-size: 1.3rem;
-    font-weight: 600;
-}
-
-.close-btn {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    transition: background 0.2s ease;
-}
-
-.close-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.dialog-content {
-    padding: 24px;
-}
-
-.gallery-main-image {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: #f8f9fa;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    min-height: 400px;
-}
-
-.main-gallery-image {
-    max-width: 100%;
-    max-height: 400px;
-    object-fit: contain;
-    border-radius: 8px;
-}
-
-.gallery-controls {
-    position: absolute;
-    top: 50%;
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transform: translateY(-50%);
-    pointer-events: none;
-}
-
-.gallery-nav-btn {
-    background: rgba(0, 0, 0, 0.5);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    font-size: 1.5rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    pointer-events: all;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.gallery-nav-btn:hover {
-    background: rgba(0, 0, 0, 0.7);
-    transform: scale(1.1);
-}
-
-.gallery-nav-btn.prev {
-    margin-left: 10px;
-}
-
-.gallery-nav-btn.next {
-    margin-right: 10px;
-}
-
-.gallery-thumbnails {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    flex-wrap: wrap;
-}
-
-.gallery-thumbnail {
-    width: 60px;
-    height: 60px;
-    object-fit: cover;
-    border-radius: 6px;
-    border: 2px solid #ddd;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.gallery-thumbnail:hover {
-    border-color: rgb(211, 169, 101);
-}
-
-.gallery-thumbnail.active {
-    border-color: rgb(211, 169, 101);
-    border-width: 3px;
+    border-color: #000;
 }
 
 /* 响应式设计 */
 @media (max-width: 1200px) {
+    .product-display-container {
+        max-width: 100%;
+        padding: 0 16px;
+    }
+    
     .products-grid {
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 6px;
     }
 }
 
+@media (max-width: 960px) {
+    .product-display-container {
+        padding: 0 12px;
+    }
+    
+    .product-header,
+    .search-section,
+    .filter-section {
+        padding: 16px 12px;
+    }
+    
+    .products-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+    
+    .pagination-container {
+        padding: 16px 12px;
+    }
+}
 
 @media (max-width: 768px) {
     .product-display-container {
-        width: 99%;
-        padding: 16px;
-        max-height: calc(100vh - 20px);
+        padding: 0 8px;
     }
-
+    
     .product-header {
         flex-direction: column;
         gap: 12px;
         text-align: center;
+        padding: 12px 8px;
     }
 
     .title {
-        font-size: 1.5rem;
+        font-size: 20px;
+    }
+    
+    .icon {
+        font-size: 24px;
+    }
+
+    .search-section,
+    .filter-section {
+        padding: 12px 8px;
     }
 
     .search-input-group {
@@ -1658,13 +1745,18 @@ onBeforeUnmount(() => {
     }
 
     .products-grid {
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        gap: 16px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 4px;
+    }
+
+    .card-body {
+        padding: 10px;
     }
 
     .pagination-container {
         flex-direction: column;
         gap: 12px;
+        padding: 12px 8px;
     }
 
     .pagination-info {
@@ -1675,21 +1767,34 @@ onBeforeUnmount(() => {
 
 @media (max-width: 480px) {
     .product-display-container {
-        margin: 10px;
-        padding: 12px;
-        max-height: calc(100vh - 20px);
+        padding: 0 4px;
+    }
+    
+    .product-header,
+    .search-section,
+    .filter-section {
+        padding: 8px 4px;
     }
 
     .title {
-        font-size: 1.3rem;
+        font-size: 18px;
+    }
+    
+    .icon {
+        font-size: 20px;
     }
 
     .products-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
     }
-
-    .product-actions {
-        flex-direction: column;
+    
+    .card-body {
+        padding: 8px;
+    }
+    
+    .pagination-container {
+        padding: 8px 4px;
     }
 }
 </style>
