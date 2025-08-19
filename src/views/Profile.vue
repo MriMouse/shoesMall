@@ -10,6 +10,9 @@
               :class="{ active: activeTab === item.key }" @click="navigateTo(item.key)">{{ item.label }}</button>
           </section>
         </nav>
+        <!-- 左侧导航底部：退出账户 -->
+        <button class="side-link logout" @click="handleLogout">退出账户</button>
+        <button class="side-link logout" @click="goHome">返回主页</button>
       </div>
 
       <div class="profile-main">
@@ -159,6 +162,9 @@ export default {
       userManager.logoutUser()
       this.$router.push('/')
       this.showLogoutDialog = false
+    },
+    goHome() {
+      this.$router.push('/')
     },
     triggerHeroUpload() {
       if (this.$refs.heroAvatarInput) this.$refs.heroAvatarInput.click()

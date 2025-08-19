@@ -134,10 +134,10 @@
 
                     <!-- 操作按钮 -->
                     <div class="action-buttons">
-                        <button @click="addToCart" class="add-to-cart-btn" :disabled="!selectedSize">
+                        <button @click="addToCart" class="add-to-cart-btn" :class="{ 'disabled': !isLoggedIn }" :disabled="isLoggedIn ? !selectedSize : false">
                             🛒 加入购物车
                         </button>
-                        <button @click="buyNow" class="buy-now-btn" :disabled="!selectedSize">
+                        <button @click="buyNow" class="buy-now-btn" :class="{ 'disabled': !isLoggedIn }" :disabled="isLoggedIn ? !selectedSize : false">
                             💳 立即购买
                         </button>
                     </div>
@@ -269,6 +269,12 @@ const showToast = (message, type = 'error') => {
     toastType.value = type
     toast.value?.show?.()
 }
+
+// 登录状态（与 MainNav 逻辑保持一致）
+const isLoggedIn = ref(!!localStorage.getItem('user'))
+function updateLoginState() { isLoggedIn.value = !!localStorage.getItem('user') }
+window.addEventListener('storage', (e) => { if (e.key === 'user') updateLoginState() })
+window.addEventListener('user-login-change', updateLoginState)
 
 // 计算属性
 const currentMainImage = computed(() => {
@@ -484,39 +490,31 @@ const getCurrentSizeStock = () => {
 
 // 操作按钮
 const addToCart = async () => {
-    if (!selectedSize.value) {
-        showToast('请先选择尺码', 'warning')
-        return
-    }
-    if (!product.value || !product.value.shoeId) {
-        showToast('商品信息不完整，请刷新后重试', 'error')
-        return
-    }
+    // 未登录：统一提示并返回
+    if (!isLoggedIn.value) { showToast('操作失败，请先登录', 'error'); return }
+    if (!selectedSize.value) { showToast('请先选择尺码', 'warning'); return }
+    if (!product.value || !product.value.shoeId) { showToast('商品信息不完整，请刷新后重试', 'error'); return }
+
     try {
         const userId = await userManager.getUserId()
-        if (!userId) {
-            showToast('请先登录', 'error')
-            return
-        }
+        if (!userId) { showToast('操作失败，请先登录', 'error'); return }
         cartManager.setUserId(userId)
         const ok = await cartManager.addToCart(selectedSize.value, quantity.value, product.value.shoeId)
         if (ok) {
             await cartManager.refreshCartCount()
             showToast(`已将 ${product.value.name} 加入购物车`, 'success')
         } else {
-            showToast('加入购物车失败，请重试', 'error')
+            showToast('操作失败，请先登录', 'error')
         }
     } catch (err) {
         console.error('加入购物车失败:', err)
-        showToast('加入购物车失败，请检查网络或稍后再试', 'error')
+        showToast('操作失败，请先登录', 'error')
     }
 }
 
 const buyNow = () => {
-    if (!selectedSize.value) {
-        showToast('请先选择尺码', 'warning')
-        return
-    }
+    if (!isLoggedIn.value) { showToast('操作失败，请先登录', 'error'); return }
+    if (!selectedSize.value) { showToast('请先选择尺码', 'warning'); return }
 
     // 检查是否从订单确认页面跳转过来
     const fromOrderConfirmation = sessionStorage.getItem('fromOrderConfirmation')
@@ -552,6 +550,7 @@ onMounted(() => {
     recordSearchHistoryOnView()
     // 进入详情页记录一次点击
     recordClickOnEnter()
+    updateLoginState()
 })
 
 // 进入详情页记录历史（带本地短期阻止，避免刚删又写回）
