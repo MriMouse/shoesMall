@@ -93,9 +93,14 @@
 						</div>
 						<div class="search-panel-content">
 							<div v-if="!searchQuery.trim()" class="search-tips">
-								<h3 class="search-tips-title">搜索提示</h3>
-								<div class="search-tips-content">
-									<p>• 输入关键词即可</p>
+								<!-- 热门搜索 -->
+								<div class="hot-search-section">
+									<h4 class="hot-search-title">热门搜索</h4>
+									<ol class="hot-search-list">
+										<li v-for="s in hotSearches.slice(0, 6)" :key="s.shoeId" class="hot-search-item" @click="goToProductDetailWithHistory(s.shoeId)">
+											<span class="hot-name">{{ s.name }}</span>
+										</li>
+									</ol>
 								</div>
 								
 								<!-- 搜索历史 -->
@@ -287,6 +292,25 @@ export default {
 		const previewProducts = ref([]);
 		const previewLoading = ref(false);
 
+		// 热门搜索
+		const hotSearches = ref([]);
+		async function loadHotSearches(limit = 6) {
+			try {
+				const idsResp = await axios.post('/api/clickLog/getHotShoeIds', new URLSearchParams({ limit }));
+				const ids = Array.isArray(idsResp?.data?.data) ? idsResp.data.data : [];
+				if (!ids.length) { hotSearches.value = []; return; }
+				const details = await Promise.all(ids.map(async (shoeId) => {
+					try {
+						const p = new URLSearchParams({ shoeId });
+						const res = await axios.post('/api/shoe/getById', p);
+						const shoe = res?.data?.data || {};
+						return { shoeId, name: shoe.name || `商品 ${shoeId}` };
+					} catch (_) { return { shoeId, name: `商品 ${shoeId}` }; }
+				}));
+				hotSearches.value = details;
+			} catch (_) { hotSearches.value = []; }
+		}
+
 		// 新增：动态分类数据
 		const dynamicCategories = ref([]);
 
@@ -409,6 +433,9 @@ export default {
 			setTimeout(() => {
 				preloadCommonImages();
 			}, 1000); // 延迟1秒开始预加载，避免影响初始加载
+
+			// 加载热门搜索
+			loadHotSearches();
 		});
 
 		onBeforeUnmount(() => {
@@ -1408,6 +1435,7 @@ export default {
 			searchProducts,
 			handleSearchImageError,
 			handleSearchImageLoad,
+			hotSearches,
 			// 新增：搜索历史相关
 			searchHistory,
 			searchHistoryLoading,
@@ -2978,4 +3006,13 @@ export default {
 	color: #666;
 }
 
+</style>
+
+<style scoped>
+.hot-search-section { margin-top: 16px; }
+.hot-search-title { font-size: 14px; color: #333; font-weight: 600; margin: 8px 0; }
+.hot-search-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; }
+.hot-search-item { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 0; border-radius: 6px; transition: background .12s ease; }
+.hot-search-item:hover { background: #f7f7f7; }
+.hot-name { font-size: 13px; color: #333; }
 </style>
