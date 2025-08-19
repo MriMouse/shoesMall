@@ -1699,7 +1699,7 @@ export default {
 	align-items: center;
 	gap: 32px;
 	/* 增大两个按钮间距 */
-	margin-right: -42px;
+	margin-right: -24px;
 	flex-shrink: 0;
 }
 .user-menu-wrapper { margin-left: 4px; position: relative; }
@@ -1726,16 +1726,20 @@ export default {
 .user-dropdown {
 	position: absolute;
 	top: 52px;
-	right: 0;
-	min-width: 200px;
+	/* 水平居中到触发按钮（个人中心） */
+	left: 50%;
+	/* 让下拉菜单宽度随内容自适应，避免右侧留白过多 */
+	min-width: 0;
+	width: max-content;
 	background: #fff;
 	border: 1px solid #eee;
 	border-radius: 12px;
 	box-shadow: 0 12px 32px rgba(0,0,0,.12);
-	padding: 8px;
+	padding: 4px;
 	display: flex;
 	flex-direction: column;
 	z-index: 1000;
+	transform: translateX(calc(-50% - 8px));
 }
 
 .dropdown-item {
@@ -1743,9 +1747,10 @@ export default {
 	text-align: left;
 	background: transparent;
 	border: none;
-	padding: 10px 12px;
+	padding: 6px 10px;
 	border-radius: 8px;
 	font-size: 14px;
+	line-height: 1.2;
 	color: #111;
 	cursor: pointer;
 	transition: background .12s ease, color .12s ease;
@@ -1757,15 +1762,15 @@ export default {
 .dropdown-divider {
 	height: 1px;
 	background: #eee;
-	margin: 6px 0;
+	margin: 2px 0;
 }
 
 .avatar-img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
 .hidden-input { display: none; }
 
 .icon-btn:first-child {
-	margin-left: -32px;
-	/* 左移第一个UI按钮（购物袋） */
+	margin-left: -16px;
+	/* 左移第一个UI按钮（购物袋），增大与个人中心的距离 */
 }
 
 .icon-btn:hover {
