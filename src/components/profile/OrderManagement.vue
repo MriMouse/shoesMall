@@ -74,131 +74,92 @@
           </div>
         </div>
 
-        <div class="order-details">
-          <div class="order-info">
-            <div class="info-row">
-              <span class="label">下单时间：</span>
-              <span class="value">{{ formatDate(order.createdAt) }}</span>
+        <div class="order-info-box">
+          <!-- 左侧：商品缩略列表 -->
+          <div class="products-list summary">
+            <div v-if="order.products && order.products.length > 0">
+              <div v-for="product in order.products" :key="product.id" class="product-item compact">
+                <div class="product-image small">
+                  <img v-if="product.image" :src="product.image" :alt="product.name" @error="handleImageError" />
+                  <div v-else class="no-image">📷</div>
+                </div>
+                <div class="product-info mini">
+                  <div class="product-name one-line">{{ product.name || '' }}</div>
+                  <div class="product-meta">尺码：{{ product.size || '' }} · 颜色：{{ product.color || '' }} · 数量：{{ product.quantity || '' }}</div>
+                </div>
+              </div>
             </div>
-            <div class="info-row">
-              <span class="label">订单金额：</span>
-              <span class="value amount">¥{{ (order.amount || 0).toFixed(2) }}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">商品数量：</span>
-              <span class="value">{{ (order.products && order.products.length) || 0 }}件</span>
-            </div>
-            <div class="info-row">
-              <span class="label">收货人：</span>
-              <span class="value">{{ order.receiver || '' }}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">联系电话：</span>
-              <span class="value">{{ order.phone || '' }}</span>
+            <div v-else class="product-item compact">
+              <div class="product-image small"><div class="no-image">📦</div></div>
+              <div class="product-info mini">
+                <div class="product-name one-line">商品信息加载中...</div>
+                <div class="product-price">¥{{ (order.amount || 0).toFixed(2) }}</div>
+              </div>
             </div>
           </div>
 
-          <div class="order-actions">
-            <button @click="viewOrderDetail(order)" class="btn btn-outline">
-              查看详情
-            </button>
-            
-            <!-- 根据订单状态显示不同的操作按钮 -->
-            <div v-if="order.status === '0'" class="action-buttons">
-              <button @click="payOrder(order)" class="btn btn-primary">
-                立即支付
-              </button>
-              <button @click="cancelOrder(order)" class="btn btn-secondary">
-                取消订单
-              </button>
-            </div>
-            
-            <div v-if="order.status === '1'" class="action-buttons">
-              <button @click="requestRefund(order)" class="btn btn-warning">
-                申请退款
-              </button>
-            </div>
-            
-            <div v-if="order.status === '2'" class="action-buttons">
-              <button @click="confirmReceived(order)" class="btn btn-primary">
-                确认收货
-              </button>
-              <button @click="requestRefund(order)" class="btn btn-warning">
-                申请退款
-              </button>
-            </div>
-            
-            <div v-if="order.status === '3'" class="action-buttons">
-              <button @click="requestRefund(order)" class="btn btn-warning">
-                申请退款
-              </button>
-              <button @click="buyAgain(order)" class="btn btn-outline">
-                再次购买
-              </button>
-            </div>
-            
-            <div v-if="order.status === '5'" class="action-buttons">
-              <button @click="viewReturnStatus(order)" class="btn btn-outline">
-                查看退货状态
-              </button>
-            </div>
-            
-            <div v-if="order.status === '6'" class="action-buttons">
-              <button @click="buyAgain(order)" class="btn btn-outline">
-                再次购买
-              </button>
-            </div>
-            
-            <!-- 退款中状态 -->
-            <div v-if="['11', '12', '13'].includes(order.status)" class="action-buttons">
-              <button @click="viewRefundStatus(order)" class="btn btn-outline">
-                查看退款状态
-              </button>
-            </div>
-            
-            <div v-if="order.status === '10'" class="action-buttons">
-              <button @click="payOrder(order)" class="btn btn-primary">
-                结算购物车
-              </button>
-              <button @click="cancelOrder(order)" class="btn btn-secondary">
-                清空购物车
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 商品列表 -->
-        <div v-if="order.products && order.products.length > 0" class="order-products">
-          <div v-for="product in order.products" :key="product.id" class="product-item">
-            <div class="product-image">
-              <img 
-                v-if="product.image" 
-                :src="product.image" 
-                :alt="product.name" 
-                @error="handleImageError" 
-              />
-              <div v-else class="no-image">📷</div>
-            </div>
-            <div class="product-info">
-              <h5>{{ product.name || '' }}</h5>
-              <p>尺码：{{ product.size || '' }}</p>
-              <p>颜色：{{ product.color || '' }}</p>
-              <p>数量：{{ product.quantity || '' }}</p>
-              <p class="price">¥{{ product.price || 0 }}</p>
-            </div>
-          </div>
-        </div>
-        
-        <!-- 如果没有商品信息，显示默认信息 -->
-        <div v-else class="order-products">
-          <div class="product-item">
-            <div class="product-image">
-              <div class="no-image">📦</div>
-            </div>
-            <div class="product-info">
-              <h4>商品信息</h4>
-              <p class="product-specs">商品信息加载中...</p>
-              <p class="product-price">¥{{ (order.amount || 0).toFixed(2) }}</p>
+          <!-- 右侧：订单信息与操作 -->
+          <div class="order-right">
+            <div class="order-details">
+              <div class="order-info">
+                <div class="info-row">
+                  <span class="label">下单时间：</span>
+                  <span class="value">{{ formatDate(order.createdAt) }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">订单金额：</span>
+                  <span class="value amount">¥{{ (order.amount || 0).toFixed(2) }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">商品数量：</span>
+                  <span class="value">{{ (order.products && order.products.length) || 0 }}件</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">收货人：</span>
+                  <span class="value">{{ order.receiver || '' }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">联系电话：</span>
+                  <span class="value">{{ order.phone || '' }}</span>
+                </div>
+              </div>
+ 
+              <div class="order-actions">
+                <button @click="viewOrderDetail(order)" class="btn btn-outline btn-compact">
+                  查看详情
+                </button>
+                
+                <!-- 根据订单状态显示不同的操作按钮 -->
+                <div v-if="['0','1','2'].includes(order.status)" class="action-buttons">
+                  <button @click="requestRefund(order)" class="btn btn-warning btn-compact">
+                    申请退款
+                  </button>
+                </div>
+                
+                <div v-else-if="order.status === '3'" class="action-buttons">
+                  <button @click="requestRefund(order)" class="btn btn-warning btn-compact">
+                    申请退款
+                  </button>
+                  <button @click="buyAgain(order)" class="btn btn-outline btn-compact">
+                    再次购买
+                  </button>
+                </div>
+                
+                <div v-else-if="['11','12','13'].includes(order.status)" class="action-buttons">
+                  <button @click="viewRefundStatus(order)" class="btn btn-outline btn-compact">
+                    查看退款状态
+                  </button>
+                </div>
+                
+                <div v-if="order.status === '10'" class="action-buttons">
+                  <button @click="payOrder(order)" class="btn btn-primary">
+                    结算购物车
+                  </button>
+                  <button @click="cancelOrder(order)" class="btn btn-secondary">
+                    清空购物车
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -321,6 +282,7 @@
 <script>
 import { OrderAPI, ShoeAPI, OrderShoeNumAPI, AddressAPI, PointsAPI } from '@/api'
 import userManager from '@/utils/userManager'
+import { orderCache } from '@/utils/orderPreloader'
 
 export default {
   name: 'OrderManagement',
@@ -346,7 +308,16 @@ export default {
     }
   },
   mounted() {
-    this.loadOrders()
+    // 尝试先用缓存秒开
+    const cached = orderCache.get()
+    if (cached && Array.isArray(cached.list) && cached.list.length) {
+      this.orders = cached.list
+      this.filteredOrders = [...this.orders]
+      // 后台刷新最新数据（不阻塞首屏）
+      this.$nextTick(() => this.loadOrders())
+    } else {
+      this.loadOrders()
+    }
   },
   methods: {
     async loadOrders() {
@@ -441,6 +412,21 @@ export default {
             this.filteredOrders = []
           } else {
             this.filteredOrders = [...this.orders]
+            // 同步更新缓存（轻量字段）
+            const light = this.orders.map(o => ({
+              orderId: o.orderId,
+              orderNumber: o.orderNumber,
+              status: o.status,
+              amount: o.amount,
+              createdAt: o.createdAt,
+              updatedAt: o.updatedAt,
+              selected: false,
+              products: null,
+              address: o.address,
+              receiver: o.receiver,
+              phone: o.phone,
+            }))
+            orderCache.set(light)
           }
         } else {
           console.error('API调用失败:', response.data?.msg || '未知错误')
@@ -1148,50 +1134,161 @@ export default {
 
 <style scoped>
 .order-management {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
+/* 订单头部 */
 .order-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e1e8ed;
+  padding: 1rem 0;
+  border-bottom: 1px solid #e6e6e6;
+  margin-bottom: 1rem;
 }
 
 .order-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111111;
   margin: 0;
-  color: #2c3e50;
-  font-size: 20px;
-  font-weight: 600;
+}
+
+.order-filters {
+  display: flex;
+  gap: 0.75rem;
 }
 
 .filter-select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  background-color: white;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  color: #111111;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
+.filter-select:focus {
+  outline: none;
+  border-color: #111111;
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.1);
+}
+
+/* 批量操作工具栏 */
+.batch-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.batch-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.select-all {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111111;
+  cursor: pointer;
+}
+
+.select-all input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #111111;
+}
+
+.selected-count {
+  font-size: 0.9rem;
+  color: #666666;
+  font-weight: 500;
+}
+
+.batch-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* 按钮样式 */
+.btn {
+  border: 2px solid #111111;
+  background: transparent;
+  color: #111111;
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.btn:hover {
+  background: #111111;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background: #111111;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #000;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #111111;
+}
+
+.btn-success {
+  background: #111111;
+  color: #fff;
+  border-color: #111111;
+}
+
+.btn-success:hover {
+  background: #000;
+}
+
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+}
+
+/* 加载状态 */
 .loading-state {
-  text-align: center;
-  padding: 60px 0;
-  color: #7f8c8d;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: #666666;
 }
 
 .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #3498db;
+  border: 3px solid #e6e6e6;
+  border-top: 3px solid #111111;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin: 0 auto 16px;
+  margin-bottom: 1rem;
 }
 
 @keyframes spin {
@@ -1199,640 +1296,348 @@ export default {
   100% { transform: rotate(360deg); }
 }
 
+/* 空状态 */
 .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
   text-align: center;
-  padding: 60px 0;
-  color: #7f8c8d;
+  color: #666666;
 }
 
 .empty-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
 }
 
+.empty-state p {
+  font-size: 1rem;
+  margin: 0 0 1.5rem 0;
+  color: #666666;
+}
+
+/* 订单列表 */
 .orders-list {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 1rem;
 }
 
 .order-item {
-  border: 1px solid #e1e8ed;
-  border-radius: 8px;
-  padding: 20px;
-  transition: box-shadow 0.3s;
-  display: flex; /* Added for flexbox */
-  align-items: center; /* Added for flexbox */
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .order-item:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
-.order-header-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #f1f3f4;
-  flex-grow: 1; /* Allow header to grow and take available space */
-}
-
-.order-number .label {
-  color: #7f8c8d;
-  font-size: 14px;
-}
-
-.order-number .value {
-  color: #2c3e50;
-  font-weight: 600;
-  font-size: 16px;
-}
-
-.status-badge {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-  text-transform: uppercase;
-}
-
-.status-pending {
-  background-color: #fff3cd;
-  color: #856404;
-}
-
-.status-paid {
-  background-color: #d1ecf1;
-  color: #0c5460;
-}
-
-.status-shipped {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.status-completed {
-  background-color: #c3e6cb;
-  color: #155724;
-}
-
-.status-cancelled {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-
-.status-returning {
-  background-color: #ffeaa7;
-  color: #d63031;
-}
-
-.status-returned {
-  background-color: #fab1a0;
-  color: #e17055;
-}
-
-.status-refunding {
-  background-color: #ff7675;
-  color: #d63031;
-}
-
-.order-details {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 20px;
-}
-
-.order-info {
-  flex: 1;
-}
-
-.info-row {
-  display: flex;
-  margin-bottom: 8px;
-}
-
-.info-row .label {
-  color: #7f8c8d;
-  width: 80px;
-  flex-shrink: 0;
-}
-
-.info-row .value {
-  color: #2c3e50;
-}
-
-.info-row .amount {
-  font-weight: 600;
-  color: #e74c3c;
-}
-
-.order-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 120px;
-}
-
-.action-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.order-products {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #f1f3f4;
-}
-
-.product-item {
-  display: flex;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid #f8f9fa;
-}
-
-.product-item:last-child {
-  border-bottom: none;
-}
-
-.product-image {
-  width: 60px;
-  height: 60px;
-  border-radius: 6px;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.product-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 6px;
-}
-
-.product-image img.no-image {
-  display: none;
-}
-
-.product-info h4 {
-  margin: 0 0 4px 0;
-  font-size: 14px;
-  color: #2c3e50;
-}
-
-.product-specs {
-  margin: 0 0 4px 0;
-  font-size: 12px;
-  color: #7f8c8d;
-}
-
-.product-price {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #e74c3c;
-}
-
-/* 模态框样式 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 12px;
-  max-width: 600px;
-  width: 90%;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e1e8ed;
-}
-
-.modal-header h3 {
-  margin: 0;
-  color: #2c3e50;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #7f8c8d;
-}
-
-.modal-body {
-  padding: 24px;
-}
-
-.detail-section {
-  margin-bottom: 24px;
-}
-
-.detail-section h4 {
-  margin: 0 0 16px 0;
-  color: #2c3e50;
-  font-size: 16px;
-}
-
-.detail-row {
-  display: flex;
-  margin-bottom: 8px;
-}
-
-.detail-row .label {
-  color: #7f8c8d;
-  width: 100px;
-  flex-shrink: 0;
-}
-
-.detail-row .value {
-  color: #2c3e50;
-}
-
-.product-detail {
-  display: flex;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid #f8f9fa;
-}
-
-.product-detail:last-child {
-  border-bottom: none;
-}
-
-.product-detail .product-image {
-  width: 80px;
-  height: 80px;
-}
-
-.product-detail .product-info h5 {
-  margin: 0 0 8px 0;
-  color: #2c3e50;
-}
-
-.product-detail .product-info p {
-  margin: 0 0 4px 0;
-  color: #7f8c8d;
-  font-size: 14px;
-}
-
-.product-detail .product-info .price {
-  color: #e74c3c;
-  font-weight: 600;
-  margin-top: 8px;
-}
-
-/* 批量操作样式 */
-.batch-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding: 12px 20px;
-  background-color: #f8f9fa;
-  border: 1px solid #e1e8ed;
-  border-radius: 8px;
-}
-
-.batch-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.select-all {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 14px;
-  color: #34495e;
-  cursor: pointer;
-}
-
-.select-all input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: #3498db;
-}
-
-.selected-count {
-  font-size: 14px;
-  color: #7f8c8d;
-}
-
-.batch-buttons {
-  display: flex;
-  gap: 10px;
-}
-
-.btn-sm {
-  padding: 6px 12px;
-  font-size: 12px;
-}
-
-.btn-primary.btn-sm {
-  background-color: #3498db;
-  color: white;
-}
-
-.btn-primary.btn-sm:hover:not(:disabled) {
-  background-color: #2980b9;
-}
-
-.btn-primary.btn-sm:disabled {
-  background-color: #bdc3c7;
-  cursor: not-allowed;
-}
-
-.btn-secondary.btn-sm {
-  background-color: #95a5a6;
-  color: white;
-}
-
-.btn-secondary.btn-sm:hover {
-  background-color: #7f8c8d;
-}
-
-.btn-outline.btn-sm {
-  background-color: transparent;
-  color: #3498db;
-  border: 2px solid #3498db;
-}
-
-.btn-outline.btn-sm:hover {
-  background-color: #3498db;
-  color: white;
-}
-
-.btn-warning.btn-sm {
-  background-color: #f39c12;
-  color: white;
-}
-
-.btn-warning.btn-sm:hover {
-  background-color: #e67e22;
-}
-
-.btn-success.btn-sm {
-  background-color: #27ae60;
-  color: white;
-}
-
-.btn-success.btn-sm:hover {
-  background-color: #229954;
-}
-
-/* 退货表单样式 */
-.return-form {
-  max-width: 400px;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #34495e;
-}
-
-.form-select,
-.form-textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  transition: border-color 0.3s;
-}
-
-.form-textarea {
-  height: 100px;
-  resize: vertical;
-}
-
-.form-select:focus,
-.form-textarea:focus {
-  outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-}
-
-.form-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 24px;
-}
-
-.btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  text-decoration: none;
-  display: inline-block;
-  text-align: center;
-  transition: all 0.3s;
-  font-size: 14px;
-}
-
-.btn-primary {
-  background-color: #3498db;
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: #2980b9;
-}
-
-.btn-primary:disabled {
-  background-color: #bdc3c7;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background-color: #95a5a6;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background-color: #7f8c8d;
-}
-
-.btn-outline {
-  background-color: transparent;
-  color: #3498db;
-  border: 2px solid #3498db;
-}
-
-.btn-outline:hover {
-  background-color: #3498db;
-  color: white;
-}
-
-.btn-warning {
-  background-color: #f39c12;
-  color: white;
-}
-
-.btn-warning:hover {
-  background-color: #e67e22;
-}
-
-/* 订单选择框样式 */
+/* 订单选择 */
 .order-select {
-  margin-right: 15px;
-  flex-shrink: 0;
+  margin-bottom: 1rem;
 }
 
 .order-checkbox {
   width: 18px;
   height: 18px;
-  accent-color: #3498db;
-  cursor: pointer;
+  accent-color: #111111;
 }
 
-.order-checkbox:hover {
-  transform: scale(1.1);
-  transition: transform 0.2s ease;
+/* 订单头部信息 */
+.order-header-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-/* 商品图片样式 */
-.no-image {
-  width: 100%;
-  height: 100%;
+.order-number {
   display: flex;
   align-items: center;
-  justify-content: center;
-  background-color: #f8f9fa;
-  color: #6c757d;
-  font-size: 24px;
-  border-radius: 6px;
+  gap: 0.5rem;
 }
 
-.product-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 6px;
+.order-number .label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111111;
 }
 
-.product-image img.no-image {
-  display: none;
-}
-
-/* 状态标签样式优化 */
-.status-badge {
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
+.order-number .value {
+  font-size: 0.9rem;
+  color: #666666;
   font-weight: 500;
-  text-transform: uppercase;
-  white-space: nowrap;
 }
 
-.status-cart {
-  background-color: #e3f2fd;
-  color: #1976d2;
+/* 状态标签 */
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: #f8f9fa;
+  color: #111111;
+  border: 1px solid #e6e6e6;
 }
 
-.status-unknown {
-  background-color: #f5f5f5;
-  color: #757575;
+/* 订单详情 */
+.order-details {
+  display: flex;
+  gap: 2rem;
 }
 
-/* 订单信息行样式优化 */
+.order-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .info-row {
   display: flex;
-  margin-bottom: 8px;
   align-items: center;
+  gap: 0.5rem;
 }
 
 .info-row .label {
-  color: #7f8c8d;
-  width: 80px;
-  flex-shrink: 0;
-  font-size: 13px;
+  min-width: 80px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111111;
 }
 
 .info-row .value {
-  color: #2c3e50;
-  font-size: 13px;
+  font-size: 0.9rem;
+  color: #666666;
+  font-weight: 500;
 }
 
 .info-row .amount {
-  font-weight: 600;
-  color: #e74c3c;
-  font-size: 14px;
+  font-weight: 700;
+  color: #111111;
 }
 
-/* 响应式优化 */
+/* 商品列表 */
+.products-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.product-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  border: none; /* 去掉商品外层细线 */
+  border-radius: 8px;
+  background: #f8f9fa;
+}
+
+.product-image {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid #e6e6e6;
+}
+
+.product-info {
+  flex: 1;
+}
+
+.product-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111111;
+  margin-bottom: 0.25rem;
+}
+
+.product-meta {
+  font-size: 0.8rem;
+  color: #666666;
+  margin-bottom: 0.25rem;
+}
+
+.product-price {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #111111;
+}
+
+/* 订单操作 */
+.order-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f0f0f0;
+}
+
+/* 响应式设计 */
 @media (max-width: 768px) {
-  .order-item {
+  .order-header {
     flex-direction: column;
     align-items: flex-start;
-  }
-  
-  .order-select {
-    margin-right: 0;
-    margin-bottom: 10px;
-  }
-  
-  .order-header-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .order-details {
-    flex-direction: column;
-    gap: 16px;
-  }
-  
-  .order-actions {
-    min-width: auto;
-    width: 100%;
-  }
-  
-  .action-buttons {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 8px;
+    gap: 1rem;
   }
   
   .batch-actions {
     flex-direction: column;
-    gap: 12px;
     align-items: flex-start;
+    gap: 1rem;
   }
   
   .batch-buttons {
     width: 100%;
     justify-content: flex-start;
   }
+  
+  .order-header-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .order-details {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .order-item {
+    padding: 1rem;
+  }
+  
+  .product-item {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: center;
+  }
+  
+  .order-actions {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+  }
+  
+  .product-image {
+    width: 50px;
+    height: 50px;
+  }
+}
+
+/* 信息灰框：除订单编号外的内容 */
+.order-info-box {
+  background: transparent; /* 去掉灰色背景 */
+  border: none;            /* 取消边框 */
+  border-radius: 12px;
+  padding: 12px;
+  max-width: 980px;  /* 整体变窄 */
+  margin: 8px auto 0 auto;
+  display: grid;
+  grid-template-columns: 320px 1fr;  /* 左图右信息 */
+  gap: 16px;
+}
+
+/* 统一按钮尺寸（小号、等高等宽风格） */
+.btn-compact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  height: 36px;
+  padding: 0 !important;
+  line-height: 36px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+/* 黑白风格的“警告”按钮，避免彩色 */
+.btn-warning {
+  background: transparent;
+  color: #111111;
+  border: 2px solid #111111;
+}
+.btn-warning:hover {
+  background: #111111;
+  color: #fff;
+}
+
+/* 左侧缩略商品列表（更紧凑） */
+.products-list.summary { padding: 0; }
+.product-item.compact { 
+  display: flex; 
+  gap: 10px; 
+  padding: 8px 6px; 
+  border: none; /* 去掉商品外层细线 */
+  border-radius: 8px; 
+  background: #fff; 
+  margin-bottom: 8px; 
+}
+.product-image.small { width: 72px; height: 72px; border-radius: 8px; overflow: hidden; border: 1px solid #eee; }
+.product-image.small img { width: 100%; height: 100%; object-fit: cover; }
+.product-info.mini { display: flex; flex-direction: column; gap: 4px; }
+.one-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.product-meta { font-size: 12px; color: #666; }
+
+/* 右侧信息更紧凑 */
+.order-right { display: flex; flex-direction: column; gap: 8px; }
+.order-info { gap: 4px; }
+.info-row { margin-bottom: 6px; }
+
+/* 自定义复选框（有边框黑白风格） */
+.order-checkbox,
+.select-all input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #111111;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  position: relative;
+  outline: none;
+}
+
+.order-checkbox:checked,
+.select-all input[type="checkbox"]:checked {
+  background: #111111;
+  border-color: #111111;
+}
+
+.order-checkbox:checked::after,
+.select-all input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 10px;
+  border-right: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(45deg);
+}
+
+/* 让复选框在高分屏上也清晰 */
+.order-checkbox:focus-visible,
+.select-all input[type="checkbox"]:focus-visible {
+  box-shadow: 0 0 0 3px rgba(17,17,17,0.12);
 }
 </style>
