@@ -32,7 +32,7 @@
               {{ formatAddress(address) }}
             </div>
           </div>
-          
+
           <div class="address-actions">
             <button @click="editAddress(address)" class="btn btn-outline">
               编辑
@@ -40,11 +40,7 @@
             <button @click="deleteAddress(address)" class="btn btn-danger">
               删除
             </button>
-            <button 
-              v-if="!address.isDefault" 
-              @click="setDefaultAddress(address)" 
-              class="btn btn-secondary"
-            >
+            <button v-if="!address.isDefault" @click="setDefaultAddress(address)" class="btn btn-secondary">
               设为默认
             </button>
           </div>
@@ -64,23 +60,12 @@
             <div class="form-row">
               <div class="form-group">
                 <label>收货人姓名 *</label>
-                <input 
-                  v-model="addressForm.receiverName" 
-                  type="text" 
-                  class="form-input" 
-                  required
-                  placeholder="请输入收货人姓名"
-                />
+                <input v-model="addressForm.receiverName" type="text" class="form-input" required
+                  placeholder="请输入收货人姓名" />
               </div>
               <div class="form-group">
                 <label>手机号码 *</label>
-                <input 
-                  v-model="addressForm.phone" 
-                  type="tel" 
-                  class="form-input" 
-                  required
-                  placeholder="请输入手机号码"
-                />
+                <input v-model="addressForm.phone" type="tel" class="form-input" required placeholder="请输入手机号码" />
               </div>
             </div>
 
@@ -94,32 +79,18 @@
 
             <div class="form-group">
               <label>详细地址 *</label>
-              <textarea 
-                v-model="addressForm.detailAddress" 
-                class="form-textarea" 
-                required
-                placeholder="请输入详细地址，如街道、门牌号等"
-                rows="3"
-              ></textarea>
+              <textarea v-model="addressForm.detailAddress" class="form-textarea" required
+                placeholder="请输入详细地址，如街道、门牌号等" rows="3"></textarea>
             </div>
 
             <div class="form-group">
               <label>邮政编码</label>
-              <input 
-                v-model="addressForm.postalCode" 
-                type="text" 
-                class="form-input" 
-                placeholder="请输入邮政编码"
-              />
+              <input v-model="addressForm.postalCode" type="text" class="form-input" placeholder="请输入邮政编码" />
             </div>
 
             <div class="form-group checkbox-group">
               <label class="checkbox-label">
-                <input 
-                  v-model="addressForm.isDefault" 
-                  type="checkbox" 
-                  class="form-checkbox"
-                />
+                <input v-model="addressForm.isDefault" type="checkbox" class="form-checkbox" />
                 <span class="checkbox-text">设为默认收货地址</span>
               </label>
             </div>
@@ -136,15 +107,23 @@
         </div>
       </div>
     </div>
+
+    <!-- 确认删除对话框 -->
+    <confirmDialog v-model:visible="showDeleteDialog" title="删除地址"
+      :message="pendingDeleteAddress ? '确定要删除地址“' + pendingDeleteAddress.receiverName + '”吗？' : '确定要删除该地址吗？'"
+      confirm-text="删除" cancel-text="取消" icon="🗑️" type="danger" @confirm="confirmDelete"
+      @cancel="handleDeleteCancel" />
   </div>
 </template>
 
 <script>
 import { AddressAPI } from '@/api'
 import userManager from '@/utils/userManager'
+import confirmDialog from '@/views/confirmDialog.vue'
 
 export default {
   name: 'AddressManagement',
+  components: { confirmDialog },
   data() {
     return {
       addresses: [],
@@ -152,6 +131,8 @@ export default {
       saving: false,
       showAddModal: false,
       showEditModal: false,
+      showDeleteDialog: false,
+      pendingDeleteAddress: null,
       editingAddress: null,
       addressForm: {
         receiverName: '',
@@ -163,7 +144,7 @@ export default {
         isDefault: false
       },
       // 简化的地区数据，实际项目中应该从API获取
-      provinceOptions: ['河北','北京','天津','山西','内蒙古','辽宁','吉林','黑龙江','山东','河南','陕西','甘肃','宁夏','青海','新疆','湖北','湖南','安徽','江苏','江西','浙江','福建','广东','广西','海南','四川','重庆','贵州','云南','西藏','上海','香港','澳门','海外']
+      provinceOptions: ['河北', '北京', '天津', '山西', '内蒙古', '辽宁', '吉林', '黑龙江', '山东', '河南', '陕西', '甘肃', '宁夏', '青海', '新疆', '湖北', '湖南', '安徽', '江苏', '江西', '浙江', '福建', '广东', '广西', '海南', '四川', '重庆', '贵州', '云南', '西藏', '上海', '香港', '澳门', '海外']
     }
   },
   mounted() {
@@ -175,7 +156,7 @@ export default {
         this.loading = true
         const userId = await userManager.getUserId()
         console.log('当前用户ID:', userId)
-        
+
         if (!userId) {
           console.log('用户未登录，无法加载地址')
           // 使用模拟数据作为演示
@@ -186,7 +167,7 @@ export default {
         try {
           const response = await AddressAPI.getList(userId)
           console.log('API响应:', response)
-          
+
           if (response.data?.code === 200 && response.data.data) {
             // 将数据库格式转换为前端显示格式
             this.addresses = response.data.data.map(dbAddress => ({
@@ -221,7 +202,7 @@ export default {
     // 解析地址信息，从完整地址中提取省市信息
     parseAddressInfo(addressInfo) {
       if (!addressInfo) return { province: '', city: '', detailAddress: '' }
-      
+
       // 尝试从地址信息中提取省市
       const parts = addressInfo.split(' ')
       if (parts.length >= 2) {
@@ -231,7 +212,7 @@ export default {
           detailAddress: parts.slice(2).join(' ') || ''
         }
       }
-      
+
       return {
         province: '',
         city: '',
@@ -285,24 +266,27 @@ export default {
         postalCode: address.postalCode,
         isDefault: address.isDefault
       }
-      
+
       this.showEditModal = true
     },
 
     async deleteAddress(address) {
-      if (!confirm(`确定要删除地址"${address.receiverName}"吗？`)) {
-        return
-      }
+      this.pendingDeleteAddress = address
+      this.showDeleteDialog = true
+    },
 
+    async confirmDelete() {
+      const address = this.pendingDeleteAddress
+      if (!address) return
       try {
         console.log('删除地址:', address.id)
         const deleteResponse = await AddressAPI.delete(address.id)
         console.log('删除地址API响应:', deleteResponse)
-        
+
         if (deleteResponse.data?.code === 200) {
           alert('地址删除成功')
           console.log('地址删除成功:', address.id)
-          
+
           // 从本地列表中移除
           const index = this.addresses.findIndex(addr => addr.id === address.id)
           if (index !== -1) {
@@ -314,7 +298,14 @@ export default {
       } catch (error) {
         console.error('删除地址失败:', error)
         alert(`删除失败: ${error.message}`)
+      } finally {
+        this.showDeleteDialog = false
+        this.pendingDeleteAddress = null
       }
+    },
+
+    handleDeleteCancel() {
+      this.pendingDeleteAddress = null
     },
 
     async setDefaultAddress(address) {
@@ -324,15 +315,15 @@ export default {
           alert('用户未登录，无法设置默认地址')
           return
         }
-        
+
         console.log('设置默认地址:', address.id, '用户ID:', userId)
         const setDefaultResponse = await AddressAPI.setDefault(address.id, userId)
         console.log('设置默认地址API响应:', setDefaultResponse)
-        
+
         if (setDefaultResponse.data?.code === 200) {
           alert('默认地址设置成功')
           console.log('默认地址设置成功:', address.id)
-          
+
           // 更新本地数据
           this.addresses.forEach(addr => {
             addr.isDefault = addr.id === address.id
@@ -355,16 +346,16 @@ export default {
         this.saving = true
         const userId = await userManager.getUserId()
         console.log('保存地址，用户ID:', userId)
-        
+
         if (!userId) {
           alert('用户未登录，无法保存地址')
           return
         }
-        
+
         // 将省市信息合并到详细地址中，符合数据库表结构
         const fullAddress = `${this.addressForm.province} ${this.addressForm.city} ${this.addressForm.detailAddress}`.trim()
         console.log('完整地址:', fullAddress)
-        
+
         const addressData = {
           receiverName: this.addressForm.receiverName,
           phone: this.addressForm.phone,
@@ -373,7 +364,7 @@ export default {
           isDefault: !!this.addressForm.isDefault, // 后端为Boolean，传布尔值
           user: { id: userId } // 按后端实体要求嵌套user对象
         }
-        
+
         console.log('准备保存的地址数据:', addressData)
 
         if (this.showEditModal && this.editingAddress) {
@@ -381,14 +372,14 @@ export default {
           try {
             addressData.addressId = this.editingAddress.id // 使用数据库字段名
             console.log('编辑地址，ID:', addressData.addressId)
-            
+
             const updateResponse = await AddressAPI.update(addressData)
             console.log('更新地址API响应:', updateResponse)
-            
+
             if (updateResponse.data?.code === 200) {
               alert('地址更新成功')
               console.log('地址更新成功:', addressData)
-              
+
               // 更新本地数据
               const index = this.addresses.findIndex(addr => addr.id === this.editingAddress.id)
               if (index !== -1) {
@@ -416,16 +407,16 @@ export default {
           try {
             console.log('添加新地址')
             console.log('发送到API的数据:', addressData)
-            
+
             const addResponse = await AddressAPI.add(addressData)
             console.log('添加地址API响应:', addResponse)
             console.log('响应状态:', addResponse.status)
             console.log('响应数据:', addResponse.data)
-            
+
             if (addResponse.data?.code === 200) {
               alert('地址添加成功')
               console.log('地址添加成功:', addressData)
-              
+
               // 重新加载地址列表以获取最新的数据
               await this.loadAddresses()
             } else {
@@ -440,7 +431,7 @@ export default {
               request: addError.request,
               config: addError.config
             })
-            
+
             let errorMessage = '地址添加失败'
             if (addError.response?.data?.message) {
               errorMessage += `: ${addError.response.data.message}`
@@ -449,7 +440,7 @@ export default {
             } else if (addError.message) {
               errorMessage += `: ${addError.message}`
             }
-            
+
             alert(errorMessage)
             return
           }
@@ -469,21 +460,21 @@ export default {
         alert('请输入收货人姓名')
         return false
       }
-      
+
       // 修复手机号码验证逻辑
       const phone = this.addressForm.phone.trim()
       if (!phone) {
         alert('请输入手机号码')
         return false
       }
-      
+
       // 更宽松的手机号码验证，支持多种格式
       const phoneRegex = /^1[3-9]\d{9}$|^0\d{2,3}-?\d{7,8}$|^400-?\d{3}-?\d{4}$/
       if (!phoneRegex.test(phone)) {
         alert('请输入正确的手机号码格式（如：13800138000）')
         return false
       }
-      
+
       if (!this.addressForm.province.trim()) {
         alert('请选择省份')
         return false
@@ -844,28 +835,28 @@ export default {
     align-items: flex-start;
     gap: 1rem;
   }
-  
+
   .addresses-list {
     grid-template-columns: 1fr;
   }
-  
+
   .address-item {
     padding: 1rem;
   }
-  
+
   .address-actions {
     flex-wrap: wrap;
   }
-  
+
   .form-row {
     grid-template-columns: 1fr;
   }
-  
+
   .modal-content {
     width: 95%;
     margin: 1rem;
   }
-  
+
   .modal-header,
   .modal-body {
     padding: 1rem;
@@ -877,11 +868,11 @@ export default {
     padding: 0.5rem 1rem;
     font-size: 0.8rem;
   }
-  
+
   .address-name {
     font-size: 0.9rem;
   }
-  
+
   .address-phone,
   .address-detail {
     font-size: 0.8rem;

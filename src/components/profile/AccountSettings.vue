@@ -184,19 +184,33 @@
         </div>
       </div>
     </div>
+
+    <!-- 通用确认对话框 -->
+    <confirmDialog v-model:visible="showConfirmDialog" :title="confirmTitle" :message="confirmMessage"
+      :icon="confirmIcon" :type="confirmType" confirm-text="确定" cancel-text="取消" @confirm="handleConfirmAction"
+      @cancel="handleCancelAction" />
   </div>
 </template>
 
 <script>
 import userManager from '@/utils/userManager'
+import confirmDialog from '@/views/confirmDialog.vue'
 
 export default {
   name: 'AccountSettings',
+  components: { confirmDialog },
   data() {
     return {
       saving: false,
       showTwoFactorModal: false,
       twoFactorCode: '',
+      // 通用确认对话框状态
+      showConfirmDialog: false,
+      confirmTitle: '确认',
+      confirmMessage: '',
+      confirmIcon: '❓',
+      confirmType: 'default',
+      pendingAction: '',
       settings: {
         emailNotification: true,
         smsNotification: false,
@@ -228,10 +242,10 @@ export default {
         this.saving = true
         // 保存到本地存储
         localStorage.setItem('userSettings', JSON.stringify(this.settings))
-        
+
         // 这里应该调用后端API保存设置
         await new Promise(resolve => setTimeout(resolve, 500))
-        
+
         console.log('设置已保存')
       } catch (error) {
         console.error('保存设置失败:', error)
@@ -247,27 +261,22 @@ export default {
     },
 
     resetSettings() {
-      if (confirm('确定要重置所有设置吗？')) {
-        this.settings = {
-          emailNotification: true,
-          smsNotification: false,
-          pushNotification: true,
-          profileVisibility: 'public',
-          searchable: true,
-          twoFactorEnabled: false
-        }
-        localStorage.removeItem('userSettings')
-        alert('设置已重置')
-      }
+      this.confirmTitle = '重置设置'
+      this.confirmMessage = '确定要重置所有设置吗？'
+      this.confirmIcon = '⚠️'
+      this.confirmType = 'warning'
+      this.pendingAction = 'reset-settings'
+      this.showConfirmDialog = true
     },
 
     setupTwoFactor() {
       if (this.settings.twoFactorEnabled) {
-        if (confirm('确定要禁用两步验证吗？')) {
-          this.settings.twoFactorEnabled = false
-          this.saveSettings()
-          alert('两步验证已禁用')
-        }
+        this.confirmTitle = '禁用两步验证'
+        this.confirmMessage = '确定要禁用两步验证吗？'
+        this.confirmIcon = '⚠️'
+        this.confirmType = 'warning'
+        this.pendingAction = 'disable-2fa'
+        this.showConfirmDialog = true
       } else {
         this.showTwoFactorModal = true
       }
@@ -282,7 +291,7 @@ export default {
       try {
         // 这里应该调用后端API验证两步验证码
         await new Promise(resolve => setTimeout(resolve, 1000))
-        
+
         this.settings.twoFactorEnabled = true
         this.saveSettings()
         this.closeTwoFactorModal()
@@ -313,27 +322,77 @@ export default {
         settings: this.settings,
         exportTime: new Date().toISOString()
       }
-      
+
       const dataStr = JSON.stringify(userData, null, 2)
       const dataBlob = new Blob([dataStr], { type: 'application/json' })
       const url = URL.createObjectURL(dataBlob)
-      
+
       const link = document.createElement('a')
       link.href = url
       link.download = `user-data-${new Date().toISOString().split('T')[0]}.json`
       link.click()
-      
+
       URL.revokeObjectURL(url)
       alert('数据导出成功')
     },
 
     deleteAccount() {
-      if (confirm('确定要删除账户吗？此操作不可撤销！')) {
-        if (confirm('再次确认：删除账户将永久删除所有数据，无法恢复！')) {
-          // 这里应该调用后端API删除账户
-          alert('账户删除功能开发中...')
+      this.confirmTitle = '删除账户'
+      this.confirmMessage = '确定要删除账户吗？此操作不可撤销！'
+      this.confirmIcon = '🗑️'
+      this.confirmType = 'danger'
+      this.pendingAction = 'delete-account-step1'
+      this.showConfirmDialog = true
+    },
+
+    handleConfirmAction() {
+      if (this.pendingAction === 'reset-settings') {
+        this.settings = {
+          emailNotification: true,
+          smsNotification: false,
+          pushNotification: true,
+          profileVisibility: 'public',
+          searchable: true,
+          twoFactorEnabled: false
         }
+        localStorage.removeItem('userSettings')
+        alert('设置已重置')
+        this.showConfirmDialog = false
+        this.pendingAction = ''
+        return
       }
+
+      if (this.pendingAction === 'disable-2fa') {
+        this.settings.twoFactorEnabled = false
+        this.saveSettings()
+        alert('两步验证已禁用')
+        this.showConfirmDialog = false
+        this.pendingAction = ''
+        return
+      }
+
+      if (this.pendingAction === 'delete-account-step1') {
+        // 进入第二次确认
+        this.confirmMessage = '再次确认：删除账户将永久删除所有数据，无法恢复！'
+        this.confirmIcon = '🗑️'
+        this.confirmType = 'danger'
+        this.pendingAction = 'delete-account-step2'
+        // 保持对话框打开
+        return
+      }
+
+      if (this.pendingAction === 'delete-account-step2') {
+        // 这里应该调用后端API删除账户
+        alert('账户删除功能开发中...')
+        this.showConfirmDialog = false
+        this.pendingAction = ''
+        return
+      }
+    },
+
+    handleCancelAction() {
+      this.showConfirmDialog = false
+      this.pendingAction = ''
     }
   }
 }
@@ -431,7 +490,9 @@ export default {
   display: inline-block;
 }
 
-.toggle-switch input { display: none; }
+.toggle-switch input {
+  display: none;
+}
 
 /* 滑块 */
 .toggle-switch span {
@@ -446,13 +507,31 @@ export default {
 }
 
 /* 选中态：边框保持黑色，滑块右移 */
-.toggle-switch.active { background: #fff; border-color: #111111; }
-.toggle-switch.active span { transform: translateX(24px); }
+.toggle-switch.active {
+  background: #fff;
+  border-color: #111111;
+}
+
+.toggle-switch.active span {
+  transform: translateX(24px);
+}
 
 /* 小尺寸版本 */
-.toggle-switch.small { width: 44px; height: 24px; }
-.toggle-switch.small span { width: 18px; height: 18px; top: 2px; left: 2px; }
-.toggle-switch.small.active span { transform: translateX(20px); }
+.toggle-switch.small {
+  width: 44px;
+  height: 24px;
+}
+
+.toggle-switch.small span {
+  width: 18px;
+  height: 18px;
+  top: 2px;
+  left: 2px;
+}
+
+.toggle-switch.small.active span {
+  transform: translateX(20px);
+}
 
 /* 按钮样式 */
 .btn {
@@ -632,27 +711,27 @@ export default {
     align-items: flex-start;
     gap: 1rem;
   }
-  
+
   .setting-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
   }
-  
+
   .setting-value {
     align-self: flex-end;
   }
-  
+
   .modal-content {
     width: 95%;
     margin: 1rem;
   }
-  
+
   .modal-header,
   .modal-body {
     padding: 1rem;
   }
-  
+
   .form-actions {
     flex-direction: column;
   }
@@ -663,15 +742,15 @@ export default {
     padding: 0.5rem 1rem;
     font-size: 0.8rem;
   }
-  
+
   .setting-label {
     font-size: 0.8rem;
   }
-  
+
   .setting-description {
     font-size: 0.75rem;
   }
-  
+
   .settings-card {
     padding: 1rem;
   }
