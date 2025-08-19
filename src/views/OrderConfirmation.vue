@@ -2673,6 +2673,7 @@ onUnmounted(() => {
     font-size: 0.9rem;
     font-weight: 500;
     transition: all 0.2s ease;
+    margin-right: -20px; /* 进一步向右偏移 */
 }
 
 .toggle-points-btn:hover {
