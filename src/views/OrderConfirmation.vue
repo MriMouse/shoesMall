@@ -157,6 +157,46 @@
                         <span class="label">运费:</span>
                         <span class="value">¥{{ shippingFee.toFixed(2) }}</span>
                     </div>
+                    
+                    <!-- 积分抵扣选择 -->
+                    <div class="summary-item points-deduction">
+                        <div class="points-info-header">
+                            <span class="label">积分抵扣</span>
+                            <button 
+                                @click="togglePointsDeduction" 
+                                class="toggle-points-btn"
+                                :class="{ 'active': usePoints }"
+                            >
+                                {{ usePoints ? '取消' : '使用' }}
+                            </button>
+                        </div>
+                        
+                        <div v-if="!usePoints" class="points-info">
+                            <span class="current-points">当前积分: {{ userCurrentPoints }} 分</span>
+                        </div>
+                        
+                        <div v-if="usePoints" class="points-deduction-controls">
+                            <div class="points-slider-container">
+                                <div class="points-rule">10积分=1元</div>
+                                <div class="points-slider-wrapper">
+                                    <input 
+                                        type="range" 
+                                        v-model="selectedPoints" 
+                                        :min="0" 
+                                        :max="maxDeductiblePoints" 
+                                        :step="10"
+                                        class="points-slider"
+                                        @input="updatePointsDeduction"
+                                    >
+                                </div>
+                                <div class="points-selection-info">
+                                    <span class="selected-points-display">{{ selectedPoints }} 积分</span>
+                                    <span class="deduction-amount">抵扣 ¥{{ pointsDeductionAmount.toFixed(2) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="summary-item">
                         <span class="label">可获得积分:</span>
                         <span class="value points">{{ totalPoints }} 分</span>
@@ -309,6 +349,13 @@
                         </div>
                         
                         <div class="form-group">
+                            <label>省份 *</label>
+                            <select v-model="addressForm.province" class="form-input" required>
+                                <option disabled value="">请选择省份/地区</option>
+                                <option v-for="p in provinceOptions" :key="p" :value="p">{{ p }}</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <label for="addressInfo">详细地址 *</label>
                             <textarea 
                                 id="addressInfo" 
@@ -316,7 +363,7 @@
                                 required
                                 class="form-textarea"
                                 rows="3"
-                                placeholder="请输入省市区街道门牌号等详细地址信息"
+                                placeholder="请输入具体到街道门牌号等详细地址信息"
                             ></textarea>
                         </div>
                         
@@ -401,6 +448,10 @@
                          <div class="total-row">
                              <span>运费:</span>
                              <span>¥{{ shippingFee.toFixed(2) }}</span>
+                         </div>
+                         <div v-if="usePoints && selectedPoints > 0" class="total-row points-deduction-row">
+                             <span>积分抵扣:</span>
+                             <span class="deduction-amount">-¥{{ pointsDeductionAmount.toFixed(2) }} ({{ selectedPoints }}分)</span>
                          </div>
                          <div class="total-row">
                              <span>可获得积分:</span>
@@ -502,9 +553,11 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { OrderAPI, InventoryAPI, CartAPI, UserAPI } from '@/api'
+import { OrderAPI, InventoryAPI, CartAPI } from '@/api'
+import { PointsAPI } from '@/api'
+import { UserAPI } from '@/api'
 import { ShoeAPI, ShoesSizeAPI } from '@/api'
-import { AddressAPI } from '@/api'
+import { AddressAPI, OrderShoeNumAPI } from '@/api'
 import userManager from '../utils/userManager'
 import cartManager from '../utils/cart'
 import axios from 'axios'
@@ -531,6 +584,11 @@ const isProcessingPayment = ref(false)
 // 订单详情弹窗相关
 const showOrderDetailsModal = ref(false)
 const orderDetails = ref(null)
+
+// 积分抵扣相关
+const userCurrentPoints = ref(0)
+const usePoints = ref(false)
+const selectedPoints = ref(0)
 
 // 地址表单数据
 const addressForm = ref({
@@ -569,12 +627,61 @@ const totalPrice = computed(() => {
     }, 0)
 })
 
+// 省份下拉与运费/积分抵扣
+const provinces = [
+    '河北','北京','天津','山西','内蒙古','辽宁','吉林','黑龙江','山东','河南','陕西','甘肃','宁夏','青海','新疆','湖北','湖南','安徽','江苏','江西','浙江','福建','广东','广西','海南','四川','重庆','贵州','云南','西藏','上海','香港','澳门','海外'
+]
+const selectedProvince = ref('河北')
+const provinceOptions = ['河北','北京','天津','山西','内蒙古','辽宁','吉林','黑龙江','山东','河南','陕西','甘肃','宁夏','青海','新疆','湖北','湖南','安徽','江苏','江西','浙江','福建','广东','广西','海南','四川','重庆','贵州','云南','西藏','上海','香港','澳门','海外']
+
+function calcShippingByProvince(province) {
+    if (!province) return 10
+    // 若不在已知省份列表中，按最远区域处理
+    if (!provinces.includes(province)) return 100
+    if (province === '香港' || province === '澳门' || province === '海外') return 5000
+    // 河北为核心圈层
+    const ring1 = ['北京','天津','山西','内蒙古','辽宁','山东','河南']
+    const ring2 = ['陕西','江苏','安徽','湖北','吉林','黑龙江']
+    const ring3 = ['宁夏','甘肃','青海','新疆','江西','浙江','湖南','四川','重庆']
+    if (province === '河北') return 10
+    if (ring1.includes(province)) return 30
+    if (ring2.includes(province)) return 60
+    if (ring3.includes(province)) return 90
+    return 100
+}
+
 const shippingFee = computed(() => {
-    return totalPrice.value > 99 ? 0 : 10
+    // 优先从所选地址解析省份
+    let province = selectedProvince.value
+    if (selectedAddress.value?.addressInfo) {
+        const firstToken = String(selectedAddress.value.addressInfo).trim().split(/\s+/)[0]
+        if (firstToken) province = firstToken
+    } else if (addressForm?.value?.province) {
+        province = addressForm.value.province
+    }
+    const base = calcShippingByProvince(province)
+    return base
 })
 
+// 积分抵扣相关计算属性
+const maxDeductiblePoints = computed(() => {
+    // 最大可抵扣积分 = 用户当前积分 和 (商品总价+运费)*10 的较小值
+    const maxByOrder = Math.floor((totalPrice.value + shippingFee.value) * 10)
+    return Math.min(userCurrentPoints.value, maxByOrder)
+})
+
+const pointsDeductionAmount = computed(() => {
+    return calcDeductionYuan(selectedPoints.value)
+})
+
+function calcDeductionYuan(points) {
+    return Math.floor((points || 0) / 10)
+}
+
 const orderTotal = computed(() => {
-    return totalPrice.value + shippingFee.value
+    const deduction = usePoints.value ? calcDeductionYuan(selectedPoints.value) : 0
+    const sum = totalPrice.value + shippingFee.value - deduction
+    return sum < 0 ? 0 : sum
 })
 
 const totalPoints = computed(() => {
@@ -592,6 +699,48 @@ const canSubmitOrder = computed(() => {
            products.value.every(product => product.selectedSize)
 })
 
+// 积分抵扣相关方法
+const togglePointsDeduction = () => {
+    usePoints.value = !usePoints.value
+    if (!usePoints.value) {
+        selectedPoints.value = 0
+    } else {
+        // 默认选择最大可抵扣积分的50%
+        selectedPoints.value = Math.floor(maxDeductiblePoints.value * 0.5 / 10) * 10
+    }
+}
+
+const updatePointsDeduction = () => {
+    // 确保选择的积分是10的倍数
+    selectedPoints.value = Math.floor(selectedPoints.value / 10) * 10
+    // 确保不超过最大可抵扣积分
+    if (selectedPoints.value > maxDeductiblePoints.value) {
+        selectedPoints.value = maxDeductiblePoints.value
+    }
+}
+
+
+
+// 加载用户积分
+const loadUserPoints = async () => {
+    try {
+        const userId = await userManager.getUserId()
+        if (!userId) return
+        
+        const response = await UserAPI.getAllUsers()
+        if (response.data?.code === 200 && response.data.data) {
+            const currentUser = response.data.data.find(u => u.id === userId)
+            if (currentUser) {
+                userCurrentPoints.value = currentUser.integral || 0
+                console.log('用户当前积分:', userCurrentPoints.value)
+            }
+        }
+    } catch (error) {
+        console.error('加载用户积分失败:', error)
+        userCurrentPoints.value = 0
+    }
+}
+
 // 获取商品数据
 const loadOrderData = async () => {
     loading.value = true
@@ -606,7 +755,7 @@ const loadOrderData = async () => {
         }
         
         // 优先处理来自购物车的跳转
-        const { productId, sizeId, quantity, fromOrderConfirmation, fromCart, items } = route.query
+        const { productId, sizeId, quantity, fromOrderConfirmation, fromCart, items, fromPendingOrder, orderId, orderNumber } = route.query
         
         // 如果有来自购物车的跳转，不恢复本地存储的数据
         // 如果没有来自购物车的跳转，才尝试恢复保存的订单数据
@@ -615,7 +764,92 @@ const loadOrderData = async () => {
             hasRestoredData = restoreOrderData()
         }
 
-        if (fromCart === 'true' && items) {
+        if (fromPendingOrder === 'true' && orderId) {
+            // 处理来自待支付订单的跳转
+            try {
+                console.log('处理待支付订单:', orderId, orderNumber)
+                
+                // 获取待支付订单的商品信息
+                const orderResponse = await OrderAPI.getAll()
+                if (orderResponse.data?.code === 200 && orderResponse.data.data) {
+                    const pendingOrders = orderResponse.data.data.filter(o => 
+                        o.orderId === parseInt(orderId) && o.status === '0'
+                    )
+                    
+                    if (pendingOrders.length > 0) {
+                        // 获取订单的商品数量信息
+                        const orderShoeNumPromises = pendingOrders.map(async (order) => {
+                            try {
+                                const orderShoeNumResponse = await OrderShoeNumAPI.getByOrderId(order.orderId)
+                                if (orderShoeNumResponse.data?.code === 200 && orderShoeNumResponse.data.data) {
+                                    return orderShoeNumResponse.data.data
+                                }
+                            } catch (error) {
+                                console.warn('获取订单商品数量失败:', error)
+                            }
+                            return null
+                        })
+                        
+                        const orderShoeNums = await Promise.all(orderShoeNumPromises)
+                        const validOrderShoeNums = orderShoeNums.filter(item => item !== null).flat()
+                        
+                        // 获取商品详细信息
+                        const productPromises = validOrderShoeNums.map(async (item) => {
+                            try {
+                                const shoeResponse = await ShoeAPI.getById(item.shoeId)
+                                if (shoeResponse.data?.code === 200 && shoeResponse.data.data) {
+                                    const shoe = shoeResponse.data.data
+                                    
+                                    // 获取商品图片
+                                    let images = []
+                                    try {
+                                        const imgResponse = await ShoeAPI.getImages(item.shoeId)
+                                        if (imgResponse.data?.code === 200 && imgResponse.data.data) {
+                                            images = imgResponse.data.data
+                                        }
+                                    } catch (imgError) {
+                                        console.warn('获取商品图片失败:', imgError)
+                                    }
+                                    
+                                    return {
+                                        ...shoe,
+                                        images,
+                                        selectedSize: pendingOrders.find(o => o.orderId === item.orderId)?.sizeId,
+                                        quantity: item.shoeNum || 1,
+                                        uniqueId: Date.now() + Math.random() + item.shoeId
+                                    }
+                                }
+                            } catch (error) {
+                                console.warn('获取商品详情失败:', error)
+                            }
+                            return null
+                        })
+                        
+                        const productResults = await Promise.all(productPromises)
+                        const validProducts = productResults.filter(p => p !== null)
+                        
+                        if (validProducts.length > 0) {
+                            products.value = validProducts
+                            console.log('从待支付订单加载的商品:', products.value)
+                            
+                            // 设置订单号用于后续支付
+                            window.pendingOrderNumber = orderNumber
+                        } else {
+                            throw new Error('无法获取待支付订单的商品信息')
+                        }
+                    } else {
+                        throw new Error('未找到待支付订单')
+                    }
+                } else {
+                    throw new Error('获取订单信息失败')
+                }
+            } catch (error) {
+                console.error('处理待支付订单失败:', error)
+                alert('加载待支付订单失败，请重试')
+                router.push('/profile')
+                return
+            }
+        } else if (fromCart === 'true' && items) {
             try {
                 const cartItems = JSON.parse(items)
                                  // 将购物车条目转为本页商品结构
@@ -790,6 +1024,9 @@ const loadOrderData = async () => {
 
         // 获取地址数据
         await loadAddresses()
+        
+        // 加载用户积分
+        await loadUserPoints()
 
     } catch (err) {
         console.error('加载订单数据失败:', err)
@@ -959,11 +1196,15 @@ const showAddAddressForm = () => {
 // 编辑地址
 const editAddressItem = (address) => {
     isEditingAddress.value = true
+    const tokens = String(address.addressInfo || '').trim().split(/\s+/)
+    const provinceToken = tokens.length > 0 ? tokens[0] : ''
+    const restAddress = tokens.length > 1 ? tokens.slice(1).join(' ') : ''
     addressForm.value = {
         addressId: address.addressId,
         receiverName: address.receiverName,
         phone: address.phone,
-        addressInfo: address.addressInfo,
+        province: provinceToken,
+        addressInfo: restAddress || address.addressInfo,
         postalCode: address.postalCode || '',
         isDefault: address.isDefault || false
     }
@@ -976,6 +1217,7 @@ const resetAddressForm = () => {
         addressId: null,
         receiverName: '',
         phone: '',
+        province: '',
         addressInfo: '',
         postalCode: '',
         isDefault: false
@@ -1033,6 +1275,10 @@ const saveAddress = async () => {
     if (addressForm.value.postalCode && !validatePostalCode()) {
         return // 如果验证失败，不继续执行
     }
+    if (!addressForm.value.province || !String(addressForm.value.province).trim()) {
+        alert('请选择省份')
+        return
+    }
     
     try {
         // 获取当前登录用户的ID
@@ -1044,8 +1290,10 @@ const saveAddress = async () => {
         
         console.log('正在保存地址，用户ID:', userId)
         
+        const fullAddress = `${String(addressForm.value.province).trim()} ${String(addressForm.value.addressInfo || '').trim()}`.trim()
         const addressData = {
             ...addressForm.value,
+            addressInfo: fullAddress,
             user: { id: userId } // 使用user对象结构，与后端Address实体类匹配
         }
 
@@ -1229,7 +1477,8 @@ const createOrderWithStatus = async (status) => {
                         orderNumber: masterOrderNumber,
                         status: status,
                         addressId: selectedAddress.value.addressId,
-                        shippingFee: shippingFee.value / Math.max(products.value.length, 1),
+                        // 将"含运费-含积分抵扣"的总价写入 shippingFee（按你的要求）
+                        shippingFee: Number(orderTotal.value.toFixed(2)) / Math.max(products.value.length, 1),
                         createdAt: formatDate(new Date()),
                         updatedAt: formatDate(new Date()),
                         deliveryTime: formatDate(addDays(new Date(), 3))
@@ -1390,10 +1639,30 @@ const confirmPayment = async () => {
         let masterOrderNumber = null
         let createdOrders = []
 
+        // 检查是否来自待支付订单的跳转
+        const isFromPendingOrder = window.pendingOrderNumber !== undefined
+
         // 检查用户是否选择更新现有订单
         const shouldUpdateExisting = window.shouldUpdateExistingOrder === true
 
-        if (pendingOrders && pendingOrders.length > 0 && shouldUpdateExisting) {
+        if (isFromPendingOrder && window.pendingOrderNumber) {
+            // 来自待支付订单的跳转，直接更新该订单
+            const orderNumber = window.pendingOrderNumber
+            const updateResult = await updateOrderStatus(orderNumber, '1')
+            
+            if (updateResult) {
+                masterOrderNumber = orderNumber
+                // 获取更新后的订单
+                const fetchRes = await OrderAPI.getAll()
+                if (fetchRes.data && fetchRes.data.code === 200 && Array.isArray(fetchRes.data.data)) {
+                    createdOrders = fetchRes.data.data.filter(o => o.orderNumber === orderNumber)
+                }
+            } else {
+                alert('更新待支付订单失败，请重试')
+                isProcessingPayment.value = false
+                return
+            }
+        } else if (pendingOrders && pendingOrders.length > 0 && shouldUpdateExisting) {
             // 用户选择更新现有订单，更新状态为1
             const orderNumbers = [...new Set(pendingOrders.map(order => order.orderNumber))]
             const updatePromises = orderNumbers.map(orderNumber => 
@@ -1512,9 +1781,61 @@ const confirmPayment = async () => {
 
                 clearInterval(paymentTimer.value)
                 showPaymentModal.value = false
-                // 清除用户选择标志
+                // 清除用户选择标志和待支付订单标记
                 window.shouldUpdateExistingOrder = false
+                window.pendingOrderNumber = undefined
                 
+                // 支付成功：为该订单号下的每个订单累计积分
+                try {
+                    const userId = orderDetails.value.userId
+                    // 直接按每个订单ID累计，兼容后端旧版本参数校验
+                    for (const ord of (createdOrders || [])) {
+                        if (ord && ord.orderId) {
+                            console.log('按订单ID累计积分: userId=', userId, ' orderId=', ord.orderId)
+                            const singleRes = await PointsAPI.accrueByOrder({ userId, orderId: ord.orderId })
+                            if (!(singleRes?.data?.code === 200 && singleRes.data.data === true)) {
+                                console.warn('按订单ID累计积分返回非成功:', singleRes?.data)
+                            }
+                        }
+                    }
+                    console.log('按订单ID累计积分完成')
+                } catch (e2) {
+                    console.warn('累计积分失败（不影响支付流程）:', e2)
+                }
+
+                // 若启用积分抵扣，则在支付成功后扣减对应积分（10 积分=1 元）
+                try {
+                    if (usePoints.value && selectedPoints.value > 0) {
+                        const userId = orderDetails.value.userId
+                        const toUse = Math.max(0, selectedPoints.value)
+                        if (toUse > 0) {
+                            const adjRes = await PointsAPI.adjust({ userId, delta: -toUse })
+                            if (adjRes?.data?.code === 200 && adjRes.data.data === true) {
+                                console.log('已扣减积分用于抵扣:', toUse)
+                            } else {
+                                console.warn('扣减积分失败:', adjRes?.data)
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('抵扣积分扣减失败（不影响支付流程）:', e)
+                }
+
+                // 可选：支付后刷新前端的本地用户积分展示
+                try {
+                    const userId = orderDetails.value.userId
+                    const allUsersRes = await UserAPI.getAllUsers()
+                    const me = allUsersRes?.data?.data?.find?.(u => u.id === userId)
+                    if (me) {
+                        const current = userManager.getCurrentUser()
+                        const merged = typeof current === 'object' && current !== null ? { ...current, integral: me.integral } : { username: current || '', id: userId, integral: me.integral }
+                        userManager.setCurrentUser(merged)
+                        console.log('已刷新本地用户积分为:', me.integral)
+                    }
+                } catch (e) {
+                    console.warn('刷新本地用户积分失败（不影响流程）:', e)
+                }
+
                 // 从购物车中删除已购买的商品
                 await removeItemsFromCart()
                 
@@ -2314,6 +2635,154 @@ onUnmounted(() => {
     font-weight: 700;
 }
 
+/* 积分抵扣样式 */
+.points-deduction {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    background: var(--card-bg);
+    box-shadow: 0 4px 16px var(--shadow-color);
+}
+
+.points-info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.points-info {
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.current-points {
+    font-size: 0.9rem;
+    color: var(--muted);
+    font-weight: 500;
+}
+
+.toggle-points-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--primary);
+    background: white;
+    color: var(--primary);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.toggle-points-btn:hover {
+    background: var(--primary);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(17, 17, 17, 0.2);
+}
+
+.toggle-points-btn.active {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 4px 12px rgba(17, 17, 17, 0.3);
+}
+
+.points-deduction-controls {
+    margin-top: 12px;
+}
+
+.points-slider-container {
+    margin-bottom: 16px;
+    text-align: center;
+    padding: 0 20px;
+}
+
+.points-rule {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-bottom: 24px;
+    font-weight: 500;
+}
+
+.points-slider-wrapper {
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.points-slider {
+    width: 60%;
+    height: 6px;
+    border-radius: 3px;
+    background: #e9ecef;
+    outline: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.points-slider:hover {
+    background: #d1d5db;
+}
+
+.points-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--primary);
+    cursor: pointer;
+    border: 3px solid rgb(255, 255, 255);
+    box-shadow: 0 4px 12px rgba(17, 17, 17, 0.3);
+    transition: all 0.2s ease;
+}
+
+.points-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(17, 17, 17, 0.4);
+}
+
+.points-slider::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--primary);
+    cursor: pointer;
+    border: 3px solid white;
+    box-shadow: 0 4px 12px rgba(17, 17, 17, 0.3);
+    transition: all 0.2s ease;
+}
+
+.points-slider::-moz-range-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(17, 17, 17, 0.4);
+}
+
+.points-selection-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    padding: 14px 20px;
+    background: rgba(17, 17, 17, 0.04);
+    border-radius: 10px;
+    border: 1px solid rgba(17, 17, 17, 0.1);
+}
+
+.selected-points-display {
+    font-weight: 600;
+    color: var(--primary);
+    font-size: 0.9rem;
+}
+
+.deduction-amount {
+    font-weight: 600;
+    color: var(--primary);
+    font-size: 0.9rem;
+}
+
 .address-content {
     display: flex;
     flex-direction: column;
@@ -3008,13 +3477,22 @@ onUnmounted(() => {
  }
 
  .total-row.final-total {
-     font-size: 1.2rem;
-     font-weight: 700;
-     color: #111;
-     border-top: 2px solid #111;
-     padding-top: 12px;
-     margin-top: 8px;
- }
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #111;
+    border-top: 2px solid #111;
+    padding-top: 12px;
+    margin-top: 8px;
+}
+
+.points-deduction-row {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.points-deduction-row .deduction-amount {
+    color: var(--primary);
+}
 
  .payment-address {
      margin-top: 20px;

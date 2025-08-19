@@ -5,11 +5,15 @@ import MenShoes from "../views/MenShoes.vue";
 import WomenShoes from "../views/WomenShoes.vue";
 import KidsShoes from "../views/KidsShoes.vue";
 import ProductListPage from "../components/ProductListPage.vue";
+import MainNav from "../views/layout/MainNav.vue";
 import ProductDetail from "../components/ProductDetail.vue";
 import OrderConfirmation from "../views/OrderConfirmation.vue";
 import Cart from "../views/Cart.vue";
 import TestCart from "../views/TestCart.vue";
 import TestUserCart from "../views/TestUserCart.vue";
+import TestAPI from "../views/TestAPI.vue";
+import TestAddress from "../views/TestAddress.vue";
+import TestOrderManagement from "../views/TestOrderManagement.vue";
 
 const routes = [
   {
@@ -49,9 +53,15 @@ const routes = [
     component: KidsShoes,
   },
   {
-    path: "/products",  // 修改为 /products
-    name: "ProductListPage",
-    component: ProductListPage,
+    path: "/products",
+    component: MainNav,
+    children: [
+      {
+        path: "",
+        name: "ProductListPage",
+        component: ProductListPage,
+      },
+    ],
   },
   {
     path: "/product/:id",
@@ -72,6 +82,21 @@ const routes = [
     path: "/test-user-cart",
     name: "TestUserCart",
     component: TestUserCart,
+  },
+  {
+    path: "/test-api",
+    name: "TestAPI",
+    component: TestAPI,
+  },
+  {
+    path: "/test-address",
+    name: "TestAddress",
+    component: TestAddress,
+  },
+  {
+    path: "/test-order-management",
+    name: "TestOrderManagement",
+    component: TestOrderManagement,
   },
   // 添加一个重定向，兼容旧的路由
   {

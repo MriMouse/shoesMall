@@ -172,13 +172,29 @@
 						<path d="M1 1h4l2.68 12.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
 					</svg>
 				</button>
-				<button class="icon-btn" :class="{ 'disabled': !isLoggedIn }" @click="goProfile" aria-label="个人中心">
-					<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"
-						stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-						<circle cx="12" cy="8" r="3" />
-						<path d="M4 20c0-3.314 3.582-6 8-6s8 2.686 8 6" />
-					</svg>
-				</button>
+				<!-- 用户头像按钮 + 悬浮下拉菜单 -->
+				<div class="user-menu-wrapper" @mouseenter="openUserMenu" @mouseleave="scheduleCloseUserMenu">
+					<button class="icon-btn" :class="{ 'disabled': !isLoggedIn }" @click="goProfile" aria-label="个人中心">
+						<img v-if="avatarPath" :src="avatarUrl" alt="avatar" class="avatar-img" />
+						<svg v-else viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"
+							stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<circle cx="12" cy="8" r="3" />
+							<path d="M4 20c0-3.314 3.582-6 8-6s8 2.686 8 6" />
+						</svg>
+					</button>
+					<input ref="avatarInput" type="file" accept="image/*" class="hidden-input" @change="handleAvatarChange" />
+					<div v-if="isLoggedIn && showUserMenu" class="user-dropdown" @mouseenter="openUserMenu" @mouseleave="scheduleCloseUserMenu">
+						<button class="dropdown-item" @click="goProfileTab('overview')">个人中心</button>
+						<button class="dropdown-item" @click="goProfileTab('info')">个人信息</button>
+						<button class="dropdown-item" @click="goProfileTab('orders')">我的订单</button>
+						<button class="dropdown-item" @click="goProfileTab('address')">收货地址</button>
+						<button class="dropdown-item" @click="goProfileTab('settings')">账户设置</button>
+						<div class="dropdown-divider"></div>
+						<button class="dropdown-item" @click="triggerUpload">更换头像</button>
+						<div class="dropdown-divider"></div>
+						<button class="dropdown-item logout" @click="logout">退出登录</button>
+					</div>
+				</div>
 			</div>
 			<!-- 全局单实例 Mega Menu，避免切换时闪烁 -->
 			<div v-if="currentGroup && activeMenuIndex !== null" class="mega-menu" 
@@ -228,11 +244,15 @@
 			</div>
 		</div>
 	</header>
+
+	<!-- 子路由内容区域：在 /products 路径下，仅渲染产品列表页面 -->
+	<router-view />
 </template>
 
 <script>
-import { reactive, ref, onMounted, onBeforeUnmount } from 'vue';
+import { reactive, ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { UserAPI } from '@/api';
 import axios from 'axios';
 import userManager from '../../utils/userManager';
 
@@ -241,6 +261,9 @@ export default {
 	emits: ['open-login'],
 	setup(props, { emit }) {
 		const router = useRouter();
+		// 用户下拉菜单
+		const showUserMenu = ref(false);
+		let userMenuTimer = null;
 		const isSticky = ref(false);
 		const activeMenuIndex = ref(null);
 		const currentGroup = ref(null);
@@ -321,6 +344,24 @@ export default {
 			} else {
 				emit('open-login');
 			}
+		}
+
+		function openUserMenu() {
+			showUserMenu.value = true;
+			if (userMenuTimer) clearTimeout(userMenuTimer);
+		}
+		function scheduleCloseUserMenu() {
+			if (userMenuTimer) clearTimeout(userMenuTimer);
+			userMenuTimer = setTimeout(() => { showUserMenu.value = false; }, 150);
+		}
+		function goProfileTab(tab) {
+			router.push('/profile');
+			sessionStorage.setItem('profile-target-tab', tab);
+		}
+		function logout() {
+			localStorage.removeItem('user');
+			showUserMenu.value = false;
+			router.push('/');
 		}
 
 		const navGroups = reactive([
@@ -1257,12 +1298,79 @@ export default {
 			}
 		}
 
+		const avatarPath = ref('');
+		const avatarUrl = computed(() => {
+			if (!avatarPath.value) return '';
+			const filename = avatarPath.value.split('/').pop();
+			return `/api/users/getAvatar/${filename}`;
+		});
+		onMounted(async () => {
+			const user = localStorage.getItem('user');
+			try {
+				if (user) {
+					const u = typeof user === 'string' ? JSON.parse(user) : user;
+					avatarPath.value = u.avatarPath || '';
+				}
+			} catch (e) { console.warn('读取本地用户失败', e); }
+			// 同步获取后端头像路径
+			try {
+				const raw = localStorage.getItem('user');
+				if (raw) {
+					const obj = typeof raw === 'string' ? JSON.parse(raw) : raw;
+					if (obj?.username) {
+						const res = await UserAPI.getAvatarPath(obj.username);
+						if (res.data?.code === 200 && res.data.data) {
+							avatarPath.value = res.data.data;
+						}
+					}
+				}
+			} catch (e) { console.warn('获取后端头像路径异常:', e) }
+		});
+		const avatarInput = ref(null);
+		function triggerUpload() { avatarInput.value && avatarInput.value.click(); }
+		async function handleAvatarChange(e) {
+			const file = e.target.files && e.target.files[0];
+			if (!file) return;
+			// 上传到后端
+			const formData = new FormData();
+			// 后端要求字段名为 avatar
+			formData.append('avatar', file);
+			try {
+				const uploadRes = await UserAPI.uploadAvatar(formData);
+				if (uploadRes.data?.code === 200 && uploadRes.data.data) {
+					const serverPath = uploadRes.data.data; // 后端返回的头像相对路径
+					avatarPath.value = serverPath;
+					// 更新数据库 user.avatar_path
+					const raw = localStorage.getItem('user');
+					let userId = null; let username = null; let obj = null;
+					if (raw) { obj = typeof raw === 'string' ? JSON.parse(raw) : raw; userId = obj.id; username = obj.username; }
+					if (userId) {
+						await UserAPI.updateAvatarById(userId, serverPath);
+					} else if (username) {
+						await UserAPI.updateAvatar(username, serverPath);
+					}
+					// 同步本地
+					if (obj) { obj.avatarPath = serverPath; localStorage.setItem('user', JSON.stringify(obj)); }
+				} else {
+					console.warn('头像上传失败:', uploadRes.data);
+				}
+			} catch (err) {
+				console.error('上传头像出错:', err);
+			}
+		}
+
 		return {
+			router,
 			isSticky,
-			navGroups,
 			activeMenuIndex,
 			currentGroup,
 			hoveredCategory,
+			showUserMenu,
+			openUserMenu,
+			scheduleCloseUserMenu,
+			goProfileTab,
+			logout,
+			navGroups,
 			isLoggedIn,
 			previewProducts,
 			previewLoading,
@@ -1308,7 +1416,12 @@ export default {
 			deleteSearchHistory,
 			clearAllSearchHistory,
 			goToProductDetailWithHistory,
-			goToProductDetailFromHistory
+			goToProductDetailFromHistory,
+			avatarPath,
+			avatarUrl,
+			avatarInput,
+			triggerUpload,
+			handleAvatarChange
 		};
 	}
 };
@@ -1587,12 +1700,12 @@ export default {
 .actions {
 	display: flex;
 	align-items: center;
-	gap: 24px;
-	/* 增加两个UI按钮之间的距离 (从12px改为24px) */
+	gap: 32px;
+	/* 增大两个按钮间距 */
 	margin-right: -42px;
-	/* 右移UI按钮 (从-32px改为-42px) */
 	flex-shrink: 0;
 }
+.user-menu-wrapper { margin-left: 4px; position: relative; }
 
 .icon-btn {
 	width: 40px;
@@ -1611,6 +1724,47 @@ export default {
 	transform: translateZ(0);
 	will-change: background, transform, color, border-color;
 }
+
+/* 下拉菜单样式（用户头像菜单） */
+.user-dropdown {
+	position: absolute;
+	top: 52px;
+	right: 0;
+	min-width: 200px;
+	background: #fff;
+	border: 1px solid #eee;
+	border-radius: 12px;
+	box-shadow: 0 12px 32px rgba(0,0,0,.12);
+	padding: 8px;
+	display: flex;
+	flex-direction: column;
+	z-index: 1000;
+}
+
+.dropdown-item {
+	width: 100%;
+	text-align: left;
+	background: transparent;
+	border: none;
+	padding: 10px 12px;
+	border-radius: 8px;
+	font-size: 14px;
+	color: #111;
+	cursor: pointer;
+	transition: background .12s ease, color .12s ease;
+}
+
+.dropdown-item:hover { background: #f5f5f5; }
+.dropdown-item.logout { color: #c0392b; }
+
+.dropdown-divider {
+	height: 1px;
+	background: #eee;
+	margin: 6px 0;
+}
+
+.avatar-img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+.hidden-input { display: none; }
 
 .icon-btn:first-child {
 	margin-left: -32px;

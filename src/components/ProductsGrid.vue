@@ -1,9 +1,43 @@
 <template>
     <div class="product-grid">
-        <div class="product-item" v-for="product in products" :key="product.shoeId" :style="(product.images && product.images.length > 0) ? { backgroundImage: 'url(' + '/api/shoeImg/getImage/' + product.images[0].imagePath + ')', backgroundSize: '80%', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}">
+        <div class="product-item" v-for="product in products" :key="product.shoeId">
             <div class="product-image">
-                <div v-if="!(product.images && product.images.length > 0)" class="no-image">📷</div>
+                <!-- 图片加载状态管理 -->
+                <div v-if="product.imageLoading" class="image-loading">
+                    <div class="loading-spinner"></div>
+                    <span>加载中...</span>
+                </div>
+                
+                <!-- 图片容器 -->
+                <div 
+                    v-else-if="product.images && product.images.length > 0" 
+                    class="image-container"
+                    :style="{ backgroundImage: `url(${product.imageUrl})` }"
+                >
+                    <!-- 图片切换按钮 -->
+                    <div v-if="product.images.length > 1" class="image-switcher">
+                        <button 
+                            @click.stop="switchImage(product, -1)" 
+                            class="switch-btn prev"
+                            :disabled="product.currentImageIndex <= 0"
+                        >
+                            ‹
+                        </button>
+                        <span class="image-counter">{{ product.currentImageIndex + 1 }}/{{ product.images.length }}</span>
+                        <button 
+                            @click.stop="switchImage(product, 1)" 
+                            class="switch-btn next"
+                            :disabled="product.currentImageIndex >= product.images.length - 1"
+                        >
+                            ›
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 无图片占位符 -->
+                <div v-else class="no-image">📷</div>
             </div>
+            
             <div class="product-info">
                 <h3 class="product-name">{{ product.name }}</h3>
                 <div class="product-meta">
@@ -39,13 +73,20 @@
                 </div>
             </div>
         </div>
+        
+        <!-- 全局加载状态 -->
+        <div v-if="loading" class="global-loading">
+            <div class="loading-spinner"></div>
+            <span>正在加载商品...</span>
+        </div>
     </div>
 </template>
 
 <script>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ShoeAPI, ShoesSizeAPI, InventoryAPI } from '@/api'
 import cartManager from '@/utils/cart'
+import { imageCache, imagePreloader, imageUtils } from '@/utils/imageOptimizer'
 
 export default {
     name: 'ProductGrid',
@@ -54,6 +95,113 @@ export default {
         const selectedSizes = reactive({})
         const quantities = reactive({})
         const loading = ref(false)
+        
+        // 图片加载状态管理
+        const imageLoadPromises = new Map()
+        
+        // 图片懒加载观察器
+        let imageObserver = null
+
+        // 初始化图片懒加载观察器
+        const initImageObserver = () => {
+            if (imageObserver) {
+                imageObserver.disconnect()
+            }
+            
+            imageObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const productId = entry.target.dataset.productId
+                        const product = products.value.find(p => p.shoeId == productId)
+                        if (product && !product.images) {
+                            loadProductImages(product)
+                        }
+                        imageObserver.unobserve(entry.target)
+                    }
+                })
+            }, {
+                rootMargin: '100px 0px', // 提前100px开始加载
+                threshold: 0.1
+            })
+        }
+
+        // 加载商品图片（带缓存和优化）
+        const loadProductImages = async (product) => {
+            if (product.images || product.imageLoading) return
+            
+            // 检查缓存
+            if (imageCache.has(product.shoeId)) {
+                product.images = imageCache.get(product.shoeId)
+                product.currentImageIndex = 0
+                product.imageUrl = `/api/shoeImg/getImage/${product.images[0].imagePath}`
+                return
+            }
+            
+            // 防止重复请求
+            if (imageLoadPromises.has(product.shoeId)) {
+                await imageLoadPromises.get(product.shoeId)
+                return
+            }
+            
+            product.imageLoading = true
+            
+            const loadPromise = (async () => {
+                try {
+                    // 使用优化的图片加载
+                    const imageResponse = await fetch(`/api/shoeImg/list/${product.shoeId}`, {
+                        signal: AbortSignal.timeout(10000) // 10秒超时
+                    })
+                    
+                    if (!imageResponse.ok) throw new Error('图片加载失败')
+                    
+                    const imageData = await imageResponse.json()
+                    
+                    if (imageData?.data && imageData.data.length > 0) {
+                        product.images = imageData.data
+                        product.currentImageIndex = 0
+                        product.imageUrl = `/api/shoeImg/getImage/${product.images[0].imagePath}`
+                        
+                        // 缓存图片数据
+                        imageCache.set(product.shoeId, product.images)
+                        
+                        // 预加载下一张图片
+                        if (product.images.length > 1) {
+                            imagePreloader.preloadImage(`/api/shoeImg/getImage/${product.images[1].imagePath}`)
+                        }
+                    } else {
+                        product.images = []
+                    }
+                } catch (error) {
+                    console.error(`加载商品 ${product.shoeId} 图片失败:`, error)
+                    product.images = []
+                } finally {
+                    product.imageLoading = false
+                    imageLoadPromises.delete(product.shoeId)
+                }
+            })()
+            
+            imageLoadPromises.set(product.shoeId, loadPromise)
+            await loadPromise
+        }
+
+
+
+        // 切换图片
+        const switchImage = (product, direction) => {
+            if (!product.images || product.images.length <= 1) return
+            
+            const newIndex = product.currentImageIndex + direction
+            if (newIndex >= 0 && newIndex < product.images.length) {
+                product.currentImageIndex = newIndex
+                product.imageUrl = `/api/shoeImg/getImage/${product.images[newIndex].imagePath}`
+                
+                // 预加载下一张图片
+                const nextIndex = newIndex + direction
+                if (nextIndex >= 0 && nextIndex < product.images.length) {
+                    imagePreloader.preloadImage(`/api/shoeImg/getImage/${product.images[nextIndex].imagePath}`)
+                }
+            }
+        }
 
         // 加载商品数据
         const loadProducts = async () => {
@@ -61,7 +209,30 @@ export default {
             try {
                 const response = await ShoeAPI.getAll()
                 if (response.data?.code === 200 && response.data.data) {
-                    products.value = response.data.data
+                    products.value = response.data.data.map(product => ({
+                        ...product,
+                        images: null,
+                        currentImageIndex: 0,
+                        imageUrl: '',
+                        imageLoading: false
+                    }))
+                    
+                    // 初始化数量
+                    products.value.forEach(product => {
+                        quantities[product.shoeId] = 1
+                    })
+                    
+                    // 等待DOM更新后初始化懒加载
+                    await nextTick()
+                    initImageObserver()
+                    
+                    // 为每个商品设置懒加载观察
+                    products.value.forEach(product => {
+                        const element = document.querySelector(`[data-product-id="${product.shoeId}"]`)
+                        if (element) {
+                            imageObserver.observe(element)
+                        }
+                    })
                     
                     // 为每个商品加载可用尺码和库存
                     await Promise.all(products.value.map(async (product) => {
@@ -91,9 +262,6 @@ export default {
                             console.error(`加载商品 ${product.shoeId} 尺码失败:`, error)
                             product.availableSizes = []
                         }
-                        
-                        // 初始化数量为1
-                        quantities[product.shoeId] = 1
                     }))
                 }
             } catch (error) {
@@ -138,15 +306,6 @@ export default {
             }
         }
 
-        // 图片加载失败处理
-        const handleImageError = (event) => {
-            event.target.style.display = 'none'
-            const noImage = event.target.parentNode.querySelector('.no-image')
-            if (noImage) {
-                noImage.style.display = 'flex'
-            }
-        }
-
         onMounted(() => {
             loadProducts()
         })
@@ -157,7 +316,7 @@ export default {
             quantities,
             loading,
             addToCart,
-            handleImageError
+            switchImage
         }
     }
 }
@@ -177,6 +336,7 @@ export default {
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 10px;
     padding: 20px;
+    position: relative;
 }
 
 .product-item {
@@ -184,9 +344,6 @@ export default {
     border-radius: 0;
     padding: 16px;
     background: var(--color-bg);
-    background-size: 80%;
-    background-position: center;
-    background-repeat: no-repeat;
     transition: box-shadow .15s ease, transform .1s ease;
 }
 
@@ -201,12 +358,83 @@ export default {
     border-radius: 0;
     overflow: hidden;
     margin-bottom: 16px;
+    position: relative;
+    background: #f8f9fa;
 }
 
-.product-image img {
+.image-container {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    background-size: 80%;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #fff;
+    position: relative;
+}
+
+.image-loading {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.loading-spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #ddd;
+    border-top: 2px solid #666;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 8px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.image-switcher {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 4px;
+    padding: 4px;
+}
+
+.switch-btn {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    transition: background-color 0.2s;
+}
+
+.switch-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.switch-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.image-counter {
+    color: white;
+    font-size: 0.7rem;
+    padding: 0 4px;
 }
 
 .no-image {
@@ -219,6 +447,19 @@ export default {
     border: 2px solid #ddd;
     font-size: 2rem;
     color: #999;
+}
+
+.global-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: #666;
+    font-size: 1rem;
 }
 
 .product-info {
@@ -273,31 +514,55 @@ export default {
 
 .size-select, .quantity-input {
     padding: 8px;
-    border: 1.5px solid var(--color-border);
+    border: 1px solid var(--color-border);
     border-radius: var(--btn-radius);
     font-size: 0.9rem;
 }
 
 .add-to-cart-btn {
     padding: 10px;
-    background: transparent;
-    color: #000;
-    border: var(--btn-border) solid #000;
+    background: #111;
+    color: white;
+    border: none;
     border-radius: var(--btn-radius);
+    font-weight: 600;
     cursor: pointer;
-    font-size: 0.9rem;
-    transition: background .15s ease, color .15s ease, border-color .15s ease, transform .1s ease;
+    transition: all 0.2s ease;
 }
 
 .add-to-cart-btn:hover:not(:disabled) {
-    background: #000;
-    color: #fff;
-    border-color: #000;
+    background: #333;
+    transform: translateY(-1px);
 }
 
 .add-to-cart-btn:disabled {
-    opacity: 0.5;
+    background: #ccc;
     cursor: not-allowed;
+    transform: none;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .product-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 8px;
+        padding: 16px;
+    }
+    
+    .product-image {
+        height: 250px;
+    }
+    
+    .image-switcher {
+        bottom: 4px;
+        right: 4px;
+        padding: 2px;
+    }
+    
+    .switch-btn {
+        font-size: 14px;
+        padding: 1px 4px;
+    }
 }
 </style>
 
