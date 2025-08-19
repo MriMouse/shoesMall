@@ -37,6 +37,12 @@ class UserManager {
         this.currentUser = user
         this.userId = user?.id || user?.userId
         localStorage.setItem('user', JSON.stringify(user))
+        // 静默预加载订单摘要（动态导入，避免循环依赖）
+        try {
+            import('./orderPreloader').then(m => m.preloadUserOrders && m.preloadUserOrders()).catch(() => {})
+        } catch (e) {
+            // ignore
+        }
     }
 
     // 获取当前用户名

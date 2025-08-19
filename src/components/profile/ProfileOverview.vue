@@ -5,9 +5,6 @@
     <!-- 统计信息卡片 -->
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-icon points">
-          <span>🎯</span>
-        </div>
         <div class="stat-content">
           <div class="stat-value">{{ stats.points }}</div>
           <div class="stat-label">我的积分</div>
@@ -19,9 +16,6 @@
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon spending">
-          <span>💰</span>
-        </div>
         <div class="stat-content">
           <div class="stat-value">¥{{ formatMoney(stats.totalSpending) }}</div>
           <div class="stat-label">总消费</div>
@@ -33,9 +27,6 @@
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon savings">
-          <span>💎</span>
-        </div>
         <div class="stat-content">
           <div class="stat-value">¥{{ formatMoney(stats.totalSavings) }}</div>
           <div class="stat-label">总节省</div>
@@ -47,9 +38,6 @@
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon orders">
-          <span>📦</span>
-        </div>
         <div class="stat-content">
           <div class="stat-value">{{ stats.totalOrders }}</div>
           <div class="stat-label">订单总数</div>
@@ -65,26 +53,11 @@
     <div class="quick-actions">
       <h3>快捷功能</h3>
       <div class="actions-grid">
-        <div class="action-item" @click="$emit('navigate', 'orders')">
-          <div class="action-icon">📋</div>
-          <div class="action-text">我的订单</div>
-        </div>
-        <div class="action-item" @click="$emit('navigate', 'address')">
-          <div class="action-icon">📍</div>
-          <div class="action-text">收货地址</div>
-        </div>
-        <div class="action-item" @click="$emit('navigate', 'coupons')">
-          <div class="action-icon">🎫</div>
-          <div class="action-text">优惠券</div>
-        </div>
-        <div class="action-item" @click="$emit('navigate', 'points')">
-          <div class="action-icon">🎯</div>
-          <div class="action-text">积分商城</div>
-        </div>
-        <div class="action-item" @click="$emit('navigate', 'customer-service')">
-          <div class="action-icon">💬</div>
-          <div class="action-text">客服中心</div>
-        </div>
+        <div class="action-item" @click="$emit('navigate', 'orders')"><div class="action-text">我的订单</div></div>
+        <div class="action-item" @click="$emit('navigate', 'address')"><div class="action-text">收货地址</div></div>
+        <div class="action-item" @click="$emit('navigate', 'coupons')"><div class="action-text">优惠券</div></div>
+        <div class="action-item" @click="$emit('navigate', 'points')"><div class="action-text">积分商城</div></div>
+        <div class="action-item" @click="$emit('navigate', 'customer-service')"><div class="action-text">客服中心</div></div>
       </div>
     </div>
 
@@ -97,7 +70,7 @@
         </button>
       </div>
       <div v-if="recentOrders.length === 0" class="empty-orders">
-        <div class="empty-icon">📦</div>
+        <div class="empty-icon"></div>
         <p>暂无订单记录</p>
         <router-link to="/products" class="btn btn-primary">去购物</router-link>
       </div>
@@ -124,31 +97,21 @@
       <h3>会员权益</h3>
       <div class="benefits-grid">
         <div class="benefit-item">
-          <div class="benefit-icon">🎁</div>
           <div class="benefit-content">
             <h4>生日特权</h4>
             <p>生日当月享受专属优惠</p>
           </div>
         </div>
         <div class="benefit-item">
-          <div class="benefit-icon">🚚</div>
           <div class="benefit-content">
             <h4>免费配送</h4>
             <p>满99元享受免费配送</p>
           </div>
         </div>
         <div class="benefit-item">
-          <div class="benefit-icon">🔄</div>
           <div class="benefit-content">
-            <h4>7天退换</h4>
-            <p>7天内无理由退换货</p>
-          </div>
-        </div>
-        <div class="benefit-item">
-          <div class="benefit-icon">🎯</div>
-          <div class="benefit-content">
-            <h4>积分奖励</h4>
-            <p>购物即可获得积分奖励</p>
+            <h4>账户安全</h4>
+            <p>加密存储，保障数据安全</p>
           </div>
         </div>
       </div>
@@ -472,476 +435,268 @@ export default {
 .profile-overview {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 1rem;
 }
 
-.user-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 16px;
-  padding: 24px;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  color: white;
-  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
-}
-
-.user-avatar {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.avatar-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
-  font-size: 2rem;
-  font-weight: bold;
-}
-
-.user-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.user-details {
-  flex: 1;
-}
-
-.user-name {
-  margin: 0 0 8px 0;
-  font-size: 24px;
-  font-weight: 600;
-}
-
-.user-level {
-  margin: 0 0 4px 0;
-  font-size: 14px;
-  opacity: 0.9;
-}
-
-.user-join-date {
-  margin: 0;
-  font-size: 12px;
-  opacity: 0.7;
-}
-
-.user-actions {
-  margin-left: auto;
-}
-
+/* 统计信息网格 */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .stat-card {
-  background: white;
+  background: #fff;
+  border: 1px solid #e6e6e6;
   border-radius: 12px;
-  padding: 24px;
+  padding: 1.5rem;
   display: flex;
   align-items: center;
-  gap: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s, box-shadow 0.3s;
+  gap: 1rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-}
-
-.stat-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-}
-
-.stat-icon.points {
-  background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
-}
-
-.stat-icon.spending {
-  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-}
-
-.stat-icon.savings {
-  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-}
-
-.stat-icon.orders {
-  background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%);
-}
-
-.stat-content {
-  flex: 1;
-}
+/* 去掉图标占位，文本左对齐 */
+.stat-card .stat-icon { display: none; }
+.stat-content { flex: 1; }
 
 .stat-value {
-  font-size: 24px;
+  font-size: 1.5rem;
   font-weight: 700;
-  color: #2c3e50;
-  margin-bottom: 4px;
+  color: #111111;
+  margin-bottom: 0.25rem;
 }
 
 .stat-label {
-  font-size: 14px;
-  color: #7f8c8d;
+  font-size: 0.9rem;
+  color: #666666;
+  font-weight: 500;
 }
 
-.stat-trend {
-  text-align: right;
-}
+.stat-trend { text-align: right; }
 
 .trend-up {
   display: block;
-  color: #27ae60;
-  font-weight: 600;
-  font-size: 16px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111111;
+  margin-bottom: 0.25rem;
 }
 
 .trend-text {
-  display: block;
-  color: #7f8c8d;
-  font-size: 12px;
-  margin-top: 2px;
+  font-size: 0.8rem;
+  color: #666666;
 }
 
+/* 快捷功能 */
 .quick-actions {
-  background: white;
+  background: #fff;
+  border: 1px solid #e6e6e6;
   border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .quick-actions h3 {
-  margin: 0 0 20px 0;
-  color: #2c3e50;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111111;
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e6e6e6;
 }
 
 .actions-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 16px;
+  gap: 1rem;
 }
 
 .action-item {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 16px;
+  justify-content: center;
+  padding: 1rem;
+  border: 1px solid #e6e6e6;
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: all 0.2s ease;
+  background: #f8f9fa;
 }
 
 .action-item:hover {
-  background-color: #f8f9fa;
+  background: #fff;
+  border-color: #111111;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.action-icon {
-  font-size: 32px;
-}
+/* 去掉图标占位 */
+.action-icon { display: none; }
+.action-text { font-size: 0.9rem; font-weight: 600; color: #111; }
 
-.action-text {
-  font-size: 14px;
-  color: #2c3e50;
-  font-weight: 500;
-}
-
-.recent-orders {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.section-header h3 {
-  margin: 0;
-  color: #2c3e50;
-  font-size: 18px;
+/* 最近订单 */
+.recent-orders { background: #fff; border: 1px solid #e6e6e6; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #e6e6e6; }
+.section-header h3 { font-size: 1.2rem; font-weight: 700; color: #111; margin: 0; }
+.btn {
+  border: 2px solid #111111;
+  background: transparent;
+  color: #111111;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
   font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
 }
 
-.empty-orders {
-  text-align: center;
-  padding: 40px 0;
-  color: #7f8c8d;
+.btn:hover {
+  background: #111111;
+  color: #fff;
+  transform: translateY(-1px);
 }
 
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
+.btn-outline {
+  border: 2px solid #111111;
+  background: transparent;
+  color: #111111;
 }
 
+.empty-orders { text-align: center; padding: 2rem; color: #666; }
+.empty-icon { display: none; }
+
+.empty-orders h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #111111;
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-orders p {
+  font-size: 0.9rem;
+  color: #666666;
+  margin: 0;
+}
+
+/* 订单列表 */
 .orders-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0.75rem;
 }
 
 .order-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 16px;
-  border: 1px solid #e1e8ed;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid #e6e6e6;
   border-radius: 8px;
-  transition: box-shadow 0.3s;
+  background: #f8f9fa;
+  transition: all 0.2s ease;
 }
 
 .order-item:hover {
+  background: #fff;
+  border-color: #111111;
+  transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .order-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex: 1;
 }
 
 .order-number {
+  font-size: 0.9rem;
   font-weight: 600;
-  color: #2c3e50;
-  font-size: 14px;
-}
-
-.order-status {
-  display: flex;
-  align-items: center;
-}
-
-.status-badge {
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.status-pending {
-  background-color: #fff3cd;
-  color: #856404;
-}
-
-.status-paid {
-  background-color: #d1ecf1;
-  color: #0c5460;
-}
-
-.status-shipped {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.status-completed {
-  background-color: #c3e6cb;
-  color: #155724;
-}
-
-.status-cancelled {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-
-.status-returning {
-  background-color: #ffeaa7;
-  color: #d63031;
-}
-
-.status-returned {
-  background-color: #fab1a0;
-  color: #e17055;
-}
-
-.status-cart {
-  background-color: #e3f2fd;
-  color: #1976d2;
-}
-
-.status-refunding {
-  background-color: #ff7675;
-  color: #d63031;
-}
-
-.status-unknown {
-  background-color: #f5f5f5;
-  color: #757575;
-}
-
-.order-details {
-  text-align: right;
-}
-
-.order-amount {
-  font-weight: 600;
-  color: #e74c3c;
-  font-size: 16px;
+  color: #111111;
+  margin-bottom: 0.25rem;
 }
 
 .order-date {
-  color: #7f8c8d;
-  font-size: 12px;
-  margin-top: 2px;
+  font-size: 0.8rem;
+  color: #666666;
+  margin-bottom: 0.25rem;
 }
 
-.membership-benefits {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-}
-
-.membership-benefits h3 {
-  margin: 0 0 20px 0;
-  color: #2c3e50;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.benefits-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-}
-
-.benefit-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 8px;
-  background-color: #f8f9fa;
-  transition: background-color 0.3s;
-}
-
-.benefit-item:hover {
-  background-color: #e9ecef;
-}
-
-.benefit-icon {
-  font-size: 24px;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: white;
-  border-radius: 8px;
-}
-
-.benefit-content h4 {
-  margin: 0 0 4px 0;
-  color: #2c3e50;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.benefit-content p {
-  margin: 0;
-  color: #7f8c8d;
-  font-size: 12px;
-}
-
-.btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  text-decoration: none;
+.order-status {
   display: inline-block;
-  text-align: center;
-  transition: all 0.3s;
-  font-size: 14px;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: #f8f9fa;
+  color: #111111;
+  border: 1px solid #e6e6e6;
 }
 
-.btn-primary {
-  background-color: #3498db;
-  color: white;
+.order-amount {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111111;
 }
 
-.btn-primary:hover {
-  background-color: #2980b9;
-}
+/* 会员权益 */
+.membership-benefits { background: #fff; border: 1px solid #e6e6e6; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.benefits-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+.benefit-item { display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 8px; background: #f8f9fa; }
+.benefit-icon { display: none; }
+.benefit-content h4 { margin: 0 0 4px 0; font-size: 14px; font-weight: 700; color: #111; }
+.benefit-content p { margin: 0; color: #666; font-size: 12px; }
 
-.btn-outline {
-  background-color: transparent;
-  color: #3498db;
-  border: 2px solid #3498db;
-}
-
-.btn-outline:hover {
-  background-color: #3498db;
-  color: white;
-}
-
+/* 响应式设计 */
 @media (max-width: 768px) {
-  .profile-overview {
-    gap: 16px;
-  }
-  
-  .user-card {
-    flex-direction: column;
-    text-align: center;
-    gap: 16px;
-  }
-  
-  .user-actions {
-    margin-left: 0;
-  }
-  
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
+  .stats-grid { grid-template-columns: 1fr; }
   
   .actions-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
   }
   
-  .benefits-grid {
-    grid-template-columns: 1fr;
+  .stat-card {
+    padding: 1rem;
+  }
+  
+  .quick-actions,
+  .recent-orders {
+    padding: 1rem;
   }
   
   .section-header {
     flex-direction: column;
-    gap: 12px;
     align-items: flex-start;
+    gap: 0.5rem;
   }
   
   .order-item {
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
+    gap: 0.5rem;
   }
   
-  .order-details {
-    text-align: left;
+  .order-amount {
+    align-self: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .actions-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stat-card {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+  }
+  
+  .stat-trend {
+    text-align: center;
   }
 }
 </style>
