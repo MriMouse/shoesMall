@@ -15,7 +15,9 @@
             <div v-if="cartItems.length > 0" class="cart-content">
                 <!-- 全选和批量操作 -->
                 <div class="batch-actions">
-                    <label class="select-all">
+                    <label 
+                        class="select-all"
+                    >
                         <input 
                             type="checkbox" 
                             :checked="hasAllChecked" 
@@ -23,13 +25,6 @@
                         />
                         <span>全选</span>
                     </label>
-                    <button 
-                        @click="goCheckout" 
-                        :disabled="!hasCheckedItems"
-                        class="checkout-btn"
-                    >
-                        结算 ({{ checkedItemsCount }})
-                    </button>
                 </div>
 
                 <!-- 商品列表 -->
@@ -144,6 +139,7 @@
                 <p>快去添加一些商品吧！</p>
                 <router-link to="/home" class="continue-shopping-btn">继续购物</router-link>
         </div>
+        <SiteFooter />
     </div>
 </template>
 
@@ -151,9 +147,11 @@
 import { ShoeAPI, ShoesSizeAPI } from '@/api'
 import cartManager from '@/utils/cart'
 import userManager from '@/utils/userManager'
+import SiteFooter from '@/views/layout/Footer.vue'
 
 export default {
     name: 'CartPage',
+    components: { SiteFooter },
     data() {
         return {
             loading: false,
@@ -791,7 +789,7 @@ export default {
 
 .cart-header h1 {
     margin: 0;
-    font-size: 2.5rem;
+    font-size: 1.6rem;
     color: var(--primary);
     font-weight: 700;
     display: flex;
@@ -871,13 +869,13 @@ export default {
 }
 
 .checkout-btn {
-    padding: 14px 28px !important;
+    padding: 12px 22px !important;
     background: var(--primary) !important;
     color: white !important;
     border: 2px solid var(--primary) !important;
     border-radius: 10px;
     cursor: pointer;
-    font-size: 1.1rem;
+    font-size: 0.9rem;
     font-weight: 700;
     transition: all 0.2s ease;
     box-shadow: none;
@@ -901,8 +899,8 @@ export default {
 }
 
 .checkout-btn.large { 
-    padding: 18px 32px !important; 
-    font-size: 1.2rem; 
+    padding: 12px 22px !important; 
+    font-size: 0.95rem; 
     border-radius: 12px;
     background: var(--primary) !important; 
     color: white !important; 
@@ -993,25 +991,25 @@ export default {
 .no-image { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #f1f3f5; color: var(--muted); font-size: 2.5rem; border: 2px dashed var(--border-color); }
 
 .item-info { min-width: 0; padding: 0 16px; }
-.item-name { margin: 0 0 12px 0; font-size: 1.3rem; color: var(--primary); font-weight: 700; line-height: 1.4; }
-.item-meta { display: flex; gap: 20px; margin-bottom: 12px; font-size: 1rem; color: var(--muted); }
-.brand, .type { background: rgba(17, 17, 17, 0.05); padding: 6px 12px; border-radius: 20px; font-weight: 600; font-size: 0.9rem; }
-.item-size { font-size: 1rem; color: var(--primary); font-weight: 600; margin-bottom: 8px; }
+.item-name { margin: 0 0 12px 0; font-size: 1rem; color: var(--primary); font-weight: 700; line-height: 1.4; }
+.item-meta { display: flex; gap: 20px; margin-bottom: 12px; font-size: 0.85rem; color: var(--muted); }
+.brand, .type { background: rgba(17, 17, 17, 0.05); padding: 6px 12px; border-radius: 20px; font-weight: 600; font-size: 0.8rem; }
+.item-size { font-size: 0.9rem; color: var(--primary); font-weight: 600; margin-bottom: 8px; }
 .item-points { margin-top: 8px; }
 .item-points .points { font-size: 0.9rem; color: var(--primary); background: rgba(17, 17, 17, 0.06); padding: 4px 10px; border-radius: 6px; font-weight: 600; }
 
 .item-price { text-align: center; padding: 16px; background: rgba(255, 255, 255, 0.8); border-radius: 10px; border: 1px solid var(--border-color); }
-.current-price { display: block; font-size: 1.3rem; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
-.original-price { display: block; font-size: 1rem; color: var(--muted); text-decoration: line-through; }
+.current-price { display: block; font-size: 1rem; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+.original-price { display: block; font-size: 0.85rem; color: var(--muted); text-decoration: line-through; }
 
 .item-quantity { display: flex; align-items: center; gap: 12px; justify-content: center; padding: 16px; background: rgba(255, 255, 255, 0.8); border-radius: 10px; border: 1px solid var(--border-color); }
-.item-quantity button { width: 36px; height: 36px; border: 2px solid var(--border-color); background: white; border-radius: 8px; cursor: pointer; font-size: 1.3rem; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; color: var(--primary); }
+.item-quantity button { width: 30px; height: 30px; border: 2px solid var(--border-color); background: white; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; color: var(--primary); }
 .item-quantity button:hover:not(:disabled) { background: var(--primary); color: white; border-color: var(--primary); transform: scale(1.1); }
 .item-quantity button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.item-quantity input { width: 70px; height: 36px; text-align: center; border: 2px solid var(--border-color); border-radius: 8px; font-size: 1rem; font-weight: 600; color: var(--primary); }
+.item-quantity input { width: 56px; height: 30px; text-align: center; border: 2px solid var(--border-color); border-radius: 8px; font-size: 0.85rem; font-weight: 600; color: var(--primary); }
 .item-quantity input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.1); }
 
-.item-subtotal { text-align: center; font-size: 1.3rem; font-weight: 700; color: var(--primary); padding: 16px; background: rgba(255, 255, 255, 0.8); border-radius: 10px; border: 1px solid var(--border-color); }
+.item-subtotal { text-align: center; font-size: 1rem; font-weight: 700; color: var(--primary); padding: 16px; background: rgba(255, 255, 255, 0.8); border-radius: 10px; border: 1px solid var(--border-color); }
 
 .item-actions { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
 .remove-btn, .pay-btn { padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: all 0.2s ease; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -1023,9 +1021,9 @@ export default {
 
 .cart-footer { display: grid; grid-template-columns: 1fr 360px; gap: 32px; padding: 32px; background: linear-gradient(180deg, rgba(248,249,250,0.96), rgba(248,249,250,0.88)); border-top: 1px solid var(--border-color); }
 .totals { background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 24px 28px; border: 1px solid var(--border-color); box-shadow: 0 4px 16px var(--shadow-color); }
-.totals-line { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px dashed var(--border-color); color: var(--primary); font-size: 1.1rem; }
+.totals-line { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px dashed var(--border-color); color: var(--primary); font-size: 0.95rem; }
 .totals-line:last-child { border-bottom: none; }
-.totals-line.total { font-weight: 800; font-size: 1.4rem; color: var(--primary); border-top: 2px solid var(--primary); padding-top: 16px; margin-top: 8px; }
+.totals-line.total { font-weight: 800; font-size: 1.1rem; color: var(--primary); border-top: 2px solid var(--primary); padding-top: 16px; margin-top: 8px; }
 .totals-line.savings { color: var(--primary); font-weight: 600; }
 .totals .amount { color: var(--primary); font-weight: 800; }
 .totals-line.points { color: var(--primary); font-weight: 600; }
@@ -1034,7 +1032,7 @@ export default {
 .footer-actions { display: flex; flex-direction: column; align-items: stretch; gap: 16px; }
 .checkout-btn.large { padding: 18px 32px; font-size: 1.2rem; border-radius: 12px; }
 
-.continue-shopping-btn { display: inline-block; padding: 16px 28px; background: white; color: var(--primary); text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 1.1rem; text-align: center; transition: all 0.2s ease; border: 2px solid var(--primary); box-shadow: 0 4px 12px rgba(17, 17, 17, 0.1); }
+.continue-shopping-btn { display: inline-block; padding: 12px 20px; background: white; color: var(--primary); text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 0.95rem; text-align: center; transition: all 0.2s ease; border: 2px solid var(--primary); box-shadow: 0 4px 12px rgba(17, 17, 17, 0.1); }
 .continue-shopping-btn:hover { background: var(--primary); color: white; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(17, 17, 17, 0.2); }
 
 .empty-cart { text-align: center; padding: 120px 48px; background: var(--card-bg); margin: 48px; border-radius: 20px; box-shadow: 0 8px 24px var(--shadow-color); backdrop-filter: saturate(140%) blur(6px); border: 1px solid var(--border-color); }
