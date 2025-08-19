@@ -162,16 +162,17 @@
                     <div class="summary-item points-deduction">
                         <div class="points-info-header">
                             <span class="label">积分抵扣</span>
-                            <div class="user-points-info">
-                                <span class="current-points">当前积分: {{ userCurrentPoints }} 分</span>
-                                <button 
-                                    @click="togglePointsDeduction" 
-                                    class="toggle-points-btn"
-                                    :class="{ 'active': usePoints }"
-                                >
-                                    {{ usePoints ? '取消抵扣' : '使用积分' }}
-                                </button>
-                            </div>
+                            <button 
+                                @click="togglePointsDeduction" 
+                                class="toggle-points-btn"
+                                :class="{ 'active': usePoints }"
+                            >
+                                {{ usePoints ? '取消' : '使用' }}
+                            </button>
+                        </div>
+                        
+                        <div v-if="!usePoints" class="points-info">
+                            <span class="current-points">当前积分: {{ userCurrentPoints }} 分</span>
                         </div>
                         
                         <div v-if="usePoints" class="points-deduction-controls">
@@ -2638,16 +2639,15 @@ onUnmounted(() => {
     margin-bottom: 12px;
 }
 
-.user-points-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+.points-info {
+    margin-bottom: 16px;
+    text-align: center;
 }
 
 .current-points {
     font-size: 0.9rem;
-    color: var(--primary);
-    font-weight: 600;
+    color: var(--muted);
+    font-weight: 500;
 }
 
 .toggle-points-btn {
@@ -2682,26 +2682,27 @@ onUnmounted(() => {
 .points-slider-container {
     margin-bottom: 16px;
     text-align: center;
+    padding: 0 20px;
 }
 
 .points-rule {
-    font-size: 1rem;
-    color: var(--primary);
-    margin-bottom: 20px;
-    font-weight: 600;
-    text-align: center;
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-bottom: 24px;
+    font-weight: 500;
 }
 
 .points-slider-wrapper {
-    margin-bottom: 16px;
+    margin-bottom: 24px;
     display: flex;
     justify-content: center;
+    align-items: center;
 }
 
 .points-slider {
-    width: 80%;
-    height: 8px;
-    border-radius: 4px;
+    width: 60%;
+    height: 6px;
+    border-radius: 3px;
     background: #e9ecef;
     outline: none;
     -webkit-appearance: none;
@@ -2752,8 +2753,8 @@ onUnmounted(() => {
     justify-content: space-between;
     align-items: center;
     margin-top: 16px;
-    padding: 16px 20px;
-    background: rgba(17, 17, 17, 0.05);
+    padding: 14px 20px;
+    background: rgba(17, 17, 17, 0.04);
     border-radius: 10px;
     border: 1px solid rgba(17, 17, 17, 0.1);
 }
@@ -2761,13 +2762,13 @@ onUnmounted(() => {
 .selected-points-display {
     font-weight: 600;
     color: var(--primary);
-    font-size: 1rem;
+    font-size: 0.9rem;
 }
 
 .deduction-amount {
     font-weight: 600;
     color: var(--primary);
-    font-size: 1rem;
+    font-size: 0.9rem;
 }
 
 .address-content {
