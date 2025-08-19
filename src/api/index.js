@@ -374,3 +374,27 @@ export default api
 
 
 
+
+// 新增：积分相关API（不改后端既有接口，新增独立接口）
+export const PointsAPI = {
+  accrueByOrder({ userId, orderId, orderNumber } = {}) {
+    const params = new URLSearchParams()
+    if (userId != null) params.append('userId', userId)
+    if (orderId != null) params.append('orderId', String(orderId))
+    if (orderNumber) params.append('orderNumber', orderNumber)
+    return api.post('/points/accrueByOrder', params)
+  },
+  deductByOrder({ userId, orderId, orderNumber } = {}) {
+    const params = new URLSearchParams()
+    if (userId != null) params.append('userId', userId)
+    if (orderId != null) params.append('orderId', String(orderId))
+    if (orderNumber) params.append('orderNumber', orderNumber)
+    return api.post('/points/deductByOrder', params)
+  },
+  adjust({ userId, delta }) {
+    const params = new URLSearchParams()
+    params.append('userId', userId)
+    params.append('delta', String(delta))
+    return api.post('/points/adjust', params)
+  }
+}

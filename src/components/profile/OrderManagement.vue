@@ -319,7 +319,7 @@
 </template>
 
 <script>
-import { OrderAPI, ShoeAPI, OrderShoeNumAPI, AddressAPI } from '@/api'
+import { OrderAPI, ShoeAPI, OrderShoeNumAPI, AddressAPI, PointsAPI } from '@/api'
 import userManager from '@/utils/userManager'
 
 export default {
@@ -648,6 +648,18 @@ export default {
           this.returnReason = ''
           this.returnDescription = ''
           alert('退货申请已提交，请等待审核')
+
+          // 退货进入处理后，直接扣减积分（与后端最终状态流转可再对齐）
+          try {
+            const userId = await userManager.getUserId()
+            if (this.selectedOrder?.orderNumber) {
+              await PointsAPI.deductByOrder({ userId, orderNumber: this.selectedOrder.orderNumber })
+            } else {
+              await PointsAPI.deductByOrder({ userId, orderId: this.selectedOrder.orderId })
+            }
+          } catch (e) {
+            console.warn('退货申请后扣减积分失败:', e)
+          }
         } else {
           alert('提交退货申请失败，请重试')
         }
@@ -687,6 +699,27 @@ export default {
             })
             this.filterOrders()
             alert('批量更新订单状态成功')
+
+            // 如果批量支付成功，则为这些订单累计积分
+            if (newStatus === '1') {
+              try {
+                const userId = await userManager.getUserId()
+                // 批量支付时若订单号一致可合并一次；否则逐个订单ID调用
+                const firstOrderNumber = selectedOrders[0]?.orderNumber
+                const allSameNumber = firstOrderNumber && selectedOrders.every(o => o.orderNumber === firstOrderNumber)
+                if (allSameNumber) {
+                  await PointsAPI.accrueByOrder({ userId, orderNumber: firstOrderNumber })
+                } else {
+                  for (const order of selectedOrders) {
+                    if (order && order.orderId) {
+                      await PointsAPI.accrueByOrder({ userId, orderId: order.orderId })
+                    }
+                  }
+                }
+              } catch (e) {
+                console.warn('批量支付后累计积分失败:', e)
+              }
+            }
           } else {
             alert('批量更新订单状态失败，请重试')
           }

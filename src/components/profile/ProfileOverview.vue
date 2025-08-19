@@ -23,11 +23,11 @@
           <span>💰</span>
         </div>
         <div class="stat-content">
-          <div class="stat-value">¥{{ stats.totalSpending }}</div>
+          <div class="stat-value">¥{{ formatMoney(stats.totalSpending) }}</div>
           <div class="stat-label">总消费</div>
         </div>
         <div class="stat-trend">
-          <span class="trend-up">+{{ userStats.monthlySpent }}</span>
+          <span class="trend-up">+{{ formatMoney(userStats.monthlySpent) }}</span>
           <span class="trend-text">本月消费</span>
         </div>
       </div>
@@ -37,11 +37,11 @@
           <span>💎</span>
         </div>
         <div class="stat-content">
-          <div class="stat-value">¥{{ stats.totalSavings }}</div>
+          <div class="stat-value">¥{{ formatMoney(stats.totalSavings) }}</div>
           <div class="stat-label">总节省</div>
         </div>
         <div class="stat-trend">
-          <span class="trend-up">+{{ userStats.monthlySaved }}</span>
+          <span class="trend-up">+{{ formatMoney(userStats.monthlySaved) }}</span>
           <span class="trend-text">本月节省</span>
         </div>
       </div>
@@ -193,6 +193,11 @@ export default {
     this.loadRecentOrders()
   },
   methods: {
+    formatMoney(value) {
+      const n = Number(value || 0)
+      if (!isFinite(n)) return '0.00'
+      return n.toFixed(2)
+    },
     async loadUserInfo() {
       try {
         const username = userManager.getCurrentUsername()

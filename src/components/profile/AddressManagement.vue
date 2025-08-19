@@ -85,23 +85,11 @@
             </div>
 
             <div class="form-group">
-              <label>所在地区 *</label>
-              <div class="region-inputs">
-                <input 
-                  v-model="addressForm.province" 
-                  type="text" 
-                  class="form-input" 
-                  required
-                  placeholder="请输入省份"
-                />
-                <input 
-                  v-model="addressForm.city" 
-                  type="text" 
-                  class="form-input" 
-                  required
-                  placeholder="请输入城市"
-                />
-              </div>
+              <label>省份 *</label>
+              <select v-model="addressForm.province" class="form-select" required>
+                <option disabled value="">请选择省份/地区</option>
+                <option v-for="p in provinceOptions" :key="p" :value="p">{{ p }}</option>
+              </select>
             </div>
 
             <div class="form-group">
@@ -175,9 +163,7 @@ export default {
         isDefault: false
       },
       // 简化的地区数据，实际项目中应该从API获取
-      provinces: [],
-      cities: [],
-      regionData: {},
+      provinceOptions: ['河北','北京','天津','山西','内蒙古','辽宁','吉林','黑龙江','山东','河南','陕西','甘肃','宁夏','青海','新疆','湖北','湖南','安徽','江苏','江西','浙江','福建','广东','广西','海南','四川','重庆','贵州','云南','西藏','上海','香港','澳门','海外']
     }
   },
   mounted() {
@@ -382,7 +368,7 @@ export default {
         const addressData = {
           receiverName: this.addressForm.receiverName,
           phone: this.addressForm.phone,
-          addressInfo: fullAddress, // 使用合并后的完整地址
+          addressInfo: fullAddress, // 使用合并后的完整地址（含省份）
           postalCode: this.addressForm.postalCode,
           isDefault: !!this.addressForm.isDefault, // 后端为Boolean，传布尔值
           user: { id: userId } // 按后端实体要求嵌套user对象
@@ -499,11 +485,7 @@ export default {
       }
       
       if (!this.addressForm.province.trim()) {
-        alert('请输入省份')
-        return false
-      }
-      if (!this.addressForm.city.trim()) {
-        alert('请输入城市')
+        alert('请选择省份')
         return false
       }
       if (!this.addressForm.detailAddress.trim()) {
