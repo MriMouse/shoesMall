@@ -252,20 +252,26 @@
 
 	<!-- 子路由内容区域：在 /products 路径下，仅渲染产品列表页面 -->
 	<router-view />
+
+	<!-- 页面底部（仅在 /products 下显示） -->
+	<SiteFooter v-if="showFooterForProducts" />
 </template>
 
 <script>
 import { reactive, ref, onMounted, onBeforeUnmount, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { UserAPI } from '@/api';
 import axios from 'axios';
 import userManager from '../../utils/userManager';
+import SiteFooter from './Footer.vue';
 
 export default {
 	name: 'MainNav',
+	components: { SiteFooter },
 	emits: ['open-login'],
 	setup(props, { emit }) {
 		const router = useRouter();
+		const route = useRoute();
 		// 用户下拉菜单
 		const showUserMenu = ref(false);
 		let userMenuTimer = null;
@@ -1386,8 +1392,11 @@ export default {
 			}
 		}
 
+		const showFooterForProducts = computed(() => route.path.startsWith('/products'));
+
 		return {
 			router,
+			showFooterForProducts,
 			isSticky,
 			activeMenuIndex,
 			currentGroup,
