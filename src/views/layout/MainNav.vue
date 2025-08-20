@@ -1905,7 +1905,7 @@ export default {
 	grid-template-columns: 280px 1fr;
 	gap: 0;
 	padding: 20px 32px 20px 32px;
-	animation: fadeIn .2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+	animation: fadeDownMega .2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 	z-index: 999;
 	box-sizing: border-box;
 	/* 添加硬件加速 */
@@ -1926,6 +1926,18 @@ export default {
 	padding-right: 32px;
 	/* 强制占满整个视口宽度 */
 	max-width: 100vw;
+}
+
+@keyframes fadeDownMega {
+	from {
+		opacity: 0;
+		transform: translateX(-50%) translateY(-8px) translateZ(0);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateX(-50%) translateY(0) translateZ(0);
+	}
 }
 
 @keyframes fadeIn {
