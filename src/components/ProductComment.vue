@@ -1,5 +1,18 @@
 <template>
   <div class="comment-container">
+    <!-- Toast 组件 -->
+    <BasicToast ref="toast" :message="toastMessage" :type="toastType" />
+    
+    <!-- ConfirmDialog 组件 -->
+    <confirmDialog 
+      v-model:visible="showConfirmDialog" 
+      :title="confirmDialog.title" 
+      :message="confirmDialog.message"
+      :type="confirmDialog.type" 
+      @confirm="confirmDialog.onConfirm" 
+      @cancel="confirmDialog.onCancel" 
+    />
+
     <!-- 评论头部 -->
     <div class="comment-header">
       <h3>商品评论</h3>
@@ -19,8 +32,7 @@
         </span>
         <span class="comment-count">{{ comments.length }} 条评论</span>
       </div>
-      <!-- 调试按钮 -->
-      <button @click="debugUserInfo" class="debug-btn">调试用户信息</button>
+
     </div>
 
     <!-- 评论表单 -->
@@ -184,9 +196,15 @@
 import { CommentAPI } from '@/api'
 import userManager from '@/utils/userManager'
 import axios from 'axios' // 导入axios
+import BasicToast from '@/views/BasicToast.vue'
+import confirmDialog from '@/views/confirmDialog.vue'
 
 export default {
   name: 'ProductComment',
+  components: {
+    BasicToast,
+    confirmDialog
+  },
   props: {
     shoeId: {
       type: [Number, String],
@@ -220,7 +238,17 @@ export default {
       updating: false,
       currentUserId: null,
       hoverRating: 0,
-      userInfoMap: {} // 新增：用于存储用户信息
+      userInfoMap: {}, // 新增：用于存储用户信息
+             toastMessage: '', // 新增：Toast消息
+       toastType: 'info', // 新增：Toast类型 (info, success, error, warning)
+       showConfirmDialog: false, // 新增：控制ConfirmDialog显示
+      confirmDialog: { // 新增：ConfirmDialog配置
+        title: '',
+        message: '',
+        type: 'info', // info, success, error, warning
+        onConfirm: () => {},
+        onCancel: () => {}
+      }
     }
   },
   computed: {
@@ -253,18 +281,18 @@ export default {
     console.log('计算属性actualShoeId:', this.actualShoeId, '类型:', typeof this.actualShoeId)
     
     // 验证shoeId的有效性
-    if (!this.actualShoeId) {
-      console.error('错误：shoeId属性未传递或为空')
-      this.showToast('商品ID无效，无法加载评论')
-      return
-    }
-    
-    const shoeIdNum = parseInt(this.actualShoeId)
-    if (isNaN(shoeIdNum) || shoeIdNum <= 0) {
-      console.error('错误：shoeId不是有效的数字:', this.actualShoeId)
-      this.showToast('商品ID格式错误，无法加载评论')
-      return
-    }
+          if (!this.actualShoeId) {
+        console.error('错误：shoeId属性未传递或为空')
+        this.showError('商品ID无效，无法加载评论')
+        return
+      }
+      
+      const shoeIdNum = parseInt(this.actualShoeId)
+      if (isNaN(shoeIdNum) || shoeIdNum <= 0) {
+        console.error('错误：shoeId不是有效的数字:', this.actualShoeId)
+        this.showError('商品ID格式错误，无法加载评论')
+        return
+      }
     
     console.log('shoeId验证成功:', shoeIdNum)
     
@@ -297,7 +325,7 @@ export default {
         // 验证用户ID的有效性
         if (!this.currentUserId) {
           console.error('无法获取用户ID，请检查登录状态')
-          this.showToast('请先登录后再发表评论')
+          this.showError('请先登录后再发表评论')
           return
         }
         
@@ -305,7 +333,7 @@ export default {
         const userId = parseInt(this.currentUserId)
         if (isNaN(userId) || userId <= 0) {
           console.error('用户ID无效:', this.currentUserId)
-          this.showToast('用户ID无效，请重新登录')
+          this.showError('用户ID无效，请重新登录')
           return
         }
         
@@ -321,7 +349,7 @@ export default {
           stack: error.stack,
           response: error.response?.data
         })
-        this.showToast('获取用户信息失败，请重新登录')
+        this.showError('获取用户信息失败，请重新登录')
       }
     },
     
@@ -430,12 +458,15 @@ export default {
           // 重置表单
           this.newComment = { rating: 0, content: '' }
           this.showCommentForm = false
-          this.showToast('评论发表成功！')
+          this.showSuccess('评论发表成功！')
           console.log('评论提交成功！')
         } else {
-          const errorMsg = '评论发表失败：' + (response.data?.msg || '未知错误')
+          // 检查是否是重复评论的错误
+          const errorMsg = response.data?.msg === '添加评论失败' 
+            ? '评论发表失败：每人仅限评论一条'
+            : '评论发表失败：' + (response.data?.msg || '未知错误')
           console.error('评论提交失败:', errorMsg)
-          this.showToast(errorMsg)
+          this.showError(errorMsg)
         }
       } catch (error) {
         console.error('提交评论异常:', error)
@@ -451,7 +482,7 @@ export default {
           console.error('请求配置错误:', error.message)
         }
 
-        this.showToast('评论发表失败，请重试')
+        this.showError('评论发表失败，请重试')
       } finally {
         this.submitting = false
       }
@@ -488,20 +519,26 @@ export default {
           // 重新加载评论列表
           await this.loadComments()
           this.closeEditModal()
-          this.showToast('评论更新成功！')
+          this.showSuccess('评论更新成功！')
         } else {
-          this.showToast('评论更新失败：' + (response.data?.msg || '未知错误'))
+          this.showError('评论更新失败：' + (response.data?.msg || '未知错误'))
         }
       } catch (error) {
         console.error('更新评论失败:', error)
-        this.showToast('评论更新失败，请重试')
+        this.showError('评论更新失败，请重试')
       } finally {
         this.updating = false
       }
     },
     
     async deleteComment(comment) {
-      if (!confirm('确定要删除这条评论吗？')) return
+      const confirmed = await this.showConfirm(
+        '确认删除',
+        '确定要删除这条评论吗？',
+        'warning'
+      )
+      
+      if (!confirmed) return
       
       try {
         const response = await CommentAPI.deleteComment({
@@ -512,13 +549,13 @@ export default {
         if (response.data?.code === 200) {
           // 重新加载评论列表
           await this.loadComments()
-          this.showToast('评论删除成功！')
+          this.showSuccess('评论删除成功！')
         } else {
-          this.showToast('评论删除失败：' + (response.data?.msg || '未知错误'))
+          this.showError('评论删除失败：' + (response.data?.msg || '未知错误'))
         }
       } catch (error) {
         console.error('删除评论失败:', error)
-        this.showToast('评论删除失败，请重试')
+        this.showError('评论删除失败，请重试')
       }
     },
     
@@ -564,16 +601,52 @@ export default {
       }
     },
     
+    // 保留 showToast 方法以兼容现有代码，但内部使用新的 toast 系统
     showToast(message) {
-      // 使用简单的提示
-      alert(message)
+      this.showMessage(message, 'info')
     },
 
-    debugUserInfo() {
-      console.log('当前userInfoMap内容:')
-      console.log(JSON.stringify(this.userInfoMap, null, 2))
-      this.showToast('用户信息已打印到控制台')
-    }
+    // Toast 和 ConfirmDialog 相关方法
+    showMessage(message, type = 'info') {
+      if (this.$refs.toast) {
+        this.toastMessage = message
+        this.toastType = type === 'success' ? 'success' : type === 'error' ? 'error' : 'warning'
+        this.$refs.toast.show()
+      }
+    },
+    
+    showSuccess(message) {
+      this.showMessage(message, 'success')
+    },
+    
+    showError(message) {
+      this.showMessage(message, 'error')
+    },
+    
+    showWarning(message) {
+      this.showMessage(message, 'warning')
+    },
+    
+    showConfirm(title, message, type = 'default') {
+      return new Promise((resolve) => {
+        this.confirmDialog = {
+          title,
+          message,
+          type,
+          onConfirm: () => {
+            this.showConfirmDialog = false
+            resolve(true)
+          },
+          onCancel: () => {
+            this.showConfirmDialog = false
+            resolve(false)
+          }
+        }
+        this.showConfirmDialog = true
+      })
+    },
+
+
   }
 }
 </script>
@@ -607,20 +680,7 @@ export default {
   gap: 16px;
 }
 
-.debug-btn {
-  background: #ff6b6b;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  margin-left: 10px;
-}
 
-.debug-btn:hover {
-  background: #ff5252;
-}
 
 .rating-info {
   display: flex;

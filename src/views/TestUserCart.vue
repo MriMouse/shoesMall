@@ -169,14 +169,10 @@ export default {
       try {
         this.addTestResult(true, '开始测试用户登录...')
         
-        const params = new URLSearchParams({
-          username: 'testuser123',
-          password: '123456'
-        })
-        
-        const response = await axios.post('/api/usersLogin/userLogin', params, {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
+        const response = await axios.get('/api/usersLogin/userLogin', {
+          params: {
+            username: 'testuser123',
+            password: '123456'
           }
         })
         

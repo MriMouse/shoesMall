@@ -1,5 +1,18 @@
 <template>
   <div class="view-comments-page">
+    <!-- Toast 组件 -->
+    <BasicToast ref="toast" :message="toastMessage" :type="toastType" />
+    
+    <!-- ConfirmDialog 组件 -->
+    <confirmDialog 
+      v-model:visible="showConfirmDialog" 
+      :title="confirmDialog.title" 
+      :message="confirmDialog.message"
+      :type="confirmDialog.type" 
+      @confirm="confirmDialog.onConfirm" 
+      @cancel="confirmDialog.onCancel" 
+    />
+
     <div class="page-header">
       <div class="breadcrumb">
         <router-link to="/home" class="breadcrumb-item">首页</router-link>
@@ -111,9 +124,15 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
+import BasicToast from '@/views/BasicToast.vue'
+import confirmDialog from '@/views/confirmDialog.vue'
 
 export default {
   name: 'ViewComments',
+  components: {
+    BasicToast,
+    confirmDialog
+  },
   setup() {
     const route = useRoute()
     const router = useRouter()
@@ -124,6 +143,19 @@ export default {
     const userInfoMap = ref({})
     const productName = ref('')
     
+    // Toast 和 ConfirmDialog 相关
+    const toast = ref(null)
+    const toastMessage = ref('')
+    const toastType = ref('info')
+    const showConfirmDialog = ref(false)
+    const confirmDialog = ref({
+      title: '',
+      message: '',
+      type: 'info',
+      onConfirm: () => {},
+      onCancel: () => {}
+    })
+
     // 从路由参数获取商品ID
     const shoeId = computed(() => route.params.shoeId)
     
@@ -243,6 +275,46 @@ export default {
       router.go(-1)
     }
     
+    // Toast 和 ConfirmDialog 相关方法
+    const showMessage = (message, type = 'info') => {
+      if (toast.value) {
+        toastMessage.value = message
+        toastType.value = type === 'success' ? 'success' : type === 'error' ? 'error' : 'warning'
+        toast.value.show()
+      }
+    }
+    
+    const showSuccess = (message) => {
+      showMessage(message, 'success')
+    }
+    
+    const showError = (message) => {
+      showMessage(message, 'error')
+    }
+    
+    const showWarning = (message) => {
+      showMessage(message, 'warning')
+    }
+    
+    const showConfirm = (title, message, type = 'default') => {
+      return new Promise((resolve) => {
+        confirmDialog.value = {
+          title,
+          message,
+          type,
+          onConfirm: () => {
+            showConfirmDialog.value = false
+            resolve(true)
+          },
+          onCancel: () => {
+            showConfirmDialog.value = false
+            resolve(false)
+          }
+        }
+        showConfirmDialog.value = true
+      })
+    }
+    
     // 生命周期
     onMounted(async () => {
       if (shoeId.value) {
@@ -264,7 +336,17 @@ export default {
       getUserName,
       formatCommentTime,
       getRatingText,
-      goBack
+      goBack,
+      toast,
+      toastMessage,
+      toastType,
+      showConfirmDialog,
+      confirmDialog,
+      showMessage,
+      showSuccess,
+      showError,
+      showWarning,
+      showConfirm
     }
   }
 }
