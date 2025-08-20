@@ -182,8 +182,6 @@
 						<button class="dropdown-item" @click="goProfileTab('address')">收货地址</button>
 						<button class="dropdown-item" @click="goProfileTab('settings')">账户设置</button>
 						<div class="dropdown-divider"></div>
-						<button class="dropdown-item" @click="triggerUpload">更换头像</button>
-						<div class="dropdown-divider"></div>
 						<button class="dropdown-item logout" @click="logout">退出登录</button>
 					</div>
 				</div>
@@ -418,9 +416,14 @@ export default {
 			}
 		}
 		function logout() {
-			localStorage.removeItem('user');
-			showUserMenu.value = false;
-			router.push('/');
+			// 触发与个人主页一致的退出流程（确认弹框/清理本地数据）
+			try {
+				localStorage.removeItem('token');
+				localStorage.removeItem('user');
+				window.location.href = '/';
+			} catch (e) {
+				window.location.href = '/';
+			}
 		}
 
 		const navGroups = reactive([
@@ -1022,7 +1025,7 @@ export default {
 			try {
 				const resolvedUserId = Number(await getCurrentUserId());
 				if (!resolvedUserId) return;
-				// 若刚被删除，短时间内不再写入，避免“删不掉”的观感
+				// 若刚被删除，短时间内不再写入，避免"删不掉"的观感
 				if (shouldBlockAddHistory(resolvedUserId, Number(shoeId))) return;
 
 				// 先查询是否已存在，存在则跳过，避免后端主键冲突

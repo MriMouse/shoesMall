@@ -90,6 +90,9 @@
         <button v-if="!showCommentForm" @click="showCommentForm = true" class="btn btn-primary">
           发表评论
         </button>
+        <button v-if="!showCommentForm" @click="backToOrders" class="btn btn-secondary btn-space">
+          返回订单
+        </button>
       </div>
       
       <div v-else class="comments">
@@ -187,6 +190,9 @@
     <div v-if="!showCommentForm && comments.length > 0" class="add-comment-section">
       <button @click="showCommentForm = true" class="btn btn-primary">
         发表评论
+      </button>
+      <button @click="backToOrders" class="btn btn-secondary btn-space">
+        返回订单
       </button>
     </div>
   </div>
@@ -491,6 +497,11 @@ export default {
     cancelComment() {
       this.newComment = { rating: 0, content: '' }
       this.showCommentForm = false
+    },
+
+    backToOrders() {
+      // 返回到“我的订单”页面
+      this.$router.push({ name: 'ProfileOrders' })
     },
     
     editComment(comment) {
@@ -836,6 +847,10 @@ export default {
 .btn-secondary {
   background: transparent;
   color: #111111;
+}
+
+.btn-space {
+  margin-left: 12px;
 }
 
 .btn-outline {

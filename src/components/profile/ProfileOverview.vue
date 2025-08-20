@@ -305,53 +305,117 @@ export default {
             userOrders.map(async (order) => {
               let computedAmount = 0
               let computedPoints = 0
+              let subOrderAmounts = [] // 存储每个子订单的金额（包含运费和折扣分摊）
+              let baseAmount = 0 // 基础商品总金额（按订单表中的商品ID明细计算）
+              let discountSaved = 0 // 该订单因打折节省的金额（原价-折后价）累计
+              
               try {
                 const osnRes = await OrderShoeNumAPI.getByOrderId(order.orderId)
-                if (osnRes.data?.code === 200 && Array.isArray(osnRes.data.data)) {
-                  const items = osnRes.data.data
+                if (osnRes.data?.code === 200 && osnRes.data.data) {
+                  // 统一为数组：后端可能返回对象或数组
+                  const raw = osnRes.data.data
+                  const items = Array.isArray(raw) ? raw : [raw]
+                  
+                  // 计算商品基础金额（使用折后价）与折扣节省（原价-折后价）
                   const itemDetails = await Promise.all(items.map(async (it) => {
-                    let price = 0
+                    let originalUnitPrice = 0
+                    let discountUnitPrice = 0
                     let points = 0
                     try {
                       const shoeRes = await ShoeAPI.getById(it.shoeId)
                       if (shoeRes.data?.code === 200 && shoeRes.data.data) {
                         const shoe = shoeRes.data.data
-                        price = (shoe.discountPrice && shoe.discountPrice < shoe.price)
+                        originalUnitPrice = (shoe.price || 0)
+                        discountUnitPrice = (shoe.discountPrice && shoe.discountPrice < originalUnitPrice)
                           ? shoe.discountPrice
-                          : (shoe.price || 0)
+                          : originalUnitPrice
                         // 获取商品积分，如果没有积分字段，使用默认值
                         points = shoe.integral || shoe.points || 10 // 默认每个商品10积分
                       }
                     } catch (e) {
                       console.warn('获取鞋子信息失败:', e)
                     }
+                    const quantity = it.shoeNum || 1
+                    const discountDiff = Math.max(0, (originalUnitPrice - discountUnitPrice)) * quantity
                     return {
-                      price: price * (it.shoeNum || 1),
-                      points: points * (it.shoeNum || 1)
+                      price: discountUnitPrice * quantity, // 折后价小计
+                      points: points * quantity,
+                      originalPrice: originalUnitPrice,
+                      discountPrice: discountUnitPrice,
+                      quantity: quantity,
+                      discountSaved: discountDiff
                     }
                   }))
-                  computedAmount = itemDetails.reduce((a, b) => a + b.price, 0)
+                  
+                  // 计算基础商品总金额与折扣节省
+                  baseAmount = itemDetails.reduce((a, b) => a + b.price, 0)
                   computedPoints = itemDetails.reduce((a, b) => a + b.points, 0)
+                  discountSaved = itemDetails.reduce((a, b) => a + (b.discountSaved || 0), 0)
+                  
+                  // 获取订单的运费和折扣信息
+                  const shippingFee = order.shippingFee || 0
+                  const orderDiscount = order.discount || 0
+                  
+                  // 计算每个子订单分摊的运费和折扣
+                  if (items.length > 0) {
+                    const shippingPerItem = shippingFee / items.length
+                    const discountPerItem = orderDiscount / items.length
+                    
+                    // 为每个子订单计算包含运费和折扣分摊的金额
+                    subOrderAmounts = itemDetails.map((item, index) => {
+                      const subOrderAmount = item.price + shippingPerItem - discountPerItem
+                      return {
+                        itemId: items[index].shoeId,
+                        quantity: item.quantity,
+                        basePrice: item.price,
+                        shippingShare: shippingPerItem,
+                        discountShare: discountPerItem,
+                        totalAmount: Math.max(0, subOrderAmount) // 确保金额不为负数
+                      }
+                    })
+                  }
+                  
+                  // 总金额 = 基础商品金额 + 运费 - 折扣
+                  computedAmount = baseAmount + shippingFee - orderDiscount
                 }
               } catch (e) {
                 console.warn('获取订单明细失败:', e)
               }
-              return { ...order, computedAmount, computedPoints }
+              
+              return { 
+                ...order, 
+                computedAmount, 
+                computedPoints,
+                baseAmount, // 记录基础商品金额(按订单明细计算)
+                discountSaved, // 记录因打折节省
+                subOrderAmounts // 添加子订单金额明细
+              }
             })
           )
 
-          // 过滤掉购物车状态的订单，只计算真实订单
-          const validOrders = enrichedOrders.filter(order => String(order.status) !== '10')
+          // 过滤掉购物车状态和已取消的订单，只计算有效订单
+          const validOrders = enrichedOrders.filter(order => 
+            String(order.status) !== '10' && 
+            String(order.status) !== '6' && 
+            String(order.status) !== '5'
+          )
 
           // 计算统计数据（排除购物车）
-          this.stats.totalOrders = validOrders.length
-          this.stats.totalSpending = validOrders.reduce(
-            (sum, o) => sum + (o.computedAmount || o.totalAmount || o.amount || 0),
-            0
-          )
-          this.stats.totalSavings = Math.round(this.stats.totalSpending * 0.1)
+          // 订单组（相同订单号合并）算一个订单
+          const totalOrderGroups = Array.from(new Set(validOrders.map(o => (o.orderNumber || `ORD${o.orderId}` || o.id)))).length
+          this.stats.totalOrders = totalOrderGroups
+          
+          // 总消费：按运费累计（订单层面）
+          this.stats.totalSpending = validOrders.reduce((sum, o) => sum + (o.shippingFee || 0), 0)
+          
+          // 计算所有商品的基价合计（按订单表中的商品ID明细求和）
+          const allBaseAmount = validOrders.reduce((sum, o) => sum + (o.baseAmount || 0), 0)
+          const allDiscountSaved = validOrders.reduce((sum, o) => sum + (o.discountSaved || 0), 0)
+          
+          // 总节省：商品基价合计 - 运费总支出 + 折扣节省（原价-折后价）
+          this.stats.totalSavings = Math.max(0, allBaseAmount - this.stats.totalSpending + allDiscountSaved)
 
-          // 月度统计（排除购物车）
+          // 月度统计（排除购物车和已取消订单）
           const now = new Date()
           const currentMonth = now.getMonth()
           const currentYear = now.getFullYear()
@@ -359,29 +423,61 @@ export default {
             const orderDate = new Date(order.createdAt || order.date)
             return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear
           })
-          this.userStats.monthlyOrders = monthlyOrders.length
-          this.userStats.monthlySpent = monthlyOrders.reduce(
-            (sum, o) => sum + (o.computedAmount || o.totalAmount || o.amount || 0),
-            0
-          )
-          this.userStats.monthlySaved = Math.round(this.userStats.monthlySpent * 0.1)
+          const monthlyOrderGroups = Array.from(new Set(monthlyOrders.map(o => (o.orderNumber || `ORD${o.orderId}` || o.id)))).length
+          this.userStats.monthlyOrders = monthlyOrderGroups
+          
+          // 月度消费：按运费累计
+          this.userStats.monthlySpent = monthlyOrders.reduce((sum, o) => sum + (o.shippingFee || 0), 0)
+          
+          // 本月商品基价合计与折扣节省
+          const monthBaseAmount = monthlyOrders.reduce((sum, o) => sum + (o.baseAmount || 0), 0)
+          const monthDiscountSaved = monthlyOrders.reduce((sum, o) => sum + (o.discountSaved || 0), 0)
+          
+          // 本月节省：本月商品基价合计 - 本月运费 + 本月折扣节省
+          this.userStats.monthlySaved = Math.max(0, monthBaseAmount - this.userStats.monthlySpent + monthDiscountSaved)
           // 积分增长计算：基于本月订单中商品的实际积分
           this.userStats.pointsEarned = monthlyOrders.reduce(
             (sum, o) => sum + (o.computedPoints || 0),
             0
           )
 
-          // 最近订单（最多3条）
-          this.recentOrders = enrichedOrders
-            .filter(order => String(order.status) !== '10') // 过滤掉购物车状态的订单
-            .sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date))
+          // 最近订单（最多3条，排除购物车和已取消订单）
+          const recentValid = enrichedOrders.filter(order => 
+            String(order.status) !== '10' && 
+            String(order.status) !== '6' && 
+            String(order.status) !== '5'
+          )
+          // 订单号分组取每组最新一条作为代表
+          const groupMap = new Map()
+          recentValid.forEach(o => {
+            const key = o.orderNumber || `ORD${o.orderId}` || o.id
+            const current = groupMap.get(key)
+            const curTime = new Date(current?.createdAt || current?.date || 0).getTime() || 0
+            const newTime = new Date(o.createdAt || o.date || 0).getTime() || 0
+            if (!current || newTime > curTime) groupMap.set(key, o)
+          })
+          // 倒序后取最新的3组
+          this.recentOrders = Array.from(groupMap.values())
+            .sort((a, b) => new Date(b.createdAt || b.date || 0) - new Date(a.createdAt || a.date || 0))
             .slice(0, 3)
-            .map(order => ({
-              id: order.orderNumber || `ORD${order.orderId}` || order.id,
-              status: order.status,
-              amount: Number((order.computedAmount || order.totalAmount || order.amount || 0).toFixed(2)),
-              date: order.createdAt || order.date
-            }))
+            .map(order => {
+              // 计算订单显示金额：优先使用子订单明细，否则使用计算金额
+              let displayAmount = 0
+              if (order.subOrderAmounts && order.subOrderAmounts.length > 0) {
+                displayAmount = order.subOrderAmounts.reduce((sum, subOrder) => {
+                  return sum + subOrder.totalAmount
+                }, 0)
+              } else {
+                displayAmount = order.computedAmount || order.totalAmount || order.amount || 0
+              }
+              
+              return {
+                id: order.orderNumber || `ORD${order.orderId}` || order.id,
+                status: order.status,
+                amount: Number(displayAmount.toFixed(2)),
+                date: order.createdAt || order.date
+              }
+            })
         } else {
           console.warn('获取订单信息失败:', response.data?.msg)
           this.recentOrders = []
@@ -419,7 +515,7 @@ export default {
         '3': 'status-completed',
         '4': 'status-cancelled',
         '5': 'status-returning',
-        '6': 'status-returned',
+        '6': 'status-cancelled', // 状态6也使用已取消的样式
         '10': 'status-cart',
         '11': 'status-refunding',
         '12': 'status-refunding',

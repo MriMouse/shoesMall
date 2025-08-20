@@ -9,9 +9,8 @@
           <option value="1">已支付</option>
           <option value="2">已发货</option>
           <option value="3">已完成</option>
-          <option value="4">已取消</option>
-          <option value="5">已退货</option>
           <option value="6">已取消</option>
+          <option value="5">已退货</option>
           <option value="11">已支付-退款中</option>
           <option value="12">已发货-退款中</option>
           <option value="13">已完成-退款中</option>
@@ -32,25 +31,25 @@
       <router-link to="/products" class="btn btn-primary">去购物</router-link>
     </div>
 
-    <div v-else class="orders-list">
-      <div v-for="order in visibleOrders" :key="order.orderId" class="order-item">
+         <div v-else class="orders-list">
+       <div v-for="order in paginatedOrders" :key="order.orderId" class="order-item">
         <!-- 订单选择框 -->
         <div class="order-select">
           <input type="checkbox" :value="order.orderId" v-model="order.selected" @change="updateSelection"
             class="order-checkbox">
         </div>
 
-        <div class="order-header-info">
-          <div class="order-number">
-            <span class="label">订单号：</span>
-            <span class="value">{{ order.orderNumber }}</span>
-          </div>
-          <div class="order-status">
-            <span class="status-badge" :class="getStatusClass(order.status)">
-              {{ getOrderStatus(order.status) }}
-            </span>
-          </div>
-        </div>
+                 <div class="order-header-info">
+           <div class="order-number">
+             <span class="label">订单号：</span>
+             <span class="value">{{ order.orderNumber }}</span>
+           </div>
+           <div class="order-status">
+             <span class="status-badge" :class="getStatusClass(order.status)">
+               {{ getOrderStatus(order.status) }}
+             </span>
+           </div>
+         </div>
 
         <div class="order-info-box">
           <!-- 左侧：商品缩略列表 -->
@@ -110,15 +109,24 @@
                   查看详情
                 </button>
 
-                <!-- 根据订单状态显示不同的操作按钮 -->
-                <div v-if="['0', '1', '2'].includes(order.status)" class="action-buttons">
-                  <button @click="requestRefund(order)" class="btn btn-warning btn-compact">
-                    申请退款
-                  </button>
-                  <button @click="goToComment(order)" class="btn btn-outline btn-compact">
-                    评论
-                  </button>
-                </div>
+                                 <!-- 根据订单状态显示不同的操作按钮 -->
+                 <div v-if="order.status === '0'" class="action-buttons">
+                   <button @click="payOrder(order)" class="btn btn-primary btn-compact">
+                     立即支付
+                   </button>
+                   <button @click="cancelOrder(order)" class="btn btn-warning btn-compact">
+                     取消订单
+                   </button>
+                 </div>
+                 
+                 <div v-else-if="['1', '2'].includes(order.status)" class="action-buttons">
+                   <button @click="requestRefund(order)" class="btn btn-warning btn-compact">
+                     申请退款
+                   </button>
+                   <button @click="goToComment(order)" class="btn btn-outline btn-compact">
+                     评论
+                   </button>
+                 </div>
 
                 <div v-else-if="order.status === '3'" class="action-buttons">
                   <button @click="requestRefund(order)" class="btn btn-warning btn-compact">
@@ -151,6 +159,66 @@
           </div>
         </div>
       </div>
+      
+      <!-- 分页组件 -->
+      <div v-if="visibleOrders.length > 0" class="pagination-container">
+        <div class="pagination-info">
+          显示第 {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, visibleOrders.length) }} 条，
+          共 {{ visibleOrders.length }} 条订单
+        </div>
+        <div class="pagination-controls">
+          <button 
+            @click="goToPage(1)" 
+            :disabled="currentPage === 1"
+            class="pagination-btn"
+          >
+            首页
+          </button>
+          <button 
+            @click="goToPage(currentPage - 1)" 
+            :disabled="currentPage === 1"
+            class="pagination-btn"
+          >
+            上一页
+          </button>
+          
+          <div class="page-numbers">
+            <button 
+              v-for="page in getPageNumbers()" 
+              :key="page"
+              @click="goToPage(page)"
+              :class="['pagination-btn', { active: page === currentPage }]"
+            >
+              {{ page }}
+            </button>
+          </div>
+          
+          <button 
+            @click="goToPage(currentPage + 1)" 
+            :disabled="currentPage >= totalPagesComputed"
+            class="pagination-btn"
+          >
+            下一页
+          </button>
+          <button 
+            @click="goToPage(totalPagesComputed)" 
+            :disabled="currentPage >= totalPageSize"
+            class="pagination-btn"
+          >
+            末页
+          </button>
+        </div>
+        
+        <div class="page-size-selector">
+          <span>每页显示：</span>
+          <select v-model="pageSize" @change="onPageSizeChange" class="page-size-select">
+            <option value="5">5条</option>
+            <option value="10">10条</option>
+            <option value="20">20条</option>
+            <option value="50">50条</option>
+          </select>
+        </div>
+      </div>
     </div>
 
     <!-- 自定义退款确认浮层 -->
@@ -158,8 +226,8 @@
       <div class="confirm-dialog">
         <div class="confirm-title">确认操作</div>
         <div class="confirm-message">
-          确定要申请退款吗？订单状态将从“{{ getOrderStatus(refundTarget?.status) }}”变为“{{
-            getOrderStatus(String(Number(refundTarget?.status) + 10)) }}”。
+          确定要申请退款吗？订单状态将从"{{ getOrderStatus(refundTarget?.status) }}"变为"{{
+            getOrderStatus(String(Number(refundTarget?.status) + 10)) }}"。
         </div>
         <div class="confirm-actions">
           <button class="btn btn-secondary btn-compact" @click="cancelRefund">取消</button>
@@ -311,13 +379,27 @@ export default {
       returnDescription: '',
       submittingReturn: false,
       showRefundConfirm: false,
-      refundTarget: null
+      refundTarget: null,
+      // 分页相关数据
+      currentPage: 1,
+      pageSize: 5,
+      totalPages: 1
     }
   },
   computed: {
     // 仅展示非购物车状态的订单
     visibleOrders() {
       return this.filteredOrders.filter(o => String(o.status) !== '10')
+    },
+    // 分页后的订单列表
+    paginatedOrders() {
+      const startIndex = (this.currentPage - 1) * this.pageSize
+      const endIndex = startIndex + this.pageSize
+      return this.visibleOrders.slice(startIndex, endIndex)
+    },
+    // 总页数
+    totalPagesComputed() {
+      return Math.ceil(this.visibleOrders.length / this.pageSize)
     }
   },
   mounted() {
@@ -327,7 +409,11 @@ export default {
       this.orders = cached.list
       this.filteredOrders = [...this.orders]
       // 应用排序，确保缓存数据也按时间倒序显示
-      this.filterOrders()
+      this.filteredOrders.sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0)
+        const dateB = new Date(b.createdAt || 0)
+        return dateB - dateA
+      })
       // 后台刷新最新数据（不阻塞首屏）
       this.$nextTick(() => this.loadOrders())
     } else {
@@ -367,57 +453,91 @@ export default {
           console.log('所有订单:', allOrders)
 
           // 过滤当前用户的订单
-          this.orders = await Promise.all(allOrders
-            .filter(order => order.userId === userId)
-            .map(async (order) => {
-              console.log('处理订单:', order.orderId, '原始数据:', order)
-              console.log('订单字段详情:', {
-                addressId: order.addressId,
-                address: order.address,
-                receiverAddress: order.receiverAddress,
-                receiver: order.receiver,
-                receiverName: order.receiverName,
-                phone: order.phone,
-                receiverPhone: order.receiverPhone
-              })
+          const userOrders = allOrders.filter(order => order.userId === userId)
+          
+          // 按订单编号分组，合并相同订单编号的订单
+          const orderGroups = {}
+          userOrders.forEach(order => {
+            const orderNumber = order.orderNumber || `ORD${order.orderId}`
+            if (!orderGroups[orderNumber]) {
+              orderGroups[orderNumber] = []
+            }
+            orderGroups[orderNumber].push(order)
+          })
+          
+          // 处理合并后的订单组
+          this.orders = await Promise.all(Object.entries(orderGroups).map(async ([orderNumber, orderGroup]) => {
+            // 使用第一个订单作为主订单
+            const mainOrder = orderGroup[0]
+            console.log('处理订单组:', orderNumber, '包含订单数量:', orderGroup.length)
+                             console.log('处理订单:', mainOrder.orderId, '原始数据:', mainOrder)
+               console.log('订单字段详情:', {
+                 addressId: mainOrder.addressId,
+                 address: mainOrder.address,
+                 receiverAddress: mainOrder.receiverAddress,
+                 receiver: mainOrder.receiver,
+                 receiverName: mainOrder.receiverName,
+                 phone: mainOrder.phone,
+                 receiverPhone: mainOrder.receiverPhone
+               })
 
-              // 获取订单的商品信息
-              const products = await this.getOrderProducts(order.orderId)
-              console.log('订单商品信息:', order.orderId, products)
+               // 获取所有订单组中订单的商品信息
+               let allProducts = []
+               for (const order of orderGroup) {
+                 const products = await this.getOrderProducts(order.orderId)
+                 allProducts = allProducts.concat(products)
+               }
+               console.log('合并后的商品信息:', orderNumber, allProducts)
 
-              // 获取订单的地址信息
-              const addressInfo = await this.getOrderAddress(order.addressId)
-              console.log('订单地址信息:', order.orderId, addressInfo)
+                             // 获取订单的地址信息
+               const addressInfo = await this.getOrderAddress(mainOrder.addressId)
+               console.log('订单地址信息:', mainOrder.orderId, addressInfo)
 
-              // 计算订单总金额
-              const totalAmount = products.reduce((sum, product) => {
-                return sum + (product.price * product.quantity)
-              }, 0)
+                             // 计算订单总金额（使用数据库中的运费字段）
+               let totalAmount = 0
+               
+               if (allProducts.length > 0) {
+                 // 使用数据库订单表中的运费字段（订单组求和）
+                 const shippingFeeTotal = orderGroup.reduce((sum, o) => sum + (o.shippingFee || 0), 0)
+                 
+                 // 订单组金额 = 子订单金额之和（这里等于各子订单运费之和）
+                 totalAmount = shippingFeeTotal
+                 
+                 // 为每个商品添加运费分摊（仅用于展示）
+                 const shippingPerProduct = allProducts.length > 0 ? (shippingFeeTotal / allProducts.length) : 0
+                 allProducts.forEach(product => {
+                   product.shippingShare = shippingPerProduct
+                   product.totalAmount = shippingPerProduct
+                 })
+               }
 
-              // 尝试从订单数据本身获取地址信息作为备选
-              const fallbackAddressInfo = this.extractOrderInfo(order)
-              console.log('订单备选地址信息:', order.orderId, fallbackAddressInfo)
+                             // 尝试从订单数据本身获取地址信息作为备选
+               const fallbackAddressInfo = this.extractOrderInfo(mainOrder)
+               console.log('订单备选地址信息:', mainOrder.orderId, fallbackAddressInfo)
 
-              const processedOrder = {
-                ...order,
-                selected: false,
-                // 根据后端真实数据结构处理字段
-                orderNumber: order.orderNumber || `ORD${order.orderId}`,
-                // 使用计算出的真实金额
-                amount: totalAmount,
-                // 处理日期格式
-                createdAt: order.createdAt ? this.formatBackendDate(order.createdAt) : new Date().toISOString(),
-                updatedAt: order.updatedAt ? this.formatBackendDate(order.updatedAt) : new Date().toISOString(),
-                // 使用获取的真实商品信息
-                products: products,
-                // 优先使用API获取的地址信息，如果没有则使用备选信息
-                address: addressInfo.address || fallbackAddressInfo.address || '',
-                receiver: addressInfo.receiver || fallbackAddressInfo.receiver || '',
-                phone: addressInfo.phone || fallbackAddressInfo.phone || ''
-              }
+                             const processedOrder = {
+                 ...mainOrder,
+                 selected: false,
+                 // 根据后端真实数据结构处理字段
+                 orderNumber: orderNumber,
+                 // 使用计算出的真实金额（包含运费）
+                 amount: totalAmount,
+                 // 处理日期格式（统一标准化）
+                 createdAt: this.getOrderDateValue(mainOrder).toISOString(),
+                 updatedAt: mainOrder.updatedAt ? this.formatBackendDate(mainOrder.updatedAt) : new Date().toISOString(),
+                 // 使用合并后的所有商品信息
+                 products: allProducts,
+                 // 优先使用API获取的地址信息，如果没有则使用备选信息
+                 address: addressInfo.address || fallbackAddressInfo.address || '',
+                 receiver: addressInfo.receiver || fallbackAddressInfo.receiver || '',
+                 phone: addressInfo.phone || fallbackAddressInfo.phone || '',
+                 // 添加订单组信息
+                 orderGroup: orderGroup,
+                 orderCount: orderGroup.length
+               }
 
-              console.log('处理后的订单:', processedOrder.orderId, '金额:', processedOrder.amount, '商品数量:', processedOrder.products.length)
-              return processedOrder
+                             console.log('处理后的订单:', processedOrder.orderId, '订单编号:', orderNumber, '金额:', processedOrder.amount, '商品数量:', processedOrder.products.length, '包含订单数:', processedOrder.orderCount)
+               return processedOrder
             }))
 
           console.log('处理后的用户订单:', this.orders)
@@ -427,8 +547,12 @@ export default {
             this.filteredOrders = []
           } else {
             this.filteredOrders = [...this.orders]
-            // 应用排序，确保订单按时间倒序显示
-            this.filterOrders()
+            // 按创建时间正序排列，最早的订单显示在最前面（兼容多种时间字段）
+            this.filteredOrders.sort((a, b) => {
+              const dateA = this.getOrderDateValue(a)
+              const dateB = this.getOrderDateValue(b)
+              return dateA - dateB
+            })
             // 同步更新缓存（轻量字段）
             const light = this.orders.map(o => ({
               orderId: o.orderId,
@@ -466,12 +590,26 @@ export default {
         this.filteredOrders = this.orders.filter(order => order.status === this.statusFilter)
       }
       
-      // 按创建时间正序排列，最早的订单显示在最前面
+      // 按创建时间正序排列，最早的订单显示在最前面（兼容多种时间字段）
       this.filteredOrders.sort((a, b) => {
-        const dateA = new Date(a.createdAt || 0)
-        const dateB = new Date(b.createdAt || 0)
+        const dateA = this.getOrderDateValue(a)
+        const dateB = this.getOrderDateValue(b)
         return dateA - dateB
       })
+      
+      // 重置分页到第一页
+      this.currentPage = 1
+    },
+
+    // 统一获取订单时间（返回 Date）
+    getOrderDateValue(order) {
+      const raw = order?.createdAt || order?.created_at || order?.createTime || order?.createdTime || order?.date || order?.updatedAt || order?.updated_at
+      if (!raw) return new Date(0)
+      try {
+        return new Date(raw)
+      } catch (e) {
+        return new Date(0)
+      }
     },
 
     getOrderStatus(status) {
@@ -499,7 +637,7 @@ export default {
         '3': 'status-completed',
         '4': 'status-cancelled',
         '5': 'status-returning',
-        '6': 'status-returned',
+        '6': 'status-cancelled', // 状态6也使用已取消的样式
         '10': 'status-cart',
         '11': 'status-refunding',
         '12': 'status-refunding',
@@ -515,7 +653,27 @@ export default {
 
     viewOrderDetail(order) {
       this.selectedOrder = order
-      this.showOrderDetailModal = true
+      const needLoadProducts = !order.products || order.products.length === 0
+      const hasGroup = Array.isArray(order.orderGroup) && order.orderGroup.length > 0
+
+      if (needLoadProducts && hasGroup) {
+        // 动态补齐订单组的商品信息后再打开弹层
+        Promise.all(
+          order.orderGroup.map(sub => this.getOrderProducts(sub.orderId))
+        ).then(list => {
+          const merged = []
+          list.forEach(arr => {
+            if (Array.isArray(arr)) merged.push(...arr)
+          })
+          this.selectedOrder.products = merged
+          this.showOrderDetailModal = true
+        }).catch(() => {
+          // 即便失败也打开，避免无响应
+          this.showOrderDetailModal = true
+        })
+      } else {
+        this.showOrderDetailModal = true
+      }
     },
 
     closeOrderDetailModal() {
@@ -530,36 +688,30 @@ export default {
       this.returnDescription = ''
     },
 
-    async payOrder(order) {
-      try {
-        // 跳转到订单确认页面进行支付
-        this.$router.push({
-          name: 'OrderConfirmation',
-          query: {
-            fromOrderConfirmation: 'true',
-            orderId: order.orderId,
-            orderNumber: order.orderNumber,
-            fromPendingOrder: 'true'
-          }
-        })
-      } catch (error) {
-        console.error('跳转失败:', error)
-        alert('跳转失败，请重试')
-      }
-    },
+         async payOrder(order) {
+       try {
+         // 跳转到订单确认页面进行支付
+         this.$router.push({
+           name: 'OrderConfirmation',
+           query: {
+             fromOrderConfirmation: 'true',
+             orderId: order.orderId,
+             orderNumber: order.orderNumber,
+             fromPendingOrder: 'true',
+             orderStatus: order.status
+           }
+         })
+       } catch (error) {
+         console.error('跳转失败:', error)
+         alert('跳转失败，请重试')
+       }
+     },
 
     async cancelOrder(order) {
       if (confirm('确定要取消这个订单吗？')) {
         try {
-          // 根据当前状态决定取消后的状态
-          let newStatus;
-          if (order.status === '0') {
-            // 待支付订单取消后变为已取消
-            newStatus = '6';
-          } else {
-            // 其他状态取消后变为已取消
-            newStatus = '4';
-          }
+          // 所有订单取消后都变为状态6
+          const newStatus = '6';
 
           const updatedOrder = { ...order, status: newStatus }
           const response = await OrderAPI.updateOrder(updatedOrder)
@@ -567,7 +719,22 @@ export default {
             order.status = newStatus
             order.updatedAt = new Date().toISOString()
             this.filterOrders()
-            alert(`订单已${newStatus === '6' ? '取消' : '取消'}`)
+            
+            // 如果取消的是已支付的订单，需要回退积分
+            if (['1', '2', '3'].includes(order.status)) {
+              try {
+                const userId = await userManager.getUserId()
+                if (userId && order.orderId) {
+                  // 回退该订单的积分
+                  await PointsAPI.deductByOrder({ userId, orderId: order.orderId })
+                  console.log('已取消订单，积分已回退:', order.orderId)
+                }
+              } catch (e) {
+                console.warn('取消订单后回退积分失败:', e)
+              }
+            }
+            
+            alert('订单已取消')
           } else {
             alert('取消订单失败，请重试')
           }
@@ -632,7 +799,7 @@ export default {
           order.status = newStatus
           order.updatedAt = new Date().toISOString()
           this.filterOrders()
-          showToast(`退款申请已提交，订单状态已更新为“${this.getOrderStatus(newStatus)}”`)
+          showToast(`退款申请已提交，订单状态已更新为"${this.getOrderStatus(newStatus)}"`)
         } else {
           showToast('提交退款申请失败，请重试')
         }
@@ -751,26 +918,33 @@ export default {
             this.filterOrders()
             alert('批量更新订单状态成功')
 
-            // 如果批量支付成功，则为这些订单累计积分
-            if (newStatus === '1') {
-              try {
-                const userId = await userManager.getUserId()
-                // 批量支付时若订单号一致可合并一次；否则逐个订单ID调用
-                const firstOrderNumber = selectedOrders[0]?.orderNumber
-                const allSameNumber = firstOrderNumber && selectedOrders.every(o => o.orderNumber === firstOrderNumber)
-                if (allSameNumber) {
-                  await PointsAPI.accrueByOrder({ userId, orderNumber: firstOrderNumber })
-                } else {
-                  for (const order of selectedOrders) {
-                    if (order && order.orderId) {
-                      await PointsAPI.accrueByOrder({ userId, orderId: order.orderId })
-                    }
-                  }
-                }
-              } catch (e) {
-                console.warn('批量支付后累计积分失败:', e)
-              }
-            }
+                             // 如果批量支付成功，则为这些订单累计积分（排除已取消的订单）
+                 if (newStatus === '1') {
+                   try {
+                     const userId = await userManager.getUserId()
+                                           // 过滤掉已取消的订单，只对有效订单累计积分
+                      const validOrders = selectedOrders.filter(order => 
+                        order.status !== '6' && order.status !== '5'
+                      )
+                     
+                     if (validOrders.length > 0) {
+                       // 批量支付时若订单号一致可合并一次；否则逐个订单ID调用
+                       const firstOrderNumber = validOrders[0]?.orderNumber
+                       const allSameNumber = firstOrderNumber && validOrders.every(o => o.orderNumber === firstOrderNumber)
+                       if (allSameNumber) {
+                         await PointsAPI.accrueByOrder({ userId, orderNumber: firstOrderNumber })
+                       } else {
+                         for (const order of validOrders) {
+                           if (order && order.orderId) {
+                             await PointsAPI.accrueByOrder({ userId, orderId: order.orderId })
+                           }
+                         }
+                       }
+                     }
+                   } catch (e) {
+                     console.warn('批量支付后累计积分失败:', e)
+                   }
+                 }
           } else {
             alert('批量更新订单状态失败，请重试')
           }
@@ -1192,6 +1366,59 @@ export default {
         console.error('获取订单地址信息异常:', error);
         return { address: '', receiver: '', phone: '' };
       }
+    },
+    
+    // 分页相关方法
+    goToPage(page) {
+      if (page >= 1 && page <= this.totalPagesComputed) {
+        this.currentPage = page
+      }
+    },
+    
+    onPageSizeChange() {
+      this.currentPage = 1 // 重置到第一页
+      this.filterOrders()
+    },
+    
+    getPageNumbers() {
+      const total = this.totalPagesComputed
+      const current = this.currentPage
+      const pages = []
+      
+      if (total <= 7) {
+        // 如果总页数少于等于7页，显示所有页码
+        for (let i = 1; i <= total; i++) {
+          pages.push(i)
+        }
+      } else {
+        // 如果总页数大于7页，显示当前页附近的页码
+        if (current <= 4) {
+          // 当前页在前4页
+          for (let i = 1; i <= 5; i++) {
+            pages.push(i)
+          }
+          pages.push('...')
+          pages.push(total)
+        } else if (current >= total - 3) {
+          // 当前页在后4页
+          pages.push(1)
+          pages.push('...')
+          for (let i = total - 4; i <= total; i++) {
+            pages.push(i)
+          }
+        } else {
+          // 当前页在中间
+          pages.push(1)
+          pages.push('...')
+          for (let i = current - 1; i <= current + 1; i++) {
+            pages.push(i)
+          }
+          pages.push('...')
+          pages.push(total)
+        }
+      }
+      
+      return pages
     }
   }
 }
@@ -1394,6 +1621,16 @@ export default {
 .order-number .value {
   font-size: 0.9rem;
   color: #666666;
+  font-weight: 500;
+}
+
+.order-count-badge {
+  background: #007bff;
+  color: white;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 8px;
   font-weight: 500;
 }
 
@@ -1603,7 +1840,7 @@ export default {
   font-size: 0.9rem;
 }
 
-/* 黑白风格的“警告”按钮，避免彩色 */
+/* 黑白风格的"警告"按钮，避免彩色 */
 .btn-warning {
   background: transparent;
   color: #111111;
@@ -1956,5 +2193,116 @@ export default {
   font-weight: 600;
   color: #856404;
   text-align: center;
+}
+
+/* 分页组件样式 */
+.pagination-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.pagination-info {
+  font-size: 0.9rem;
+  color: #666666;
+  text-align: center;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.pagination-btn {
+  border: 1px solid #e6e6e6;
+  background: #fff;
+  color: #111111;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 40px;
+  text-align: center;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #111111;
+  color: #fff;
+  border-color: #111111;
+}
+
+.pagination-btn:disabled {
+  background: #f5f5f5;
+  color: #ccc;
+  cursor: not-allowed;
+  border-color: #e6e6e6;
+}
+
+.pagination-btn.active {
+  background: #111111;
+  color: #fff;
+  border-color: #111111;
+}
+
+.page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.page-numbers .pagination-btn {
+  min-width: 36px;
+  padding: 0.5rem 0.5rem;
+}
+
+.page-size-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #666666;
+}
+
+.page-size-select {
+  border: 1px solid #e6e6e6;
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.9rem;
+  background: #fff;
+  cursor: pointer;
+}
+
+.page-size-select:focus {
+  outline: none;
+  border-color: #111111;
+  box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.1);
+}
+
+/* 响应式分页 */
+@media (max-width: 768px) {
+  .pagination-controls {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .page-numbers {
+    order: -1;
+  }
+  
+  .pagination-container {
+    padding: 1rem;
+  }
 }
 </style>
