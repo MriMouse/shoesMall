@@ -1378,10 +1378,9 @@ const submitOrder = async () => {
             showPaymentModal.value = true
             startPaymentCountdown()
         }, () => {
-            // 用户选择创建新订单，清除标志
+            // 用户取消操作，保持在订单确认界面
             window.shouldUpdateExistingOrder = false
-            showPaymentModal.value = true
-            startPaymentCountdown()
+            showMessage('操作已取消', 'info')
         })
     } else {
         // 没有待支付订单，清除标志
