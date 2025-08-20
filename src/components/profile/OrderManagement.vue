@@ -133,11 +133,17 @@
                   <button @click="requestRefund(order)" class="btn btn-warning btn-compact">
                     申请退款
                   </button>
+                  <button @click="goToComment(order)" class="btn btn-outline btn-compact">
+                    评论
+                  </button>
                 </div>
                 
                 <div v-else-if="order.status === '3'" class="action-buttons">
                   <button @click="requestRefund(order)" class="btn btn-warning btn-compact">
                     申请退款
+                  </button>
+                  <button @click="goToComment(order)" class="btn btn-outline btn-compact">
+                    评论
                   </button>
                   <button @click="buyAgain(order)" class="btn btn-outline btn-compact">
                     再次购买
@@ -705,6 +711,31 @@ export default {
     buyAgain() {
       // 跳转到商品页面
       this.$router.push('/home')
+    },
+    
+    // 新增：跳转到评论页面
+    goToComment(order) {
+      // 获取订单中的第一个商品ID用于评论
+      let shoeId = null;
+      if (order.products && order.products.length > 0) {
+        shoeId = order.products[0].id;
+      }
+      
+      if (!shoeId) {
+        this.showToast('无法获取商品信息，请重试');
+        return;
+      }
+      
+      // 跳转到专门的评论页面，传递商品ID
+      this.$router.push({
+        name: 'ProductComment',
+        params: { shoeId: shoeId },
+        query: { 
+          orderId: order.orderId,
+          orderNumber: order.orderNumber,
+          productName: order.products[0]?.name || '商品'
+        }
+      });
     },
     
     // 新增：批量操作订单状态

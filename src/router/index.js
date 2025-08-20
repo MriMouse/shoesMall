@@ -14,6 +14,9 @@ import TestUserCart from "../views/TestUserCart.vue";
 import TestAPI from "../views/TestAPI.vue";
 import TestAddress from "../views/TestAddress.vue";
 import TestOrderManagement from "../views/TestOrderManagement.vue";
+import ProductComment from "../components/ProductComment.vue";
+import TestComment from "../views/TestComment.vue";
+import ViewComments from "../views/ViewComments.vue";
 
 const routes = [
   {
@@ -97,6 +100,23 @@ const routes = [
     path: "/test-order-management",
     name: "TestOrderManagement",
     component: TestOrderManagement,
+  },
+  {
+    path: "/comment/:shoeId",
+    name: "ProductComment",
+    component: ProductComment,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/test-comment",
+    name: "TestComment",
+    component: TestComment,
+  },
+  {
+    path: "/view-comments/:shoeId",
+    name: "ViewComments",
+    component: ViewComments,
+    meta: { requiresAuth: true },
   },
   // 添加一个重定向，兼容旧的路由
   {
