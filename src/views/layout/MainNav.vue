@@ -23,36 +23,13 @@
 		<div class="nav-inner">
 			<div class="brand" @click="goHome" aria-label="ShoesMall Home">
 				<div class="brand-logo" role="img" aria-label="Shoes Logo">
-					<svg viewBox="0 0 140 44" width="112" height="40" fill="none" xmlns="http://www.w3.org/2000/svg">
-						<g fill="none" stroke-linecap="round" stroke-linejoin="round">
-							<!-- 轮廓白描 + 内嵌黑线，黑白相间，在黑色背景上清晰可辨 -->
-							<path
-								d="M10 30c8 0 16-2.5 24-8 3.5-2.6 5.5-6.5 8.5-6.5 4 0 9.5 7.5 18 10 7 2 12 2.5 17 6.5 2.8 2.2 4.8 5 4.8 7.2 0 2.2-2.4 3.8-6.8 3.8H26c-9.5 0-14-1-16.8-2.6-2.4-1.4-3.4-3-3.4-5.2 0-2.7 2.7-4.9 5-5.2z"
-								stroke="#111" stroke-width="3" />
-							<path
-								d="M10 30c8 0 16-2.5 24-8 3.5-2.6 5.5-6.5 8.5-6.5 4 0 9.5 7.5 18 10 7 2 12 2.5 17 6.5 2.8 2.2 4.8 5 4.8 7.2 0 2.2-2.4 3.8-6.8 3.8H26c-9.5 0-14-1-16.8-2.6-2.4-1.4-3.4-3-3.4-5.2 0-2.7 2.7-4.9 5-5.2z"
-								stroke="#0a0a0a" stroke-width="1.5" />
-
-							<!-- 鞋口与后跟 -->
-							<path d="M61 16c2.8 1.6 6.5 3.9 9 5.5" stroke="#111" stroke-width="3" />
-							<path d="M61 16c2.8 1.6 6.5 3.9 9 5.5" stroke="#0a0a0a" stroke-width="1.5" />
-
-							<!-- 鞋带（黑白双线叠加） -->
-							<path d="M49 22h10M43 26h11M36 30h11" stroke="#111" stroke-width="3" />
-							<path d="M49 22h10M43 26h11M36 30h11" stroke="#0a0a0a" stroke-width="1.6" />
-
-							<!-- 鞋底高光 -->
-							<path d="M24 40.5h84" stroke="#111" stroke-width="2" />
-							<path d="M24 40.5h84" stroke="#0a0a0a" stroke-width="1" />
-						</g>
-					</svg>
+					<img src="./logo.png" width="80" height="28" alt="Shoes Logo" />
 				</div>
 			</div>
 			<nav class="primary-nav" @mouseenter="cancelClose" @mouseleave="scheduleClose">
 				<ul class="nav-list">
 					<li v-for="(group, index) in navGroups" :key="group.key" class="nav-item"
-						@mouseenter="openMegaMenu(index)"
-						@mouseover="preloadMegaMenu(index)">
+						@mouseenter="openMegaMenu(index)" @mouseover="preloadMegaMenu(index)">
 						<span class="nav-link" @click="goBrandAll(group.key)">{{ group.label }}</span>
 					</li>
 				</ul>
@@ -97,32 +74,39 @@
 								<div class="hot-search-section">
 									<h4 class="hot-search-title">热门搜索</h4>
 									<ol class="hot-search-list">
-										<li v-for="s in hotSearches.slice(0, 6)" :key="s.shoeId" class="hot-search-item" @click="goToProductDetailWithHistory(s.shoeId)">
+										<li v-for="s in hotSearches.slice(0, 6)" :key="s.shoeId" class="hot-search-item"
+											@click="goToProductDetailWithHistory(s.shoeId)">
 											<span class="hot-name">{{ s.name }}</span>
 										</li>
 									</ol>
 								</div>
-								
+
 								<!-- 搜索历史 -->
 								<div v-if="isLoggedIn && searchHistory.length > 0" class="search-history-section">
 									<div class="search-history-header">
 										<h4 class="search-history-title">搜索历史</h4>
-										<button class="clear-history-btn" @click="clearAllSearchHistory" title="清空所有历史">🗑️</button>
+										<button class="clear-history-btn" @click="clearAllSearchHistory"
+											title="清空所有历史">🗑️</button>
 									</div>
 									<div class="history-chips">
-										<div v-for="h in searchHistory" :key="`${h.userId ?? h.user_id ?? h.id}-${h.shoeId ?? h.shoe_id}`" class="history-chip" @click="goToProductDetailFromHistory(h.shoeId ?? h.shoe_id)">
+										<div v-for="h in searchHistory"
+											:key="`${h.userId ?? h.user_id ?? h.id}-${h.shoeId ?? h.shoe_id}`"
+											class="history-chip"
+											@click="goToProductDetailFromHistory(h.shoeId ?? h.shoe_id)">
 											<span class="chip-text">{{ h.shoe?.name || '商品' }}</span>
-											<button class="chip-close" @click.stop="deleteSearchHistory(h.shoeId ?? h.shoe_id)" title="删除">×</button>
+											<button class="chip-close"
+												@click.stop="deleteSearchHistory(h.shoeId ?? h.shoe_id)"
+												title="删除">×</button>
 										</div>
 									</div>
 								</div>
-								
+
 								<!-- 搜索历史加载状态 -->
 								<div v-else-if="isLoggedIn && searchHistoryLoading" class="search-history-loading">
 									<div class="loading-spinner"></div>
 									<p>加载搜索历史...</p>
 								</div>
-								
+
 								<!-- 无搜索历史提示 -->
 								<div v-else-if="isLoggedIn && searchHistory.length === 0" class="no-search-history">
 									<p>暂无搜索历史</p>
@@ -136,27 +120,28 @@
 								<div v-else-if="searchResults.length === 0" class="no-results">
 									<p>未找到相关商品</p>
 									<p class="no-results-tip">尝试使用其他关键词搜索</p>
-							</div>
+								</div>
 								<div v-else class="search-results">
-									<div v-for="product in searchResults" :key="product.shoeId" class="search-result-item"
+									<div v-for="product in searchResults" :key="product.shoeId"
+										class="search-result-item"
 										@click="goToProductDetailWithHistory(product.shoeId)">
 										<div class="result-image">
 											<img v-if="product.images && product.images.length > 0"
-												:src="`/api/shoeImg/getImage/${product.images[0].imagePath}`" 
-												:alt="product.name"
-												class="result-product-image" 
-												loading="lazy"
-												@load="handleSearchImageLoad"
-												@error="handleSearchImageError">
+												:src="`/api/shoeImg/getImage/${product.images[0].imagePath}`"
+												:alt="product.name" class="result-product-image" loading="lazy"
+												@load="handleSearchImageLoad" @error="handleSearchImageError">
 											<div v-else class="result-placeholder">🖼️</div>
-						</div>
+										</div>
 										<div class="result-info">
 											<div class="result-name">{{ product.name }}</div>
 											<div class="result-meta">
-												<span class="result-brand">{{ product.brand?.brandName || 'N/A' }}</span>
-												<span class="result-type">{{ product.shoesType?.typeName || 'N/A' }}</span>
+												<span class="result-brand">{{ product.brand?.brandName || 'N/A'
+													}}</span>
+												<span class="result-type">{{ product.shoesType?.typeName || 'N/A'
+													}}</span>
 											</div>
-											<div class="result-price">¥{{ product.discountPrice || product.price }}</div>
+											<div class="result-price">¥{{ product.discountPrice || product.price }}
+											</div>
 										</div>
 									</div>
 								</div>
@@ -181,14 +166,16 @@
 				<div class="user-menu-wrapper" @mouseenter="openUserMenu" @mouseleave="scheduleCloseUserMenu">
 					<button class="icon-btn" :class="{ 'disabled': !isLoggedIn }" @click="goProfile" aria-label="个人中心">
 						<img v-if="avatarPath" :src="avatarUrl" alt="avatar" class="avatar-img" />
-						<svg v-else viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"
-							stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<svg v-else viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor"
+							stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 							<circle cx="12" cy="8" r="3" />
 							<path d="M4 20c0-3.314 3.582-6 8-6s8 2.686 8 6" />
 						</svg>
 					</button>
-					<input ref="avatarInput" type="file" accept="image/*" class="hidden-input" @change="handleAvatarChange" />
-					<div v-if="isLoggedIn && showUserMenu" class="user-dropdown" @mouseenter="openUserMenu" @mouseleave="scheduleCloseUserMenu">
+					<input ref="avatarInput" type="file" accept="image/*" class="hidden-input"
+						@change="handleAvatarChange" />
+					<div v-if="isLoggedIn && showUserMenu" class="user-dropdown" @mouseenter="openUserMenu"
+						@mouseleave="scheduleCloseUserMenu">
 						<button class="dropdown-item" @click="goProfileTab('overview')">个人中心</button>
 						<button class="dropdown-item" @click="goProfileTab('info')">个人信息</button>
 						<button class="dropdown-item" @click="goProfileTab('orders')">我的订单</button>
@@ -202,16 +189,13 @@
 				</div>
 			</div>
 			<!-- 全局单实例 Mega Menu，避免切换时闪烁 -->
-			<div v-if="currentGroup && activeMenuIndex !== null" class="mega-menu" 
-				@mouseenter="cancelClose"
-				@mouseleave="scheduleClose"
-				@mousemove="cancelClose">
+			<div v-if="currentGroup && activeMenuIndex !== null" class="mega-menu" @mouseenter="cancelClose"
+				@mouseleave="scheduleClose" @mousemove="cancelClose">
 				<div class="mega-left">
 					<h4 class="mega-title">类型详情</h4>
 					<ul class="mega-cat-list">
 						<li v-for="category in currentGroup.categories" :key="category.key" class="mega-cat-item"
-							@mouseenter="hoverCategory(category)" 
-							@click="goCategory(currentGroup.key, category)">
+							@mouseenter="hoverCategory(category)" @click="goCategory(currentGroup.key, category)">
 							<span>{{ category.label }}</span>
 						</li>
 					</ul>
@@ -227,11 +211,8 @@
 							@click="goToProductDetail(product.shoeId)">
 							<div class="preview-media">
 								<img v-if="product.images && product.images.length > 0"
-									:src="`/api/shoeImg/getImage/${product.images[0].imagePath}`" 
-									:alt="product.name"
-									class="preview-image" 
-									loading="lazy"
-									@load="handleImageLoad" 
+									:src="`/api/shoeImg/getImage/${product.images[0].imagePath}`" :alt="product.name"
+									class="preview-image" loading="lazy" @load="handleImageLoad"
 									@error="handleImageError">
 								<div v-else class="preview-placeholder"></div>
 							</div>
@@ -257,12 +238,8 @@
 	<SiteFooter v-if="showFooterForProducts" />
 
 	<!-- 全局登录抽屉：导航栏内部自管理，保证所有使用导航的页面行为一致 -->
-	<LoginDrawer 
-		v-model="showLoginDrawer" 
-		:show-profile-access-message="showProfileAccessMessage"
-		:access-message="loginAccessMessage"
-		@login-success="handleLoginSuccess" 
-	/>
+	<LoginDrawer v-model="showLoginDrawer" :show-profile-access-message="showProfileAccessMessage"
+		:access-message="loginAccessMessage" @login-success="handleLoginSuccess" />
 </template>
 
 <script>
@@ -330,7 +307,7 @@ export default {
 
 		// 检查登录状态
 		const isLoggedIn = ref(false);
-		
+
 		// 检查登录状态的函数
 		const checkLoginStatus = () => {
 			const user = localStorage.getItem('user');
@@ -367,7 +344,7 @@ export default {
 				return null;
 			}
 		}
-		
+
 		// 监听 localStorage 变化
 		const handleStorageChange = (e) => {
 			if (e.key === 'user') {
@@ -484,9 +461,9 @@ export default {
 			window.addEventListener('storage', handleStorageChange);
 			// 监听自定义登录成功事件
 			window.addEventListener('user-login-change', checkLoginStatus);
-			
+
 			loadCategoriesFromBackend(); // 加载分类数据
-			
+
 			// 预加载一些常用图片，提升用户体验
 			setTimeout(() => {
 				preloadCommonImages();
@@ -517,7 +494,7 @@ export default {
 		const loadCategoriesFromBackend = async () => {
 			try {
 				console.log('开始加载分类数据...');
-				
+
 				// 并行请求所有数据，提高加载速度
 				const [brandResponse, typeResponse, shoeResponse] = await Promise.all([
 					// 加载品牌数据
@@ -564,7 +541,7 @@ export default {
 						navGroups.forEach(group => {
 							if (group.key !== 'brands' && group.shoeSex) {
 								// 根据shoe_sex筛选产品
-								const shoesBySex = allShoes.filter(shoe => 
+								const shoesBySex = allShoes.filter(shoe =>
 									shoe.shoeSex === group.shoeSex
 								);
 								console.log(`${group.label} 性别产品数量:`, shoesBySex.length);
@@ -578,7 +555,7 @@ export default {
 								console.log(`${group.label} 对应的类型ID:`, typeIdsBySex);
 
 								// 根据提取的typeId筛选类型
-								const filteredTypes = activeTypes.filter(type => 
+								const filteredTypes = activeTypes.filter(type =>
 									typeIdsBySex.includes(type.typeId)
 								);
 								console.log(`${group.label} 筛选后的类型:`, filteredTypes.map(t => t.typeName));
@@ -614,7 +591,7 @@ export default {
 			if (activeMenuIndex.value === index && currentGroup.value === navGroups[index]) {
 				return;
 			}
-			
+
 			activeMenuIndex.value = index;
 			currentGroup.value = navGroups[index];
 			// 重置已悬停分类，避免自动选中左侧第一个
@@ -622,7 +599,7 @@ export default {
 			// 清理可能存在的防抖/预加载定时器
 			if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
 			cancelClose();
-			
+
 			// 延迟加载产品预览数据，避免闪烁
 			setTimeout(() => {
 				loadPreviewProducts();
@@ -641,7 +618,7 @@ export default {
 			const promises = productIds.map(async (productId) => {
 				if (imageCache.has(`product_${productId}`)) return; // 已缓存
 				if (imagePreloadQueue.has(productId)) return; // 已在队列中
-				
+
 				imagePreloadQueue.add(productId);
 				try {
 					const imageResponse = await axios.get(`/api/shoeImg/list/${productId}`);
@@ -654,7 +631,7 @@ export default {
 					imagePreloadQueue.delete(productId);
 				}
 			});
-			
+
 			// 并行预加载，不等待完成
 			Promise.allSettled(promises);
 		}
@@ -697,9 +674,9 @@ export default {
 		}
 
 		function cancelClose() {
-			if (closeTimer) { 
-				clearTimeout(closeTimer); 
-				closeTimer = null; 
+			if (closeTimer) {
+				clearTimeout(closeTimer);
+				closeTimer = null;
 			}
 		}
 
@@ -708,14 +685,14 @@ export default {
 			if (hoveredCategory.value && hoveredCategory.value.key === category.key) {
 				return;
 			}
-			
+
 			hoveredCategory.value = category;
-			
+
 			// 增加防抖延迟，避免频繁切换
 			if (debounceTimer) {
 				clearTimeout(debounceTimer);
 			}
-			
+
 			// 增加延迟，避免闪烁
 			debounceTimer = setTimeout(() => {
 				loadPreviewProductsByCategory(category);
@@ -873,7 +850,7 @@ export default {
 								const typeName = product.shoesType?.typeName?.toLowerCase();
 								const categoryKey = category.key.toLowerCase();
 								const categoryLabel = category.label.toLowerCase();
-								
+
 								// 检查产品类型是否匹配当前分类
 								return typeName?.includes(categoryKey) || typeName?.includes(categoryLabel) || (product.shoesType?.typeId && product.shoesType.typeId.toString() === category.key);
 							}
@@ -1332,13 +1309,13 @@ export default {
 
 		function submitSearch() {
 			if (!searchQuery.value.trim()) return;
-			
+
 			// 跳转到产品列表页面，传递搜索关键字
-			router.push({ 
-				name: 'ProductListPage', 
-				query: { q: searchQuery.value.trim() } 
+			router.push({
+				name: 'ProductListPage',
+				query: { q: searchQuery.value.trim() }
 			});
-			
+
 			isSearchFocused.value = false;
 			closeSearchPanel();
 		}
@@ -1372,7 +1349,7 @@ export default {
 				const response = await axios.post('/api/shoe/getAll', {}, {
 					headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
 				});
-				
+
 				if (response.data && response.data.data) {
 					const popularProducts = response.data.data.slice(0, 16); // 预加载前16个产品
 					const productIds = popularProducts.map(p => p.shoeId);
@@ -1799,7 +1776,11 @@ export default {
 	margin-right: -24px;
 	flex-shrink: 0;
 }
-.user-menu-wrapper { margin-left: 4px; position: relative; }
+
+.user-menu-wrapper {
+	margin-left: 4px;
+	position: relative;
+}
 
 .icon-btn {
 	width: 40px;
@@ -1831,7 +1812,7 @@ export default {
 	background: #fff;
 	border: 1px solid #eee;
 	border-radius: 12px;
-	box-shadow: 0 12px 32px rgba(0,0,0,.12);
+	box-shadow: 0 12px 32px rgba(0, 0, 0, .12);
 	padding: 4px;
 	display: flex;
 	flex-direction: column;
@@ -1853,8 +1834,13 @@ export default {
 	transition: background .12s ease, color .12s ease;
 }
 
-.dropdown-item:hover { background: #f5f5f5; }
-.dropdown-item.logout { color: #c0392b; }
+.dropdown-item:hover {
+	background: #f5f5f5;
+}
+
+.dropdown-item.logout {
+	color: #c0392b;
+}
 
 .dropdown-divider {
 	height: 1px;
@@ -1862,8 +1848,16 @@ export default {
 	margin: 2px 0;
 }
 
-.avatar-img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
-.hidden-input { display: none; }
+.avatar-img {
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	object-fit: cover;
+}
+
+.hidden-input {
+	display: none;
+}
 
 .icon-btn:first-child {
 	margin-left: -16px;
@@ -2440,7 +2434,8 @@ export default {
 	margin-bottom: 4px;
 }
 
-.result-brand, .result-type {
+.result-brand,
+.result-type {
 	font-size: 11px;
 	color: #666;
 	background: transparent;
@@ -2552,6 +2547,7 @@ export default {
 
 /* 响应式设计 */
 @media (max-width: 1200px) {
+
 	.top-bar-inner,
 	.nav-inner,
 	.search-panel-header,
@@ -2565,7 +2561,7 @@ export default {
 		width: 40%;
 		min-width: 200px;
 	}
-	
+
 	.top-bar-right {
 		right: 8px;
 	}
@@ -2575,22 +2571,22 @@ export default {
 	.top-bar {
 		height: 36px;
 	}
-	
+
 	.top-bar-inner {
 		padding: 0 12px;
 	}
-	
+
 	.login-status {
 		font-size: 13px;
 		padding: 5px 10px;
 		gap: 6px;
 		min-width: 70px;
 	}
-	
+
 	.top-bar-right {
 		right: 6px;
 	}
-	
+
 	.nav-inner {
 		height: 70px;
 		padding: 0 12px;
@@ -2898,74 +2894,74 @@ export default {
 	.top-bar {
 		height: 24px;
 	}
-	
+
 	.top-bar-inner {
 		padding: 0 4px;
 	}
-	
+
 	.login-status {
 		font-size: 10px;
 		padding: 2px 4px;
 		gap: 2px;
 		min-width: 45px;
 	}
-	
+
 	.top-bar-right {
 		right: 2px;
 	}
-	
+
 	.nav-inner {
 		height: 56px;
 		padding: 0 4px;
 	}
-	
+
 	.brand {
 		margin-left: -4px;
 	}
-	
+
 	.brand-logo svg {
 		width: 60px;
 		height: 20px;
 	}
-	
+
 	.primary-nav {
 		margin-left: 8px;
 	}
-	
+
 	.primary-nav .nav-list {
 		gap: 6px;
 	}
-	
+
 	.nav-link {
 		font-size: 11px;
 		padding: 2px 1px;
 	}
-	
+
 	.nav-search {
 		margin-right: 16px;
 		padding: 0 4px 0 2px;
 	}
-	
+
 	.search-box {
 		margin-right: 4px;
 	}
-	
+
 	.search-placeholder {
 		font-size: 11px;
 		height: 28px;
 		padding: 0 10px 0 26px;
 	}
-	
+
 	.actions {
 		margin-right: -4px;
 		gap: 6px;
 	}
-	
+
 	.icon-btn {
 		width: 28px;
 		height: 28px;
 	}
-	
+
 	.icon-btn:first-child {
 		margin-left: -4px;
 	}
@@ -2976,47 +2972,47 @@ export default {
 	.top-bar {
 		height: 22px;
 	}
-	
+
 	.top-bar-inner {
 		padding: 0 2px;
 	}
-	
+
 	.login-status {
 		font-size: 9px;
 		padding: 1px 3px;
 		gap: 1px;
 		min-width: 40px;
 	}
-	
+
 	.top-bar-right {
 		right: 1px;
 	}
-	
+
 	.nav-inner {
 		height: 52px;
 		padding: 0 2px;
 	}
-	
+
 	.brand-logo svg {
 		width: 50px;
 		height: 18px;
 	}
-	
+
 	.primary-nav .nav-list {
 		gap: 4px;
 	}
-	
+
 	.nav-link {
 		font-size: 10px;
 		padding: 1px 1px;
 	}
-	
+
 	.search-placeholder {
 		font-size: 10px;
 		height: 26px;
 		padding: 0 8px 0 24px;
 	}
-	
+
 	.icon-btn {
 		width: 26px;
 		height: 26px;
@@ -3068,17 +3064,48 @@ export default {
 }
 
 .chip-close:hover {
-	background: rgba(0,0,0,0.05);
+	background: rgba(0, 0, 0, 0.05);
 	color: #666;
 }
-
 </style>
 
 <style scoped>
-.hot-search-section { margin-top: 16px; }
-.hot-search-title { font-size: 14px; color: #333; font-weight: 600; margin: 8px 0; }
-.hot-search-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; }
-.hot-search-item { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 0; border-radius: 6px; transition: background .12s ease; }
-.hot-search-item:hover { background: #f7f7f7; }
-.hot-name { font-size: 13px; color: #333; }
+.hot-search-section {
+	margin-top: 16px;
+}
+
+.hot-search-title {
+	font-size: 14px;
+	color: #333;
+	font-weight: 600;
+	margin: 8px 0;
+}
+
+.hot-search-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 6px 16px;
+}
+
+.hot-search-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+	padding: 4px 0;
+	border-radius: 6px;
+	transition: background .12s ease;
+}
+
+.hot-search-item:hover {
+	background: #f7f7f7;
+}
+
+.hot-name {
+	font-size: 13px;
+	color: #333;
+}
 </style>
