@@ -388,8 +388,8 @@ const averageRating = computed(() => {
 })
 
 const previewComments = computed(() => {
-    // 只显示前3条评论作为预览
-    return comments.value.slice(0, 3)
+    // 只显示前2条评论作为预览
+    return comments.value.slice(0, 2)
 })
 
 // 获取鞋子性别文本

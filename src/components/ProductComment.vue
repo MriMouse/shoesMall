@@ -35,6 +35,13 @@
 
     </div>
 
+    <!-- 全局导航操作 -->
+    <div class="nav-actions" style="margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
+      <button @click="goHome" class="btn btn-secondary">返回首页</button>
+      <button @click="goProfile" class="btn btn-secondary">返回个人中心</button>
+      <button @click="backToOrders" class="btn btn-secondary">返回订单</button>
+    </div>
+
     <!-- 评论表单 -->
     <div v-if="showCommentForm" class="comment-form-section">
       <h4>发表评论</h4>
@@ -502,6 +509,15 @@ export default {
     backToOrders() {
       // 返回到“我的订单”页面
       this.$router.push({ name: 'ProfileOrders' })
+    },
+    
+    goHome() {
+      this.$router.push({ name: 'Home' })
+    },
+    
+    goProfile() {
+      // 进入个人中心（默认子路由为概览）
+      this.$router.push({ name: 'Profile' })
     },
     
     editComment(comment) {
