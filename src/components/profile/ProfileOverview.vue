@@ -154,34 +154,34 @@ export default {
       try {
         const username = userManager.getCurrentUsername()
         console.log('当前用户名:', username)
-        
+
         if (!username) {
           console.warn('未找到用户名，使用本地存储数据')
           this.loadFallbackUserInfo()
           return
         }
-        
+
         // 使用现有的API获取用户信息：先获取用户ID，然后从所有用户中筛选
         try {
           console.log('开始获取用户信息...')
-          
+
           // 先获取用户ID
           const userIdResponse = await UserAPI.getUserIdByUsername(username)
           console.log('用户ID响应:', userIdResponse)
-          
+
           if (userIdResponse.data?.code === 200 && userIdResponse.data.data) {
             const userId = userIdResponse.data.data
             console.log('获取到用户ID:', userId)
-            
+
             // 获取所有用户信息
             const allUsersResponse = await UserAPI.getAllUsers()
             console.log('所有用户响应:', allUsersResponse)
-            
+
             if (allUsersResponse.data?.code === 200 && allUsersResponse.data.data) {
               // 根据用户ID筛选出当前用户信息
               const user = allUsersResponse.data.data.find(u => u.id === userId)
               console.log('找到的用户信息:', user)
-              
+
               if (user) {
                 this.userInfo = {
                   username: user.username || username,
@@ -191,10 +191,10 @@ export default {
                   registrationDate: user.registrationDate || new Date().toISOString(),
                   avatarPath: user.avatarPath || ''
                 }
-                
+
                 // 更新统计数据
                 this.stats.points = user.integral || 0
-                
+
                 console.log('用户信息加载成功:', this.userInfo)
               } else {
                 console.warn('未找到匹配的用户信息，使用本地存储')
@@ -212,7 +212,7 @@ export default {
           console.warn('API获取用户信息失败，使用本地存储:', apiError)
           this.loadFallbackUserInfo()
         }
-        
+
         // 获取用户头像路径
         try {
           const avatarResponse = await UserAPI.getAvatarPath(username)
@@ -228,13 +228,13 @@ export default {
         this.loadFallbackUserInfo()
       }
     },
-    
+
     loadFallbackUserInfo() {
       console.log('使用本地存储的用户信息')
       const currentUser = userManager.getCurrentUser()
       const currentUsername = userManager.getCurrentUsername()
       console.log('本地存储的用户信息:', currentUser, '用户名:', currentUsername)
-      
+
       if (currentUser || currentUsername) {
         // 如果currentUser是字符串，转换为对象
         if (typeof currentUser === 'string') {
@@ -266,10 +266,10 @@ export default {
             avatarPath: ''
           }
         }
-        
+
         // 更新统计数据
         this.stats.points = this.userInfo.integral || 0
-        
+
         console.log('本地用户信息加载成功:', this.userInfo)
       } else {
         // 如果本地存储也没有数据，设置默认值
@@ -293,13 +293,13 @@ export default {
           console.warn('无法获取用户ID')
           return
         }
-        
+
         const response = await OrderAPI.getAll()
         if (response.data?.code === 200 && response.data.data) {
           // 过滤当前用户的订单
           const userOrders = response.data.data.filter(order => order.userId === userId)
           console.log('用户订单数据:', userOrders)
-          
+
           // 通过订单明细与鞋子价格和积分计算每个订单的真实金额和积分
           const enrichedOrders = await Promise.all(
             userOrders.map(async (order) => {
@@ -342,7 +342,7 @@ export default {
 
           // 过滤掉购物车状态的订单，只计算真实订单
           const validOrders = enrichedOrders.filter(order => String(order.status) !== '10')
-          
+
           // 计算统计数据（排除购物车）
           this.stats.totalOrders = validOrders.length
           this.stats.totalSpending = validOrders.reduce(
@@ -393,7 +393,7 @@ export default {
         this.loading = false
       }
     },
-    
+
     getOrderStatus(status) {
       const statusMap = {
         '0': '待支付',
@@ -401,8 +401,8 @@ export default {
         '2': '已发货',
         '3': '已完成',
         '4': '已取消',
-        '5': '退货中',
-        '6': '已退货',
+        '5': '已退货',
+        '6': '已取消',
         '10': '购物车',
         '11': '已支付-退款中',
         '12': '已发货-退款中',
@@ -464,8 +464,13 @@ export default {
 }
 
 /* 去掉图标占位，文本左对齐 */
-.stat-card .stat-icon { display: none; }
-.stat-content { flex: 1; }
+.stat-card .stat-icon {
+  display: none;
+}
+
+.stat-content {
+  flex: 1;
+}
 
 .stat-value {
   font-size: 1.5rem;
@@ -480,7 +485,9 @@ export default {
   font-weight: 500;
 }
 
-.stat-trend { text-align: right; }
+.stat-trend {
+  text-align: right;
+}
 
 .trend-up {
   display: block;
@@ -498,9 +505,31 @@ export default {
 
 
 /* 最近订单 */
-.recent-orders { background: #fff; border: 1px solid #e6e6e6; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #e6e6e6; }
-.section-header h3 { font-size: 1.2rem; font-weight: 700; color: #111; margin: 0; }
+.recent-orders {
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.section-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111;
+  margin: 0;
+}
+
 .btn {
   border: 2px solid #111111;
   background: transparent;
@@ -525,8 +554,15 @@ export default {
   color: #111111;
 }
 
-.empty-orders { text-align: center; padding: 2rem; color: #666; }
-.empty-icon { display: none; }
+.empty-orders {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+}
+
+.empty-icon {
+  display: none;
+}
 
 .empty-orders h4 {
   font-size: 1.1rem;
@@ -601,37 +637,72 @@ export default {
 }
 
 /* 会员权益 */
-.membership-benefits { background: #fff; border: 1px solid #e6e6e6; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-.benefits-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
-.benefit-item { display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 8px; background: #f8f9fa; }
-.benefit-icon { display: none; }
-.benefit-content h4 { margin: 0 0 4px 0; font-size: 14px; font-weight: 700; color: #111; }
-.benefit-content p { margin: 0; color: #666; font-size: 12px; }
+.membership-benefits {
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.benefit-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  background: #f8f9fa;
+}
+
+.benefit-icon {
+  display: none;
+}
+
+.benefit-content h4 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #111;
+}
+
+.benefit-content p {
+  margin: 0;
+  color: #666;
+  font-size: 12px;
+}
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .stats-grid { grid-template-columns: 1fr; }
-  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
   .stat-card {
     padding: 1rem;
   }
-  
+
   .recent-orders {
     padding: 1rem;
   }
-  
+
   .section-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
   }
-  
+
   .order-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
   }
-  
+
   .order-amount {
     align-self: flex-end;
   }
@@ -643,7 +714,7 @@ export default {
     text-align: center;
     gap: 0.75rem;
   }
-  
+
   .stat-trend {
     text-align: center;
   }

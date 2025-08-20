@@ -20,6 +20,12 @@
                     <line x1="12" y1="9" x2="12" y2="13" />
                     <line x1="12" y1="17" x2="12.01" y2="17" />
                 </svg>
+                <svg v-if="type === 'info'" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                </svg>
             </div>
             <div class="toast-content">
                 <p class="toast-message">{{ message }}</p>
@@ -182,6 +188,20 @@ defineExpose({
 
 .toast-warning .toast-close {
     color: #333;
+}
+
+/* Info type styles - 简洁的黑底白字 */
+.toast-info {
+    background-color: #000;
+    color: white;
+}
+
+.toast-info .toast-icon {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.toast-info .toast-close {
+    color: white;
 }
 
 /* Transition */
