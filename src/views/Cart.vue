@@ -558,11 +558,17 @@ export default {
             if (!confirm(`确定要删除商品"${item.shoeName}"吗？`)) return
             
             try {
-                console.log('删除商品:', {
-                    orderId: item.orderId,
-                    shoeId: item.shoeId,
-                    shoeName: item.shoeName
-                })
+                console.log('删除商品:', item)
+                
+                // 验证必要参数
+                if (!item.orderId || !item.shoeId) {
+                    console.error('删除失败：缺少必要参数', {
+                        orderId: item.orderId,
+                        shoeId: item.shoeId
+                    })
+                    this.showError('删除失败：商品信息不完整')
+                    return
+                }
                 
                 // 使用购物车管理器删除商品
                 const success = await cartManager.removeFromCart(item.orderId, item.shoeId)
@@ -574,11 +580,12 @@ export default {
                     // 使用购物车管理器触发更新
                     cartManager.triggerUpdate()
                 } else {
-                    this.showError('删除失败')
+                    console.error('删除失败：API返回失败')
+                    this.showError('删除失败，请重试')
                 }
             } catch (error) {
-                console.error('删除订单失败:', error)
-                this.showError('删除失败')
+                console.error('删除订单异常:', error)
+                this.showError('删除失败：' + (error.message || '未知错误'))
             }
         },
         
@@ -750,14 +757,14 @@ export default {
 <style scoped>
 .cart-page {
     min-height: 100vh;
-    background: linear-gradient(180deg, #f5f7fa 0%, #eef1f6 100%);
+    background: #ffffff;
     font-family: 'Helvetica Neue', Arial, 'Microsoft YaHei', sans-serif;
     color: #111;
     line-height: 1.6;
     --accent-color: #C6FF00;
     --accent-hover: #B8FF2E;
-    --bg-start: #f5f7fa;
-    --bg-end: #eef1f6;
+    --bg-start: #ffffff;
+    --bg-end: #ffffff;
     --card-bg: rgba(255, 255, 255, 0.9);
     --border-color: rgba(17, 17, 17, 0.08);
     --ring: rgba(17, 17, 17, 0.12);
@@ -941,46 +948,46 @@ export default {
     background: rgba(248, 249, 250, 0.8); 
 }
 
-/* 未选中商品样式 - 白色背景，灰色文字 */
+/* 未选中商品样式 - 保持一致的白色背景和颜色 */
 .cart-item:not(.disabled) {
     background: rgba(255, 255, 255, 0.9);
 }
 
 .cart-item:not(.disabled) .item-name {
-    color: var(--muted);
+    color: var(--primary);
 }
 
 .cart-item:not(.disabled) .item-size {
-    color: var(--muted);
+    color: var(--primary);
 }
 
 .cart-item:not(.disabled) .current-price {
-    color: var(--muted);
+    color: var(--primary);
 }
 
 .cart-item:not(.disabled) .item-subtotal {
-    color: var(--muted);
+    color: var(--primary);
 }
 
-/* 选中商品样式 - 黑色背景，白色文字 */
+/* 禁用状态的商品样式 - 保持与正常状态一致的颜色，只改变背景透明度 */
 .cart-item.disabled {
-    background: var(--primary);
+    background: rgba(255, 255, 255, 0.9);
 }
 
 .cart-item.disabled .item-name {
-    color: white;
+    color: var(--primary);
 }
 
 .cart-item.disabled .item-size {
-    color: white;
+    color: var(--primary);
 }
 
 .cart-item.disabled .current-price {
-    color: white;
+    color: var(--primary);
 }
 
 .cart-item.disabled .item-subtotal {
-    color: white;
+    color: var(--primary);
 }
 
 .item-checkbox input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--primary); }

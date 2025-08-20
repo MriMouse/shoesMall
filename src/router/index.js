@@ -30,6 +30,33 @@ const routes = [
     name: "Profile",
     component: Profile,
     meta: { requiresAuth: true },
+    children: [
+      {
+        path: "",
+        name: "ProfileOverview",
+        component: () => import("@/components/profile/ProfileOverview.vue"),
+      },
+      {
+        path: "info",
+        name: "ProfileInfo",
+        component: () => import("@/components/profile/UserInfoCard.vue"),
+      },
+      {
+        path: "orders",
+        name: "ProfileOrders",
+        component: () => import("@/components/profile/OrderManagement.vue"),
+      },
+      {
+        path: "address",
+        name: "ProfileAddress",
+        component: () => import("@/components/profile/AddressManagement.vue"),
+      },
+      {
+        path: "settings",
+        name: "ProfileSettings",
+        component: () => import("@/components/profile/AccountSettings.vue"),
+      },
+    ],
   },
   {
     path: "/cart",
