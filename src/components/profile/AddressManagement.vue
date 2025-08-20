@@ -80,7 +80,7 @@
             <div class="form-group">
               <label>详细地址 *</label>
               <textarea v-model="addressForm.detailAddress" class="form-textarea" required
-                placeholder="请输入详细地址，如街道、门牌号等" rows="3"></textarea>
+                placeholder="请输入详细地址，如街道、门牌号等" rows="3" resize="none"></textarea>
             </div>
 
             <div class="form-group">
@@ -108,11 +108,12 @@
       </div>
     </div>
 
-    <!-- 确认删除对话框 -->
-    <confirmDialog v-model:visible="showDeleteDialog" title="删除地址"
-      :message="pendingDeleteAddress ? '确定要删除地址“' + pendingDeleteAddress.receiverName + '”吗？' : '确定要删除该地址吗？'"
-      confirm-text="删除" cancel-text="取消" icon="🗑️" type="danger" @confirm="confirmDelete"
-      @cancel="handleDeleteCancel" />
+    <!-- 删除确认对话框 -->
+    <confirmDialog v-model:visible="showDeleteDialog" title="确认删除" message="确定要删除这个地址吗？" icon="🗑️" type="danger"
+      confirm-text="删除" cancel-text="取消" @confirm="handleDeleteConfirm" @cancel="handleDeleteCancel" />
+
+    <!-- Toast组件 -->
+    <BasicToast ref="toast" :message="toastMessage" :type="toastType" />
   </div>
 </template>
 
@@ -120,10 +121,11 @@
 import { AddressAPI } from '@/api'
 import userManager from '@/utils/userManager'
 import confirmDialog from '@/views/confirmDialog.vue'
+import BasicToast from '@/views/BasicToast.vue' // Added import for BasicToast
 
 export default {
   name: 'AddressManagement',
-  components: { confirmDialog },
+  components: { confirmDialog, BasicToast }, // Added BasicToast to components
   data() {
     return {
       addresses: [],
@@ -144,13 +146,23 @@ export default {
         isDefault: false
       },
       // 简化的地区数据，实际项目中应该从API获取
-      provinceOptions: ['河北', '北京', '天津', '山西', '内蒙古', '辽宁', '吉林', '黑龙江', '山东', '河南', '陕西', '甘肃', '宁夏', '青海', '新疆', '湖北', '湖南', '安徽', '江苏', '江西', '浙江', '福建', '广东', '广西', '海南', '四川', '重庆', '贵州', '云南', '西藏', '上海', '香港', '澳门', '海外']
+      provinceOptions: ['河北', '北京', '天津', '山西', '内蒙古', '辽宁', '吉林', '黑龙江', '山东', '河南', '陕西', '甘肃', '宁夏', '青海', '新疆', '湖北', '湖南', '安徽', '江苏', '江西', '浙江', '福建', '广东', '广西', '海南', '四川', '重庆', '贵州', '云南', '西藏', '上海', '香港', '澳门', '海外'],
+      // Toast相关
+      toastMessage: '',
+      toastType: 'info'
     }
   },
   mounted() {
     this.loadAddresses()
   },
   methods: {
+    // 显示Toast消息
+    showToast(message, type = 'info') {
+      this.toastMessage = message
+      this.toastType = type
+      this.$refs.toast.show()
+    },
+
     async loadAddresses() {
       try {
         this.loading = true
@@ -284,7 +296,7 @@ export default {
         console.log('删除地址API响应:', deleteResponse)
 
         if (deleteResponse.data?.code === 200) {
-          alert('地址删除成功')
+          this.showToast('地址删除成功', 'success')
           console.log('地址删除成功:', address.id)
 
           // 从本地列表中移除
@@ -297,7 +309,7 @@ export default {
         }
       } catch (error) {
         console.error('删除地址失败:', error)
-        alert(`删除失败: ${error.message}`)
+        this.showToast(`删除失败: ${error.message}`, 'error')
       } finally {
         this.showDeleteDialog = false
         this.pendingDeleteAddress = null
@@ -312,7 +324,7 @@ export default {
       try {
         const userId = await userManager.getUserId()
         if (!userId) {
-          alert('用户未登录，无法设置默认地址')
+          this.showToast('用户未登录，无法设置默认地址', 'warning')
           return
         }
 
@@ -321,7 +333,7 @@ export default {
         console.log('设置默认地址API响应:', setDefaultResponse)
 
         if (setDefaultResponse.data?.code === 200) {
-          alert('默认地址设置成功')
+          this.showToast('默认地址设置成功', 'success')
           console.log('默认地址设置成功:', address.id)
 
           // 更新本地数据
@@ -333,7 +345,7 @@ export default {
         }
       } catch (error) {
         console.error('设置默认地址失败:', error)
-        alert(`设置失败: ${error.message}`)
+        this.showToast(`设置失败: ${error.message}`, 'error')
       }
     },
 
@@ -348,7 +360,7 @@ export default {
         console.log('保存地址，用户ID:', userId)
 
         if (!userId) {
-          alert('用户未登录，无法保存地址')
+          this.showToast('用户未登录，无法保存地址', 'warning')
           return
         }
 
@@ -377,7 +389,7 @@ export default {
             console.log('更新地址API响应:', updateResponse)
 
             if (updateResponse.data?.code === 200) {
-              alert('地址更新成功')
+              this.showToast('地址更新成功', 'success')
               console.log('地址更新成功:', addressData)
 
               // 更新本地数据
@@ -399,7 +411,7 @@ export default {
             }
           } catch (updateError) {
             console.error('API更新失败:', updateError)
-            alert(`地址更新失败: ${updateError.message}`)
+            this.showToast(`地址更新失败: ${updateError.message}`, 'error')
             return
           }
         } else {
@@ -414,7 +426,7 @@ export default {
             console.log('响应数据:', addResponse.data)
 
             if (addResponse.data?.code === 200) {
-              alert('地址添加成功')
+              this.showToast('地址添加成功', 'success')
               console.log('地址添加成功:', addressData)
 
               // 重新加载地址列表以获取最新的数据
@@ -441,7 +453,7 @@ export default {
               errorMessage += `: ${addError.message}`
             }
 
-            alert(errorMessage)
+            this.showToast(errorMessage, 'error')
             return
           }
         }
@@ -449,7 +461,7 @@ export default {
         this.closeModal()
       } catch (error) {
         console.error('保存地址失败:', error)
-        alert(`保存失败: ${error.message}`)
+        this.showToast(`保存失败: ${error.message}`, 'error')
       } finally {
         this.saving = false
       }
@@ -457,30 +469,30 @@ export default {
 
     validateForm() {
       if (!this.addressForm.receiverName.trim()) {
-        alert('请输入收货人姓名')
+        this.showToast('请输入收货人姓名', 'warning')
         return false
       }
 
       // 修复手机号码验证逻辑
       const phone = this.addressForm.phone.trim()
       if (!phone) {
-        alert('请输入手机号码')
+        this.showToast('请输入手机号码', 'warning')
         return false
       }
 
       // 更宽松的手机号码验证，支持多种格式
       const phoneRegex = /^1[3-9]\d{9}$|^0\d{2,3}-?\d{7,8}$|^400-?\d{3}-?\d{4}$/
       if (!phoneRegex.test(phone)) {
-        alert('请输入正确的手机号码格式（如：13800138000）')
+        this.showToast('请输入正确的手机号码格式（如：13800138000）', 'warning')
         return false
       }
 
       if (!this.addressForm.province.trim()) {
-        alert('请选择省份')
+        this.showToast('请选择省份', 'warning')
         return false
       }
       if (!this.addressForm.detailAddress.trim()) {
-        alert('请输入详细地址')
+        this.showToast('请输入详细地址', 'warning')
         return false
       }
       return true
@@ -783,6 +795,53 @@ export default {
   color: #111111;
   background: #fff;
   transition: all 0.2s ease;
+}
+
+.form-textarea {
+  width: 100%;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  color: #111111;
+  background: #fff;
+  transition: all 0.2s ease;
+  resize: none;
+  overflow-y: auto;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
+.form-textarea:focus {
+  outline: none;
+  border-color: #111111;
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.1);
+}
+
+/* 自定义滚动条样式 */
+.form-textarea::-webkit-scrollbar {
+  width: 8px;
+}
+
+.form-textarea::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.form-textarea::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.form-textarea::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Firefox 滚动条样式 */
+.form-textarea {
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 #f1f1f1;
 }
 
 .form-input:focus,
