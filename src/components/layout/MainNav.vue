@@ -116,18 +116,16 @@ export default {
         },
         
         handleLogout() {
-            localStorage.removeItem('user')
+            // 统一使用 userManager 的登出逻辑
+            try { userManager.logoutUser() } catch (e) {}
             this.isLoggedIn = false
             this.username = ''
             this.cartItemCount = 0
             this.showUserMenu = false
-            
-            // 清空购物车管理器的用户ID
+            // 清空购物车用户上下文
             cartManager.setUserId(null)
-            
-            // 触发自定义事件，通知其他组件登录状态变化
-            window.dispatchEvent(new CustomEvent('user-login-change'));
-            
+            // 通知其他模块
+            window.dispatchEvent(new CustomEvent('user-login-change'))
             this.$router.push('/')
         },
         

@@ -14,6 +14,7 @@
 		<LoginDrawer 
 			v-model="loginOpen" 
 			:show-profile-access-message="showProfileAccessMessage"
+			:access-message="loginAccessMessage"
 			@login-success="onLoginSuccess" 
 		/>
 	</div>
@@ -35,10 +36,18 @@ export default {
 		const router = useRouter();
 		const loginOpen = ref(false);
 		const showProfileAccessMessage = ref(false);
+		const loginAccessMessage = ref('');
 
-		function onOpenLogin(fromProfile = false) {
+		function onOpenLogin(payload = false) {
 			loginOpen.value = true;
-			showProfileAccessMessage.value = fromProfile;
+			// 兼容：true 表示来自个人中心，需要展示固定提示；字符串表示自定义提示
+			if (typeof payload === 'string') {
+				showProfileAccessMessage.value = false;
+				loginAccessMessage.value = payload;
+			} else {
+				showProfileAccessMessage.value = !!payload;
+				loginAccessMessage.value = '';
+			}
 		}
 
 		function goAll() { router.push({ name: 'ProductListPage' }); }
@@ -54,6 +63,7 @@ export default {
 		return { 
 			loginOpen, 
 			showProfileAccessMessage,
+			loginAccessMessage,
 			goAll, 
 			goMen, 
 			goWomen, 
