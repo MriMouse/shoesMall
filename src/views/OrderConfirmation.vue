@@ -191,7 +191,7 @@
                     <!-- 我的地址（完整卡片列表，点击选择） -->
                     <div v-if="addresses.length > 0" class="address-inline">
                         <div class="address-choices-header">我的地址</div>
-                        <div class="address-inline-list">
+                        <div class="address-inline-list" :style="addressListInlineStyle">
                             <div v-for="addr in addresses" :key="addr.addressId"
                                 class="address-item address-item-inline"
                                 :class="{ 'selected': selectedAddress?.addressId === addr.addressId }"
@@ -335,6 +335,7 @@
                     <span class="countdown-value" :class="{ 'warning': paymentCountdown <= 3 }">{{ paymentCountdown
                     }}s</span>
                 </div>
+                <button class="cancel-in-header" @click="cancelPayment">取消</button>
             </div>
 
             <div class="modal-body payment-body">
@@ -678,6 +679,22 @@ const totalPoints = computed(() => {
         const points = product.points || 0
         return sum + (points * quantity)
     }, 0)
+})
+
+// 地址列表动态高度与滚动
+const addressListMaxHeight = computed(() => {
+    const baseHeight = 180 // 初始较小高度
+    const perItemIncrease = 24 // 每件商品增加高度
+    const dynamicHeight = baseHeight + Math.min(totalItems.value, 10) * perItemIncrease
+    const maxHeight = 440 // 上限，避免撑满屏幕
+    return Math.min(dynamicHeight, maxHeight)
+})
+
+const addressListInlineStyle = computed(() => {
+    return {
+        maxHeight: addressListMaxHeight.value + 'px',
+        overflow: 'auto'
+    }
 })
 
 const canSubmitOrder = computed(() => {
@@ -1412,19 +1429,12 @@ const paymentTimeout = () => {
 }
 
 // 取消支付
-const cancelPayment = async () => {
+const cancelPayment = () => {
     clearInterval(paymentTimer.value)
     showPaymentModal.value = false
     // 清除用户选择标志
     window.shouldUpdateExistingOrder = false
-
-    // 创建订单但状态为0（取消支付状态）
-    const result = await createOrderWithStatus('0')
-    if (result) {
-        showSuccess('订单已创建，状态为待支付。您可以稍后重新提交订单进行支付。')
-    } else {
-        showError('创建订单失败，请重试。')
-    }
+    showError('支付取消')
 }
 
 // 创建订单的通用方法
@@ -3351,6 +3361,9 @@ onUnmounted(() => {
 .payment-modal-content {
     max-width: 700px;
     max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .payment-header {
@@ -3403,6 +3416,8 @@ onUnmounted(() => {
 
 .payment-body {
     padding: 24px;
+    overflow-y: auto;
+    flex: 1 1 auto;
 }
 
 .payment-order-summary h4,
@@ -3557,6 +3572,22 @@ onUnmounted(() => {
     border-top: 1px solid #e9ecef;
     background: #ffffff;
     border-radius: 0 0 12px 12px;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* 头部取消按钮（不参与滚动） */
+.cancel-in-header {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.cancel-in-header:hover {
+    background: rgba(255, 255, 255, 0.12);
 }
 
 /* 订单详情弹窗：订单信息更清晰（纯黑色） */
