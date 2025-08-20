@@ -49,30 +49,19 @@
       </div>
     </div>
 
-    <!-- 快捷功能卡片 -->
-    <div class="quick-actions">
-      <h3>快捷功能</h3>
-      <div class="actions-grid">
-        <div class="action-item" @click="$emit('navigate', 'orders')"><div class="action-text">我的订单</div></div>
-        <div class="action-item" @click="$emit('navigate', 'address')"><div class="action-text">收货地址</div></div>
-        <div class="action-item" @click="$emit('navigate', 'coupons')"><div class="action-text">优惠券</div></div>
-        <div class="action-item" @click="$emit('navigate', 'points')"><div class="action-text">积分商城</div></div>
-        <div class="action-item" @click="$emit('navigate', 'customer-service')"><div class="action-text">客服中心</div></div>
-      </div>
-    </div>
+
 
     <!-- 最近订单 -->
     <div class="recent-orders">
       <div class="section-header">
         <h3>最近订单</h3>
-        <button @click="$emit('navigate', 'orders')" class="btn btn-outline">
+        <button @click="$router.push('/profile/orders')" class="btn btn-outline">
           查看全部
         </button>
       </div>
       <div v-if="recentOrders.length === 0" class="empty-orders">
         <div class="empty-icon"></div>
         <p>暂无订单记录</p>
-        <router-link to="/products" class="btn btn-primary">去购物</router-link>
       </div>
       <div v-else class="orders-list">
         <div v-for="order in recentOrders.slice(0, 3)" :key="order.id" class="order-item">
@@ -311,16 +300,18 @@ export default {
           const userOrders = response.data.data.filter(order => order.userId === userId)
           console.log('用户订单数据:', userOrders)
           
-          // 通过订单明细与鞋子价格计算每个订单的真实金额
+          // 通过订单明细与鞋子价格和积分计算每个订单的真实金额和积分
           const enrichedOrders = await Promise.all(
             userOrders.map(async (order) => {
               let computedAmount = 0
+              let computedPoints = 0
               try {
                 const osnRes = await OrderShoeNumAPI.getByOrderId(order.orderId)
                 if (osnRes.data?.code === 200 && Array.isArray(osnRes.data.data)) {
                   const items = osnRes.data.data
-                  const itemTotals = await Promise.all(items.map(async (it) => {
+                  const itemDetails = await Promise.all(items.map(async (it) => {
                     let price = 0
+                    let points = 0
                     try {
                       const shoeRes = await ShoeAPI.getById(it.shoeId)
                       if (shoeRes.data?.code === 200 && shoeRes.data.data) {
@@ -328,34 +319,43 @@ export default {
                         price = (shoe.discountPrice && shoe.discountPrice < shoe.price)
                           ? shoe.discountPrice
                           : (shoe.price || 0)
+                        // 获取商品积分，如果没有积分字段，使用默认值
+                        points = shoe.integral || shoe.points || 10 // 默认每个商品10积分
                       }
                     } catch (e) {
                       console.warn('获取鞋子信息失败:', e)
                     }
-                    return price * (it.shoeNum || 1)
+                    return {
+                      price: price * (it.shoeNum || 1),
+                      points: points * (it.shoeNum || 1)
+                    }
                   }))
-                  computedAmount = itemTotals.reduce((a, b) => a + b, 0)
+                  computedAmount = itemDetails.reduce((a, b) => a + b.price, 0)
+                  computedPoints = itemDetails.reduce((a, b) => a + b.points, 0)
                 }
               } catch (e) {
                 console.warn('获取订单明细失败:', e)
               }
-              return { ...order, computedAmount }
+              return { ...order, computedAmount, computedPoints }
             })
           )
 
-          // 计算统计数据
-          this.stats.totalOrders = enrichedOrders.length
-          this.stats.totalSpending = enrichedOrders.reduce(
+          // 过滤掉购物车状态的订单，只计算真实订单
+          const validOrders = enrichedOrders.filter(order => String(order.status) !== '10')
+          
+          // 计算统计数据（排除购物车）
+          this.stats.totalOrders = validOrders.length
+          this.stats.totalSpending = validOrders.reduce(
             (sum, o) => sum + (o.computedAmount || o.totalAmount || o.amount || 0),
             0
           )
           this.stats.totalSavings = Math.round(this.stats.totalSpending * 0.1)
 
-          // 月度统计
+          // 月度统计（排除购物车）
           const now = new Date()
           const currentMonth = now.getMonth()
           const currentYear = now.getFullYear()
-          const monthlyOrders = enrichedOrders.filter(order => {
+          const monthlyOrders = validOrders.filter(order => {
             const orderDate = new Date(order.createdAt || order.date)
             return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear
           })
@@ -365,10 +365,15 @@ export default {
             0
           )
           this.userStats.monthlySaved = Math.round(this.userStats.monthlySpent * 0.1)
-          this.userStats.pointsEarned = Math.round(this.userStats.monthlySpent * 0.01)
+          // 积分增长计算：基于本月订单中商品的实际积分
+          this.userStats.pointsEarned = monthlyOrders.reduce(
+            (sum, o) => sum + (o.computedPoints || 0),
+            0
+          )
 
           // 最近订单（最多3条）
           this.recentOrders = enrichedOrders
+            .filter(order => String(order.status) !== '10') // 过滤掉购物车状态的订单
             .sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date))
             .slice(0, 3)
             .map(order => ({
@@ -490,53 +495,7 @@ export default {
   color: #666666;
 }
 
-/* 快捷功能 */
-.quick-actions {
-  background: #fff;
-  border: 1px solid #e6e6e6;
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
 
-.quick-actions h3 {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #111111;
-  margin: 0 0 1rem 0;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid #e6e6e6;
-}
-
-.actions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 1rem;
-}
-
-.action-item {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  border: 1px solid #e6e6e6;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background: #f8f9fa;
-}
-
-.action-item:hover {
-  background: #fff;
-  border-color: #111111;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* 去掉图标占位 */
-.action-icon { display: none; }
-.action-text { font-size: 0.9rem; font-weight: 600; color: #111; }
 
 /* 最近订单 */
 .recent-orders { background: #fff; border: 1px solid #e6e6e6; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
@@ -653,16 +612,10 @@ export default {
 @media (max-width: 768px) {
   .stats-grid { grid-template-columns: 1fr; }
   
-  .actions-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-  }
-  
   .stat-card {
     padding: 1rem;
   }
   
-  .quick-actions,
   .recent-orders {
     padding: 1rem;
   }
@@ -685,10 +638,6 @@ export default {
 }
 
 @media (max-width: 480px) {
-  .actions-grid {
-    grid-template-columns: 1fr;
-  }
-  
   .stat-card {
     flex-direction: column;
     text-align: center;

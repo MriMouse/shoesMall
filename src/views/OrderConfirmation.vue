@@ -2180,6 +2180,26 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+:root {
+  --accent-color: #C6FF00;
+  --accent-hover: #B8FF2E;
+  --bg-start: #ffffff;
+  --bg-end: #ffffff;
+  --card-bg: #ffffff;
+  --border-color: rgba(17, 17, 17, 0.08);
+  --ring: rgba(17, 17, 17, 0.12);
+  --shadow-color: rgba(0, 0, 0, 0.08);
+  --text-primary: #111;
+  --text-secondary: #6c757d;
+  --text-muted: #9ca3af;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --muted: #6c757d;
+  --summary-offset: clamp(280px, 34vh, 420px);
+  background: #ffffff;
+}
+
 .order-confirmation-container {
     max-width: 1200px;
     margin: 0 auto;
@@ -2203,20 +2223,16 @@ onUnmounted(() => {
     --danger: #e74c3c;
     --muted: #6c757d;
     --summary-offset: clamp(280px, 34vh, 420px);
-    background:
-        radial-gradient(1200px 600px at 100% -200px, rgba(198,255,0,0.12), transparent 60%),
-        radial-gradient(800px 400px at -100px 100%, rgba(0,0,0,0.06), transparent 60%),
-        linear-gradient(180deg, var(--bg-start), var(--bg-end));
+    background: #ffffff;
 }
 
 .page-header {
-    background: var(--card-bg);
-    padding: 24px;
-    border-radius: 12px;
-    margin-bottom: 24px;
-    border: 1px solid var(--border-color);
-    box-shadow: 0 8px 24px var(--shadow-color);
-    backdrop-filter: saturate(140%) blur(6px);
+  background: #ffffff;
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 8px 24px var(--shadow-color);
 }
 
 .breadcrumb {
@@ -2309,12 +2325,11 @@ onUnmounted(() => {
 }
 
 .products-section, .order-summary-section, .address-section {
-    background: var(--card-bg);
-    border-radius: 16px;
-    padding: 24px;
-    border: 1px solid var(--border-color);
-    box-shadow: 0 8px 24px var(--shadow-color);
-    backdrop-filter: saturate(140%) blur(6px);
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 8px 24px var(--shadow-color);
 }
 
 .section-title {
@@ -2355,9 +2370,8 @@ onUnmounted(() => {
     overflow: hidden;
     transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
     position: relative;
-    background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.82));
+    background: #ffffff;
     box-shadow: 0 8px 24px var(--shadow-color);
-    backdrop-filter: blur(4px);
 }
 
 .product-card:hover {
@@ -2631,11 +2645,11 @@ onUnmounted(() => {
 
 /* 积分抵扣样式 */
 .points-deduction {
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 20px;
-    background: var(--card-bg);
-    box-shadow: 0 4px 16px var(--shadow-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  background: #ffffff;
+  box-shadow: 0 4px 16px var(--shadow-color);
 }
 
 .points-info-header {
@@ -2761,9 +2775,9 @@ onUnmounted(() => {
     align-items: center;
     margin-top: 16px;
     padding: 14px 20px;
-    background: rgba(17, 17, 17, 0.04);
+    background: #f8f9fa;
     border-radius: 10px;
-    border: 1px solid rgba(17, 17, 17, 0.1);
+    border: 1px solid #e9ecef;
 }
 
 .selected-points-display {
@@ -2883,7 +2897,7 @@ onUnmounted(() => {
     padding: 16px;
     border: 2px solid #111;
     border-radius: 12px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.88));
+    background: #ffffff;
     box-shadow: 0 6px 18px var(--shadow-color);
     position: relative;
 }
@@ -2947,11 +2961,10 @@ onUnmounted(() => {
     justify-content: space-between;
     gap: 16px;
     padding: 24px;
-    background: var(--card-bg);
+    background: #ffffff;
     border-radius: 16px;
     border: 1px solid var(--border-color);
     box-shadow: 0 8px 24px var(--shadow-color);
-    backdrop-filter: saturate(140%) blur(6px);
 }
 
 .back-btn, .submit-order-btn {
@@ -2995,21 +3008,20 @@ onUnmounted(() => {
 
 /* 模态框样式 */
 .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    backdrop-filter: blur(4px) saturate(120%);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
 }
 
 .modal-content {
-    background: var(--card-bg);
+    background: #ffffff;
     border-radius: 16px;
     width: 90%;
     max-width: 600px;
@@ -3093,7 +3105,7 @@ onUnmounted(() => {
     padding: 16px;
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-    background: rgba(255,255,255,0.9);
+    background: #ffffff;
     position: relative;
 }
 
@@ -3105,7 +3117,7 @@ onUnmounted(() => {
 
 .address-item.selected {
     border-color: #111;
-    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.9));
+    background: #ffffff;
 }
 
 .address-header {
@@ -3388,7 +3400,7 @@ onUnmounted(() => {
      padding: 16px;
      border: 1px solid var(--border-color);
      border-radius: 12px;
-     background: linear-gradient(180deg, rgba(248,249,250,0.9), rgba(248,249,250,0.8));
+     background: #ffffff;
      box-shadow: 0 6px 18px var(--shadow-color);
  }
 
@@ -3437,7 +3449,7 @@ onUnmounted(() => {
  .item-details .item-points {
      color: var(--accent-color);
      font-size: 0.8rem;
-     background: rgba(198, 255, 0, 0.15);
+     background: #e8f5e8;
      padding: 2px 6px;
      border-radius: 4px;
      display: inline-block;
@@ -3452,7 +3464,7 @@ onUnmounted(() => {
  }
 
  .payment-total {
-     background: linear-gradient(180deg, rgba(248,249,250,0.95), rgba(248,249,250,0.85));
+     background: #ffffff;
      padding: 16px;
      border-radius: 8px;
      border: 1px solid var(--border-color);
@@ -3515,7 +3527,7 @@ onUnmounted(() => {
      gap: 16px;
      padding: 20px 24px;
      border-top: 1px solid #e9ecef;
-     background: linear-gradient(180deg, rgba(248,249,250,0.96), rgba(248,249,250,0.88));
+     background: #ffffff;
      border-radius: 0 0 12px 12px;
  }
 
@@ -3608,7 +3620,7 @@ onUnmounted(() => {
  .add-product-card {
      border: 2px dashed #cfd4da;
      border-radius: 12px;
-     background: linear-gradient(180deg, rgba(248,249,250,0.9), rgba(248,249,250,0.8));
+     background: #ffffff;
      cursor: pointer;
      transition: all 0.3s ease;
      display: flex;
@@ -3626,11 +3638,11 @@ onUnmounted(() => {
  }
 
  .add-product-card:hover {
-     border-color: #111;
-     background: rgba(198, 255, 0, 0.07);
-     transform: translateY(-2px);
-     box-shadow: 0 10px 24px rgba(0,0,0,0.08);
- }
+  border-color: #111;
+  background: #f0f8f0;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+}
 
  .add-product-content {
      text-align: center;

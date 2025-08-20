@@ -21,22 +21,8 @@
           <h1 class="greeting">你好，{{ userName || '会员' }}</h1>
         </div>
 
-
-
-        <!-- 个人中心概览 -->
-        <ProfileOverview v-if="activeTab === 'overview'" @navigate="handleNavigation" />
-
-        <!-- 个人信息组件 -->
-        <UserInfoCard v-if="activeTab === 'info'" @user-updated="handleUserUpdated" />
-
-        <!-- 订单管理组件 -->
-        <OrderManagement v-if="activeTab === 'orders'" />
-
-        <!-- 地址管理组件 -->
-        <AddressManagement v-if="activeTab === 'address'" />
-
-        <!-- 账户设置组件 -->
-        <AccountSettings v-if="activeTab === 'settings'" />
+        <!-- 路由视图，显示子路由内容 -->
+        <router-view />
 
       </div>
     </div>
@@ -50,11 +36,6 @@
 </template>
 
 <script>
-import ProfileOverview from '@/components/profile/ProfileOverview.vue'
-import UserInfoCard from '@/components/profile/UserInfoCard.vue'
-import OrderManagement from '@/components/profile/OrderManagement.vue'
-import AddressManagement from '@/components/profile/AddressManagement.vue'
-import AccountSettings from '@/components/profile/AccountSettings.vue'
 import confirmDialog from '@/views/confirmDialog.vue'
 import userManager from '@/utils/userManager'
 import SiteFooter from '@/views/layout/Footer.vue'
@@ -62,11 +43,6 @@ import SiteFooter from '@/views/layout/Footer.vue'
 export default {
   name: 'Profile-Page',
   components: {
-    ProfileOverview,
-    UserInfoCard,
-    OrderManagement,
-    AddressManagement,
-    AccountSettings,
     confirmDialog,
     SiteFooter
   },
@@ -132,6 +108,9 @@ export default {
     // 优惠/权益可与后端联动，这里先占位
     this.availableCoupons = 0
     this.exclusiveBenefits = 0
+    
+    // 根据当前路由设置activeTab
+    this.setActiveTabFromRoute()
   },
   computed: {
     heroAvatarUrl() {
@@ -141,9 +120,69 @@ export default {
       return `/api/users/getAvatar/${filename}`
     }
   },
+  watch: {
+    // 监听路由变化，更新activeTab状态
+    '$route'(to) {
+      if (to.path === '/profile') {
+        this.activeTab = 'overview'
+      } else if (to.path === '/profile/info') {
+        this.activeTab = 'info'
+      } else if (to.path === '/profile/orders') {
+        this.activeTab = 'orders'
+      } else if (to.path === '/profile/address') {
+        this.activeTab = 'address'
+      } else if (to.path === '/profile/settings') {
+        this.activeTab = 'settings'
+      }
+    }
+  },
   methods: {
+    setActiveTabFromRoute() {
+      const path = this.$route.path
+      if (path === '/profile') {
+        this.activeTab = 'overview'
+      } else if (path === '/profile/info') {
+        this.activeTab = 'info'
+      } else if (path === '/profile/orders') {
+        this.activeTab = 'orders'
+      } else if (path === '/profile/address') {
+        this.activeTab = 'address'
+      } else if (path === '/profile/settings') {
+        this.activeTab = 'settings'
+      }
+    },
+    
     navigateTo(tab) {
-      this.activeTab = tab
+      // 根据不同的标签页跳转到对应的路由
+      switch (tab) {
+        case 'overview':
+          // 个人中心首页，保持在当前页面
+          this.activeTab = tab
+          this.$router.push('/profile')
+          break
+        case 'info':
+          // 个人信息页面
+          this.activeTab = tab
+          this.$router.push('/profile/info')
+          break
+        case 'orders':
+          // 我的订单页面
+          this.activeTab = tab
+          this.$router.push('/profile/orders')
+          break
+        case 'address':
+          // 收货地址页面
+          this.activeTab = tab
+          this.$router.push('/profile/address')
+          break
+        case 'settings':
+          // 账户设置页面
+          this.activeTab = tab
+          this.$router.push('/profile/settings')
+          break
+        default:
+          this.activeTab = tab
+      }
     },
     handleNavigation(tab) {
       this.activeTab = tab
