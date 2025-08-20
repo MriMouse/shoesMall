@@ -2,13 +2,6 @@
     <div class="order-confirmation-container">
         <!-- 页面头部 -->
         <div class="page-header">
-            <div class="breadcrumb">
-                <router-link to="/home" class="breadcrumb-item">首页</router-link>
-                <span class="breadcrumb-separator">/</span>
-                <router-link to="/products" class="breadcrumb-item">产品列表</router-link>
-                <span class="breadcrumb-separator">/</span>
-                <span class="breadcrumb-current">订单确认</span>
-            </div>
             <h1 class="page-title">
                 <span class="icon">🛒</span>
                 订单确认
@@ -259,7 +252,7 @@
 
             <!-- 操作按钮 -->
             <div class="action-buttons">
-                <button @click="goBack" class="back-btn">返回商品列表</button>
+                <button @click="goBack" class="back-btn">放弃购买</button>
                 <button @click="submitOrder" class="submit-order-btn" :disabled="!canSubmitOrder">
                     提交订单
                 </button>
@@ -2673,6 +2666,7 @@ onUnmounted(() => {
     font-size: 0.9rem;
     font-weight: 500;
     transition: all 0.2s ease;
+    margin-right: -20px; /* 进一步向右偏移 */
 }
 
 .toggle-points-btn:hover {
