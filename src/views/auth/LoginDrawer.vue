@@ -212,11 +212,14 @@ export default {
 			loginError.value = '';
 			
 			try {
-				// 使用GET请求发送登录参数
-				const response = await axios.get('/api/usersLogin/userLogin', {
-					params: {
-						username: loginForm.value.username,
-						password: loginForm.value.password
+				// 使用URLSearchParams来发送表单数据
+				const params = new URLSearchParams();
+				params.append('username', loginForm.value.username);
+				params.append('password', loginForm.value.password);
+				
+				const response = await axios.post('/api/usersLogin/userLogin', params, {
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded'
 					}
 				});
 
