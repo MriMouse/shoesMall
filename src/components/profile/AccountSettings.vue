@@ -189,16 +189,20 @@
     <confirmDialog v-model:visible="showConfirmDialog" :title="confirmTitle" :message="confirmMessage"
       :icon="confirmIcon" :type="confirmType" confirm-text="确定" cancel-text="取消" @confirm="handleConfirmAction"
       @cancel="handleCancelAction" />
+
+    <!-- Toast组件 -->
+    <BasicToast ref="toast" :message="toastMessage" :type="toastType" />
   </div>
 </template>
 
 <script>
 import userManager from '@/utils/userManager'
 import confirmDialog from '@/views/confirmDialog.vue'
+import BasicToast from '@/views/BasicToast.vue'
 
 export default {
   name: 'AccountSettings',
-  components: { confirmDialog },
+  components: { confirmDialog, BasicToast },
   data() {
     return {
       saving: false,
@@ -211,6 +215,9 @@ export default {
       confirmIcon: '❓',
       confirmType: 'default',
       pendingAction: '',
+      // Toast相关
+      toastMessage: '',
+      toastType: 'info',
       settings: {
         emailNotification: true,
         smsNotification: false,
@@ -249,7 +256,9 @@ export default {
         console.log('设置已保存')
       } catch (error) {
         console.error('保存设置失败:', error)
-        alert('保存失败，请重试')
+        this.toastMessage = '保存失败，请重试'
+        this.toastType = 'error'
+        this.$refs.toast.show()
       } finally {
         this.saving = false
       }
@@ -257,7 +266,9 @@ export default {
 
     async saveAllSettings() {
       await this.saveSettings()
-      alert('设置保存成功')
+      this.toastMessage = '设置保存成功'
+      this.toastType = 'success'
+      this.$refs.toast.show()
     },
 
     resetSettings() {
@@ -284,7 +295,9 @@ export default {
 
     async confirmTwoFactor() {
       if (!this.twoFactorCode || this.twoFactorCode.length !== 6) {
-        alert('请输入6位验证码')
+        this.toastMessage = '请输入6位验证码'
+        this.toastType = 'warning'
+        this.$refs.toast.show()
         return
       }
 
@@ -295,10 +308,14 @@ export default {
         this.settings.twoFactorEnabled = true
         this.saveSettings()
         this.closeTwoFactorModal()
-        alert('两步验证设置成功')
+        this.toastMessage = '两步验证设置成功'
+        this.toastType = 'success'
+        this.$refs.toast.show()
       } catch (error) {
         console.error('设置两步验证失败:', error)
-        alert('设置失败，请重试')
+        this.toastMessage = '设置失败，请重试'
+        this.toastType = 'error'
+        this.$refs.toast.show()
       }
     },
 
@@ -308,11 +325,15 @@ export default {
     },
 
     manageDevices() {
-      alert('设备管理功能开发中...')
+      this.toastMessage = '设备管理功能开发中...'
+      this.toastType = 'info'
+      this.$refs.toast.show()
     },
 
     viewLoginHistory() {
-      alert('登录历史功能开发中...')
+      this.toastMessage = '登录历史功能开发中...'
+      this.toastType = 'info'
+      this.$refs.toast.show()
     },
 
     exportData() {
@@ -333,7 +354,9 @@ export default {
       link.click()
 
       URL.revokeObjectURL(url)
-      alert('数据导出成功')
+      this.toastMessage = '数据导出成功'
+      this.toastType = 'success'
+      this.$refs.toast.show()
     },
 
     deleteAccount() {
@@ -356,7 +379,9 @@ export default {
           twoFactorEnabled: false
         }
         localStorage.removeItem('userSettings')
-        alert('设置已重置')
+        this.toastMessage = '设置已重置'
+        this.toastType = 'success'
+        this.$refs.toast.show()
         this.showConfirmDialog = false
         this.pendingAction = ''
         return
@@ -365,7 +390,9 @@ export default {
       if (this.pendingAction === 'disable-2fa') {
         this.settings.twoFactorEnabled = false
         this.saveSettings()
-        alert('两步验证已禁用')
+        this.toastMessage = '两步验证已禁用'
+        this.toastType = 'success'
+        this.$refs.toast.show()
         this.showConfirmDialog = false
         this.pendingAction = ''
         return
@@ -383,7 +410,9 @@ export default {
 
       if (this.pendingAction === 'delete-account-step2') {
         // 这里应该调用后端API删除账户
-        alert('账户删除功能开发中...')
+        this.toastMessage = '账户删除功能开发中...'
+        this.toastType = 'info'
+        this.$refs.toast.show()
         this.showConfirmDialog = false
         this.pendingAction = ''
         return
