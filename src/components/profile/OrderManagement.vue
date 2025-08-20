@@ -19,23 +19,7 @@
       </div>
     </div>
 
-    <!-- 批量操作工具栏 -->
-    <div v-if="filteredOrders.length > 0" class="batch-actions">
-      <div class="batch-info">
-        <label class="select-all">
-          <input type="checkbox" @change="toggleSelectAll" :checked="isAllSelected">
-          全选
-        </label>
-        <span class="selected-count" v-if="selectedCount > 0">
-          已选择 {{ selectedCount }} 个订单
-        </span>
-      </div>
-      <div class="batch-buttons" v-if="selectedCount > 0">
-        <button @click="batchUpdateStatus('1')" class="btn btn-primary btn-sm">批量支付</button>
-        <button @click="batchUpdateStatus('4')" class="btn btn-secondary btn-sm">批量取消</button>
-        <button @click="batchUpdateStatus('3')" class="btn btn-success btn-sm">批量完成</button>
-      </div>
-    </div>
+    <!-- 移除批量操作工具栏 -->
 
     <div v-if="loading" class="loading-state">
       <div class="loading-spinner"></div>
@@ -50,16 +34,6 @@
 
     <div v-else class="orders-list">
       <div v-for="order in visibleOrders" :key="order.orderId" class="order-item">
-        <!-- 订单选择框 -->
-        <div class="order-select">
-          <input 
-            type="checkbox" 
-            :value="order.orderId"
-            v-model="order.selected"
-            @change="updateSelection"
-            class="order-checkbox"
-          >
-        </div>
         
         <div class="order-header-info">
           <div class="order-number">
@@ -124,47 +98,57 @@
               </div>
  
               <div class="order-actions">
-                <button @click="viewOrderDetail(order)" class="btn btn-outline btn-compact">
-                  查看详情
-                </button>
-                
-                <!-- 根据订单状态显示不同的操作按钮 -->
-                <div v-if="['0','1','2'].includes(order.status)" class="action-buttons">
-                  <button @click="requestRefund(order)" class="btn btn-warning btn-compact">
-                    申请退款
-                  </button>
-                  <button @click="goToComment(order)" class="btn btn-outline btn-compact">
-                    评论
-                  </button>
-                </div>
-                
-                <div v-else-if="order.status === '3'" class="action-buttons">
-                  <button @click="requestRefund(order)" class="btn btn-warning btn-compact">
-                    申请退款
-                  </button>
-                  <button @click="goToComment(order)" class="btn btn-outline btn-compact">
-                    评论
-                  </button>
-                  <button @click="buyAgain(order)" class="btn btn-outline btn-compact">
-                    再次购买
-                  </button>
-                </div>
-                
-                <div v-else-if="['11','12','13'].includes(order.status)" class="action-buttons">
-                  <div class="refund-status-display">
-                    <span class="refund-status-text">{{ getRefundStatusText(order.status) }}</span>
-                  </div>
-                </div>
-                
-                <div v-if="order.status === '10'" class="action-buttons">
-                  <button @click="payOrder(order)" class="btn btn-primary">
-                    结算购物车
-                  </button>
-                  <button @click="cancelOrder(order)" class="btn btn-secondary">
-                    清空购物车
-                  </button>
-                </div>
-              </div>
+                 <button @click="viewOrderDetail(order)" class="btn btn-outline btn-compact">
+                   查看详情
+                 </button>
+                 
+                 <!-- 根据订单状态显示不同的操作按钮 -->
+                 <div v-if="['0'].includes(order.status)" class="action-buttons">
+                   <!-- 待支付订单只能支付或取消 -->
+                   <button @click="payOrder(order)" class="btn btn-primary btn-compact">
+                     立即支付
+                   </button>
+                   <button @click="cancelOrder(order)" class="btn btn-secondary btn-compact">
+                     取消订单
+                   </button>
+                 </div>
+                 
+                 <div v-else-if="['1','2','3'].includes(order.status)" class="action-buttons">
+                   <!-- 已支付、已发货、已完成的订单可以申请退款和评论 -->
+                   <button @click="requestRefund(order)" class="btn btn-warning btn-compact">
+                     申请退款
+                   </button>
+                   <button @click="goToComment(order)" class="btn btn-outline btn-compact">
+                     评论
+                   </button>
+                   <button v-if="order.status === '3'" @click="buyAgain(order)" class="btn btn-outline btn-compact">
+                     再次购买
+                   </button>
+                 </div>
+                 
+                 <div v-else-if="['11','12','13'].includes(order.status)" class="action-buttons">
+                   <!-- 退款中的订单只能显示退款状态 -->
+                   <div class="refund-status-display">
+                     <span class="refund-status-text">{{ getRefundStatusText(order.status) }}</span>
+                   </div>
+                 </div>
+                 
+                 <div v-else-if="['4','5','6'].includes(order.status)" class="action-buttons">
+                   <!-- 已取消、退货中、已退货的订单可以评论 -->
+                   <button @click="goToComment(order)" class="btn btn-outline btn-compact">
+                     评论
+                   </button>
+                 </div>
+                 
+                 <div v-if="order.status === '10'" class="action-buttons">
+                   <button @click="payOrder(order)" class="btn btn-primary">
+                     结算购物车
+                   </button>
+                   <button @click="cancelOrder(order)" class="btn btn-secondary">
+                     清空购物车
+                   </button>
+                 </div>
+               </div>
             </div>
           </div>
         </div>
@@ -332,16 +316,11 @@ export default {
       returnReason: '',
       returnDescription: '',
       submittingReturn: false,
-      selectedCount: 0, // 新增：选中的订单数量
       showRefundConfirm: false,
       refundTarget: null
     }
   },
   computed: {
-    // 新增：判断是否全选
-    isAllSelected() {
-      return this.visibleOrders.length > 0 && this.visibleOrders.every(order => order.selected)
-    },
     // 仅展示非购物车状态的订单
     visibleOrders() {
       return this.filteredOrders.filter(o => String(o.status) !== '10')
@@ -353,6 +332,8 @@ export default {
     if (cached && Array.isArray(cached.list) && cached.list.length) {
       this.orders = cached.list
       this.filteredOrders = [...this.orders]
+      // 应用排序，确保缓存数据也按时间倒序显示
+      this.filterOrders()
       // 后台刷新最新数据（不阻塞首屏）
       this.$nextTick(() => this.loadOrders())
     } else {
@@ -452,6 +433,8 @@ export default {
             this.filteredOrders = []
           } else {
             this.filteredOrders = [...this.orders]
+            // 应用排序，确保订单按时间倒序显示
+            this.filterOrders()
             // 同步更新缓存（轻量字段）
             const light = this.orders.map(o => ({
               orderId: o.orderId,
@@ -488,6 +471,13 @@ export default {
       } else {
         this.filteredOrders = this.orders.filter(order => order.status === this.statusFilter)
       }
+      
+      // 按创建时间正序排列，最早的订单显示在最前面
+      this.filteredOrders.sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0)
+        const dateB = new Date(b.createdAt || 0)
+        return dateA - dateB
+      })
     },
     
     getOrderStatus(status) {
@@ -745,70 +735,7 @@ export default {
       });
     },
     
-    // 新增：批量操作订单状态
-    async batchUpdateStatus(newStatus) {
-      const selectedOrders = this.filteredOrders.filter(order => order.selected)
-      if (selectedOrders.length === 0) {
-        alert('请先选择要操作的订单')
-        return
-      }
-      
-      if (confirm(`确定要将选中的${selectedOrders.length}个订单状态更新为"${this.getOrderStatus(newStatus)}"吗？`)) {
-        try {
-          const orderIds = selectedOrders.map(order => order.orderId)
-          // 使用现有接口：批量更新订单状态
-          const response = await OrderAPI.batchUpdateOrderStatus(orderIds, newStatus)
-          if (response.data?.code === 200) {
-            // 更新本地订单状态
-            selectedOrders.forEach(order => {
-              order.status = newStatus
-              order.updatedAt = new Date().toISOString()
-            })
-            this.filterOrders()
-            alert('批量更新订单状态成功')
-
-            // 如果批量支付成功，则为这些订单累计积分
-            if (newStatus === '1') {
-              try {
-                const userId = await userManager.getUserId()
-                // 批量支付时若订单号一致可合并一次；否则逐个订单ID调用
-                const firstOrderNumber = selectedOrders[0]?.orderNumber
-                const allSameNumber = firstOrderNumber && selectedOrders.every(o => o.orderNumber === firstOrderNumber)
-                if (allSameNumber) {
-                  await PointsAPI.accrueByOrder({ userId, orderNumber: firstOrderNumber })
-                } else {
-                  for (const order of selectedOrders) {
-                    if (order && order.orderId) {
-                      await PointsAPI.accrueByOrder({ userId, orderId: order.orderId })
-                    }
-                  }
-                }
-              } catch (e) {
-                console.warn('批量支付后累计积分失败:', e)
-              }
-            }
-          } else {
-            alert('批量更新订单状态失败，请重试')
-          }
-        } catch (error) {
-          console.error('批量更新订单状态失败:', error)
-          alert('批量更新订单状态失败，请重试')
-        }
-      }
-    },
-
-    // 新增：更新选择框状态
-    updateSelection() {
-      this.selectedCount = this.visibleOrders.filter(order => order.selected).length
-    },
-
-    // 新增：切换全选/取消全选
-    toggleSelectAll() {
-      this.visibleOrders.forEach(order => {
-        order.selected = !this.isAllSelected
-      })
-      this.updateSelection()
-    },
+    
 
     // 新增：处理图片加载失败
     handleImageError(event) {
@@ -1259,50 +1186,7 @@ export default {
   box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.1);
 }
 
-/* 批量操作工具栏 */
-.batch-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background: #f8f9fa;
-  border: 1px solid #e6e6e6;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-}
 
-.batch-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.select-all {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #111111;
-  cursor: pointer;
-}
-
-.select-all input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  accent-color: #111111;
-}
-
-.selected-count {
-  font-size: 0.9rem;
-  color: #666666;
-  font-weight: 500;
-}
-
-.batch-buttons {
-  display: flex;
-  gap: 0.5rem;
-}
 
 /* 按钮样式 */
 .btn {
@@ -1421,16 +1305,7 @@ export default {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
-/* 订单选择 */
-.order-select {
-  margin-bottom: 1rem;
-}
 
-.order-checkbox {
-  width: 18px;
-  height: 18px;
-  accent-color: #111111;
-}
 
 /* 订单头部信息 */
 .order-header-info {
@@ -1576,16 +1451,7 @@ export default {
     gap: 1rem;
   }
   
-  .batch-actions {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-  
-  .batch-buttons {
-    width: 100%;
-    justify-content: flex-start;
-  }
+
   
   .order-header-info {
     flex-direction: column;
@@ -1684,44 +1550,16 @@ export default {
 .order-info { gap: 4px; }
 .info-row { margin-bottom: 6px; }
 
-/* 自定义复选框（有边框黑白风格） */
-.order-checkbox,
-.select-all input[type="checkbox"] {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 18px;
-  height: 18px;
+/* 取消全选按钮样式 */
+.btn-outline {
+  background: transparent;
+  color: #111111;
   border: 2px solid #111111;
-  border-radius: 4px;
-  background: #fff;
-  cursor: pointer;
-  position: relative;
-  outline: none;
 }
 
-.order-checkbox:checked,
-.select-all input[type="checkbox"]:checked {
+.btn-outline:hover {
   background: #111111;
-  border-color: #111111;
-}
-
-.order-checkbox:checked::after,
-.select-all input[type="checkbox"]:checked::after {
-  content: '';
-  position: absolute;
-  left: 4px;
-  top: 1px;
-  width: 5px;
-  height: 10px;
-  border-right: 2px solid #fff;
-  border-bottom: 2px solid #fff;
-  transform: rotate(45deg);
-}
-
-/* 让复选框在高分屏上也清晰 */
-.order-checkbox:focus-visible,
-.select-all input[type="checkbox"]:focus-visible {
-  box-shadow: 0 0 0 3px rgba(17,17,17,0.12);
+  color: #fff;
 }
 
 .simple-toast { position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%); background: rgba(33,33,33,.92); color: #fff; padding: 10px 14px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .3s ease, transform .3s ease; z-index: 9999; }

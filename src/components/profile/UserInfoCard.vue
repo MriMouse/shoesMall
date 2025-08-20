@@ -52,12 +52,34 @@
           <option value="其他">其他</option>
         </select>
       </div>
-      
-      <div class="info-item">
-        <label>手机号</label>
-        <div v-if="!isEditing" class="info-value">{{ userInfo.phone || '未设置' }}</div>
-        <input v-else v-model="editForm.phone" type="tel" class="form-input" />
+
+      <!-- 密码修改部分 -->
+      <div v-if="isEditing" class="info-item">
+        <label>修改密码</label>
+        <div class="password-form">
+          <input 
+            v-model="passwordForm.oldPassword" 
+            type="password" 
+            placeholder="请输入当前密码" 
+            class="form-input password-input"
+          />
+          <input 
+            v-model="passwordForm.newPassword" 
+            type="password" 
+            placeholder="请输入新密码" 
+            class="form-input password-input"
+          />
+          <button 
+            @click="updatePassword" 
+            class="btn btn-warning password-btn"
+            :disabled="updatingPassword || !passwordForm.oldPassword || !passwordForm.newPassword"
+          >
+            {{ updatingPassword ? '更新中...' : '更新密码' }}
+          </button>
+        </div>
       </div>
+      
+
       
       <div class="info-item">
         <label>注册时间</label>
@@ -77,36 +99,7 @@
       </div>
     </div>
     
-    <!-- 修改密码部分 -->
-    <div class="password-section">
-      <div class="section-header">
-        <h4>修改密码</h4>
-        <button @click="togglePasswordEdit" class="btn btn-outline">
-          {{ isPasswordEditing ? '取消' : '修改密码' }}
-        </button>
-      </div>
-      
-      <div v-if="isPasswordEditing" class="password-form">
-        <div class="form-group">
-          <label>当前密码</label>
-          <input v-model="passwordForm.currentPassword" type="password" class="form-input" />
-        </div>
-        <div class="form-group">
-          <label>新密码</label>
-          <input v-model="passwordForm.newPassword" type="password" class="form-input" />
-        </div>
-        <div class="form-group">
-          <label>确认新密码</label>
-          <input v-model="passwordForm.confirmPassword" type="password" class="form-input" />
-        </div>
-        <div class="form-actions">
-          <button @click="changePassword" class="btn btn-primary" :disabled="changingPassword">
-            {{ changingPassword ? '修改中...' : '确认修改' }}
-          </button>
-          <button @click="togglePasswordEdit" class="btn btn-secondary">取消</button>
-        </div>
-      </div>
-    </div>
+
   </div>
 </template>
 
@@ -119,15 +112,12 @@ export default {
   data() {
     return {
       isEditing: false,
-      isPasswordEditing: false,
       saving: false,
-      changingPassword: false,
       uploadingAvatar: false,
       userInfo: {
         username: '',
         email: '',
         gender: '',
-        phone: '',
         registerTime: '',
         level: '普通会员',
         avatarPath: ''
@@ -135,14 +125,13 @@ export default {
       editForm: {
         username: '',
         email: '',
-        gender: '',
-        phone: ''
+        gender: ''
       },
       passwordForm: {
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      }
+        oldPassword: '',
+        newPassword: ''
+      },
+      updatingPassword: false
     }
   },
   computed: {
@@ -154,10 +143,13 @@ export default {
     }
   },
   mounted() {
+    console.log('UserInfoCard 组件已挂载，开始加载用户信息')
     this.loadUserInfo()
   },
   methods: {
     async loadUserInfo() {
+      console.log('开始加载用户信息...')
+      
       try {
         const username = userManager.getCurrentUsername()
         console.log('当前用户名:', username)
@@ -168,9 +160,12 @@ export default {
           return
         }
         
-        // 使用现有的API获取用户信息：先获取用户ID，然后从所有用户中筛选
+        // 首先加载本地存储的用户信息作为默认值
+        this.loadFallbackUserInfo()
+        
+        // 然后尝试从后端获取最新的用户信息
         try {
-          console.log('开始获取用户信息...')
+          console.log('尝试从后端获取用户信息...')
           
           // 先获取用户ID
           const userIdResponse = await UserAPI.getUserIdByUsername(username)
@@ -180,46 +175,43 @@ export default {
             const userId = userIdResponse.data.data
             console.log('获取到用户ID:', userId)
             
-            // 获取所有用户信息
-            const allUsersResponse = await UserAPI.getAllUsers()
-            console.log('所有用户响应:', allUsersResponse)
+            // 直接通过用户ID获取用户信息
+            const userResponse = await UserAPI.getUserById(userId)
+            console.log('用户信息响应:', userResponse)
             
-            if (allUsersResponse.data?.code === 200 && allUsersResponse.data.data) {
-              // 根据用户ID筛选出当前用户信息
-              const user = allUsersResponse.data.data.find(u => u.id === userId)
-              console.log('找到的用户信息:', user)
+            if (userResponse.data?.code === 200 && userResponse.data.data) {
+              const user = userResponse.data.data
+              console.log('从后端获取的用户信息:', user)
               
-              if (user) {
-                this.userInfo = {
-                  username: user.username || username,
-                  email: user.email || '未设置',
-                  gender: user.gender || '未设置',
-                  phone: user.phone || '未设置',
-                  registerTime: user.registrationDate || new Date().toISOString(),
-                  level: user.integral ? `积分${user.integral}` : '普通会员',
-                  integral: user.integral || 0,
-                  avatarPath: user.avatarPath || ''
-                }
-                
-                console.log('用户信息加载成功:', this.userInfo)
-              } else {
-                console.warn('未找到匹配的用户信息，使用本地存储')
-                this.loadFallbackUserInfo()
+              // 更新用户信息
+              this.userInfo = {
+                username: user.username || username,
+                email: user.email || '未设置',
+                gender: user.gender || '未设置',
+                registerTime: user.registrationDate || new Date().toISOString(),
+                level: user.integral ? `积分${user.integral}` : '普通会员',
+                integral: user.integral || 0,
+                avatarPath: user.avatarPath || ''
               }
+              
+              console.log('后端用户信息加载成功:', this.userInfo)
+              
+              // 更新本地存储
+              userManager.setCurrentUser({
+                ...userManager.getCurrentUser(),
+                ...user
+              })
             } else {
-              console.warn('获取所有用户失败:', allUsersResponse.data?.msg)
-              this.loadFallbackUserInfo()
+              console.warn('获取用户信息失败:', userResponse.data?.msg)
             }
           } else {
             console.warn('获取用户ID失败:', userIdResponse.data?.msg)
-            this.loadFallbackUserInfo()
           }
         } catch (apiError) {
-          console.warn('API获取用户信息失败，使用本地存储:', apiError)
-          this.loadFallbackUserInfo()
+          console.warn('API获取用户信息失败，使用本地存储数据:', apiError)
         }
         
-        // 获取用户头像路径
+        // 尝试获取用户头像路径
         try {
           const avatarResponse = await UserAPI.getAvatarPath(username)
           if (avatarResponse.data?.code === 200 && avatarResponse.data.data) {
@@ -230,13 +222,9 @@ export default {
           console.warn('获取头像路径失败:', avatarError)
         }
         
-        // 如果没有从API获取到数据，使用本地存储的数据
-        if (!this.userInfo.username) {
-          console.log('API数据不完整，补充本地存储数据')
-          this.loadFallbackUserInfo()
-        }
       } catch (error) {
         console.error('加载用户信息失败:', error)
+        // 确保至少显示本地存储的数据
         this.loadFallbackUserInfo()
       }
     },
@@ -252,8 +240,7 @@ export default {
           this.userInfo = {
             username: currentUser,
             email: '未设置',
-            gender: '未设置',
-            phone: '未设置',
+            gender: '',
             registerTime: new Date().toISOString(),
             level: '普通会员',
             integral: 0,
@@ -263,8 +250,7 @@ export default {
           this.userInfo = {
             username: currentUser.username || '用户',
             email: currentUser.email || '未设置',
-            gender: currentUser.gender || '未设置',
-            phone: currentUser.phone || '未设置',
+            gender: currentUser.gender || '',
             registerTime: currentUser.registerTime || currentUser.registrationDate || new Date().toISOString(),
             level: currentUser.integral ? `积分${currentUser.integral}` : '普通会员',
             integral: currentUser.integral || 0,
@@ -278,8 +264,7 @@ export default {
         this.userInfo = {
           username: '用户',
           email: '未设置',
-          gender: '未设置',
-          phone: '未设置',
+          gender: '',
           registerTime: new Date().toISOString(),
           level: '普通会员',
           integral: 0,
@@ -295,16 +280,14 @@ export default {
         this.editForm = {
           username: this.userInfo.username,
           email: this.userInfo.email,
-          gender: this.userInfo.gender,
-          phone: this.userInfo.phone
+          gender: this.userInfo.gender
         }
       } else {
         // 开始编辑，复制当前值到编辑表单
         this.editForm = {
           username: this.userInfo.username,
           email: this.userInfo.email,
-          gender: this.userInfo.gender,
-          phone: this.userInfo.phone
+          gender: this.userInfo.gender
         }
       }
       this.isEditing = !this.isEditing
@@ -319,26 +302,38 @@ export default {
       try {
         this.saving = true
         
-        // 如果后端使用中文性别，则无需转换；但若之前本地存了英文，做一次映射
-        const mappedGender = this.getGenderText(this.editForm.gender) !== '未设置'
-          ? this.getGenderText(this.editForm.gender)
-          : this.editForm.gender
-
-        const updatedUser = {
-          ...this.userInfo,
-          ...this.editForm,
-          gender: mappedGender
+        // 获取当前用户ID
+        const username = userManager.getCurrentUsername()
+        if (!username) {
+          alert('用户信息获取失败，请重新登录')
+          return
         }
         
-        // 更新本地存储
-        userManager.setCurrentUser(updatedUser)
+        // 获取用户ID
+        const userIdResponse = await UserAPI.getUserIdByUsername(username)
+        if (userIdResponse.data?.code !== 200 || !userIdResponse.data.data) {
+          alert('获取用户ID失败，请重试')
+        }
         
-        // 更新显示的数据
-        this.userInfo = { ...updatedUser }
-        this.isEditing = false
+        const userId = userIdResponse.data.data
         
-        this.$emit('user-updated', updatedUser)
-        alert('个人信息更新成功')
+        // 直接使用中文性别值，数据库支持中文字符
+        const response = await UserAPI.updateUserInfo(
+          userId,
+          this.editForm.username,
+          this.editForm.email,
+          this.editForm.gender
+        )
+        
+        if (response.data?.code === 200) {
+          // 更新成功，刷新用户信息
+          await this.loadUserInfo()
+          this.isEditing = false
+          this.$emit('user-updated', this.userInfo)
+          alert('个人信息更新成功！')
+        } else {
+          alert('更新失败：' + (response.data?.msg || '未知错误'))
+        }
       } catch (error) {
         console.error('保存用户信息失败:', error)
         alert('保存失败，请重试')
@@ -346,76 +341,70 @@ export default {
         this.saving = false
       }
     },
-    
-    togglePasswordEdit() {
-      if (this.isPasswordEditing) {
-        // 清空密码表单
-        this.passwordForm = {
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: ''
-        }
-      }
-      this.isPasswordEditing = !this.isPasswordEditing
-    },
-    
-    async changePassword() {
-      if (!this.passwordForm.currentPassword) {
-        alert('请输入当前密码')
+
+    async updatePassword() {
+      if (!this.passwordForm.oldPassword || !this.passwordForm.newPassword) {
+        alert('请填写完整的密码信息')
         return
       }
-      if (!this.passwordForm.newPassword) {
-        alert('请输入新密码')
-        return
-      }
+
       if (this.passwordForm.newPassword.length < 6) {
         alert('新密码长度不能少于6位')
         return
       }
-      if (this.passwordForm.newPassword !== this.passwordForm.confirmPassword) {
-        alert('两次输入的新密码不一致')
-        return
-      }
 
       try {
-        this.changingPassword = true
+        this.updatingPassword = true
+        
+        // 获取当前用户ID
         const username = userManager.getCurrentUsername()
         if (!username) {
-          alert('请先登录')
+          alert('用户信息获取失败，请重新登录')
           return
         }
-        // 使用后端已有流程：获取验证码token -> 用户输入验证码 -> 重置密码
-        const codeRes = await UserAPI.getResetCode(username, this.userInfo.email || '')
-        if (codeRes.data?.code !== 200 || !codeRes.data?.data?.token) {
-          alert(codeRes.data?.message || '获取验证码失败')
+        
+        // 获取用户ID
+        const userIdResponse = await UserAPI.getUserIdByUsername(username)
+        if (userIdResponse.data?.code !== 200 || !userIdResponse.data.data) {
+          alert('获取用户ID失败，请重试')
           return
         }
-        const token = codeRes.data.data.token
-        const code = window.prompt('验证码已发送至邮箱，请输入验证码：')
-        if (!code) return
-        const resetRes = await UserAPI.resetPassword(username, this.passwordForm.newPassword, code, token)
-        if (resetRes.data?.code === 200) {
-          this.togglePasswordEdit()
-          alert('密码修改成功')
+        
+        const userId = userIdResponse.data.data
+        
+        // 调用密码更新API
+        const response = await UserAPI.updatePassword(
+          userId,
+          this.passwordForm.oldPassword,
+          this.passwordForm.newPassword
+        )
+        
+        if (response.data?.code === 200) {
+          alert('密码更新成功！')
+          // 清空密码表单
+          this.passwordForm.oldPassword = ''
+          this.passwordForm.newPassword = ''
         } else {
-          alert(resetRes.data?.message || '密码修改失败')
+          alert('密码更新失败：' + (response.data?.msg || '未知错误'))
         }
       } catch (error) {
-        console.error('修改密码失败:', error)
-        alert('修改密码失败，请重试')
+        console.error('密码更新失败:', error)
+        alert('密码更新失败，请重试')
       } finally {
-        this.changingPassword = false
+        this.updatingPassword = false
       }
     },
     
+
+    
+
+    
     getGenderText(gender) {
       if (!gender) return '未设置'
-      // 若已是中文，直接返回
-      if (gender === '男' || gender === '女' || gender === '其他') return gender
-      // 兼容旧数据英文
-      const genderMap = { male: '男', female: '女', other: '其他' }
-      return genderMap[gender] || '未设置'
+      return gender || '未设置'
     },
+
+
     
     formatDate(dateString) {
       if (!dateString) return '未知'
@@ -691,32 +680,38 @@ export default {
   border-top: 1px solid #e6e6e6;
 }
 
-/* 密码部分 */
-.password-section {
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #e6e6e6;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.section-header h4 {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #111111;
-  margin: 0;
-}
-
+/* 密码修改样式 */
 .password-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
+  width: 100%;
 }
+
+.password-input {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.password-btn {
+  background: #ff6b35;
+  color: #fff;
+  border-color: #ff6b35;
+  align-self: flex-start;
+}
+
+.password-btn:hover {
+  background: #e55a2b;
+  border-color: #e55a2b;
+}
+
+.password-btn:disabled {
+  background: #ccc;
+  border-color: #ccc;
+  color: #666;
+}
+
+
 
 .form-group {
   display: flex;

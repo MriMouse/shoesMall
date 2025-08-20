@@ -9,31 +9,14 @@ export const UserAPI = {
   getAllUsers() {
     return api.post("/users/getAllUsers");
   },
-  // 修改密码 - 使用验证码/令牌
-  resetPassword(username, newPassword, code, token) {
-    const params = new URLSearchParams({ username, newPassword, code, token });
-    return api.post("/usersLogin/resetPassword", params);
-  },
-  // 直接修改密码（不走验证码）——若后端提供
-  directUpdatePassword(username, newPassword) {
-    const params = new URLSearchParams({ username, newPassword });
-    return api.post("/usersLogin/userRegister", params); // 占位：如果你有 /users/updatePassword 接口请替换为正确路径
-  },
-  // 申请重置密码验证码
-  getResetCode(username, email) {
-    const params = new URLSearchParams({ username, email });
-    return api.get("/usersLogin/getCode", { params });
-  },
-  // 直接修改密码（推荐你将此路径改为后端实际的修改密码接口）
-  updatePassword(username, newPassword) {
-    const params = new URLSearchParams({ username, newPassword });
-    // TODO: 将下面的路径替换为你后端“直接修改密码”的真实地址，如 /users/updatePassword 或 /usersLogin/updatePassword
-    return api.post("/usersLogin/updatePassword", params);
-  },
+  
+
+  
   getUserIdByUsername(username) {
     const params = new URLSearchParams({ username });
     return api.post("/users/getUserIdByUsername", params);
   },
+  
   getPersonalInfo(username) {
     const params = new URLSearchParams({ username });
     return api.post("/personal/info", params);
@@ -53,9 +36,12 @@ export const UserAPI = {
     const params = new URLSearchParams({ username, avatarPath });
     return api.post("/users/updateAvatar", params);
   },
+  
   // 通过用户ID更新头像（与数据库 user.avatar_path 字段对应）
   updateAvatarById(userId, avatarPath) {
-    const params = new URLSearchParams({ userId, avatarPath });
+    const params = new URLSearchParams();
+    params.append("userId", userId);
+    params.append("avatarPath", avatarPath);
     return api.post("/users/updateAvatarById", params);
   },
 
@@ -64,28 +50,68 @@ export const UserAPI = {
     const params = new URLSearchParams({ username });
     return api.post("/users/getAvatarPath", params);
   },
+  
+  // 更新用户基本信息
+  updateUserInfo(userId, username, email, gender) {
+    const params = new URLSearchParams();
+    params.append("userId", userId);
+    params.append("username", username);
+    params.append("email", email);
+    params.append("gender", gender);
+    return api.post("/users/updateUserInfo", params);
+  },
+  
+  // 更新用户密码
+  updatePassword(userId, oldPassword, newPassword) {
+    const params = new URLSearchParams();
+    params.append("userId", userId);
+    params.append("oldPassword", oldPassword);
+    params.append("newPassword", newPassword);
+    return api.post("/users/updatePassword", params);
+  },
+
+  // 更新用户积分
+  updateIntegral(userId, integral) {
+    const params = new URLSearchParams();
+    params.append("userId", userId);
+    params.append("integral", integral);
+    return api.post("/users/updateIntegral", params);
+  },
+
+  // 根据用户ID获取用户信息
+  getUserById(userId) {
+    const params = new URLSearchParams();
+    params.append("id", userId);
+    return api.post("/users/getUsersByIds", params);
+  },
+
   getAddresses(username) {
     const params = new URLSearchParams({ username });
     return api.post("/personal/addresses", params);
   },
+  
   addAddress(address) {
     return api.post("/personal/address/add", address, {
       headers: { "Content-Type": "application/json" },
     });
   },
+  
   updateAddress(address) {
     return api.post("/personal/address/update", address, {
       headers: { "Content-Type": "application/json" },
     });
   },
+  
   deleteAddress(addressId) {
     const params = new URLSearchParams({ addressId });
     return api.post("/personal/address/delete", params);
   },
+  
   setDefaultAddress(addressId, userId) {
     const params = new URLSearchParams({ addressId, userId });
     return api.post("/personal/address/setDefault", params);
   },
+  
   getOrders(username, pageNum = 1, pageSize = 2, status = "") {
     const params = new URLSearchParams({ username, pageNum, pageSize });
     if (status) params.append("status", status);
@@ -103,7 +129,7 @@ export const OrderAPI = {
   getAllWithFullDetails() {
     return api.post("/order/getAllWithFullDetails");
   },
-  insertOrder(order) {
+   insertOrder(order) {
     return api.post("/order/insertOrder", order, {
       headers: { "Content-Type": "application/json" },
     });
