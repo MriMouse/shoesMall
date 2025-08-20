@@ -419,8 +419,26 @@ export default {
 			userMenuTimer = setTimeout(() => { showUserMenu.value = false; }, 150);
 		}
 		function goProfileTab(tab) {
-			router.push('/profile');
-			sessionStorage.setItem('profile-target-tab', tab);
+			// 直接跳转到对应的路由
+			switch (tab) {
+				case 'overview':
+					router.push('/profile');
+					break;
+				case 'info':
+					router.push('/profile/info');
+					break;
+				case 'orders':
+					router.push('/profile/orders');
+					break;
+				case 'address':
+					router.push('/profile/address');
+					break;
+				case 'settings':
+					router.push('/profile/settings');
+					break;
+				default:
+					router.push('/profile');
+			}
 		}
 		function logout() {
 			localStorage.removeItem('user');

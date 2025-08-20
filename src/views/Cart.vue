@@ -1,145 +1,125 @@
 <template>
     <div class="cart-page">
-            <!-- 购物车头部 -->
-            <div class="cart-header">
+        <!-- 购物车头部 -->
+        <div class="cart-header">
             <div class="header-content">
                 <h1>我的购物车</h1>
                 <div class="cart-summary">
                     <span>共 {{ cartItems.length }} 件商品</span>
                     <button @click="clearAll" class="clear-all-btn">清空购物车</button>
                 </div>
-                </div>
+            </div>
+        </div>
+
+        <!-- 购物车内容 -->
+        <div v-if="cartItems.length > 0" class="cart-content">
+            <!-- 全选和批量操作 -->
+            <div class="batch-actions">
+                <label class="select-all">
+                    <input type="checkbox" :checked="hasAllChecked" @change="toggleSelectAll" />
+                    <span>全选</span>
+                </label>
             </div>
 
-            <!-- 购物车内容 -->
-            <div v-if="cartItems.length > 0" class="cart-content">
-                <!-- 全选和批量操作 -->
-                <div class="batch-actions">
-                    <label 
-                        class="select-all"
-                    >
-                        <input 
-                            type="checkbox" 
-                            :checked="hasAllChecked" 
-                            @change="toggleSelectAll"
-                        />
-                        <span>全选</span>
-                    </label>
-                </div>
+            <!-- 商品列表 -->
+            <div class="cart-items">
+                <div v-for="item in cartItems" :key="item.orderId" class="cart-item"
+                    :class="{ 'disabled': item.shoeDisabled }">
+                    <div class="item-checkbox">
+                        <input type="checkbox" v-model="item.checked" :disabled="item.shoeDisabled"
+                            @change="updateSelection" />
+                    </div>
 
-                <!-- 商品列表 -->
-                <div class="cart-items">
-                    <div 
-                        v-for="item in cartItems" 
-                        :key="item.orderId" 
-                        class="cart-item"
-                        :class="{ 'disabled': item.shoeDisabled }"
-                    >
-                        <div class="item-checkbox">
-                            <input 
-                                type="checkbox" 
-                                v-model="item.checked"
-                                :disabled="item.shoeDisabled"
-                                @change="updateSelection"
-                            />
+                    <div class="item-image">
+                        <img v-if="item.image" :src="getShoeImage(item)" :alt="item.shoeName"
+                            @error="handleImageError" />
+                        <div v-else class="no-image">📷</div>
+                    </div>
+
+                    <div class="item-info">
+                        <h3 class="item-name">{{ item.shoeName }}</h3>
+                        <div class="item-meta">
+                            <span class="brand">{{ item.brandName }}</span>
+                            <span class="type">{{ item.typeName }}</span>
                         </div>
-                        
-                        <div class="item-image">
-                            <img 
-                                v-if="item.image" 
-                                :src="getShoeImage(item)" 
-                                :alt="item.shoeName"
-                                @error="handleImageError"
-                            />
-                            <div v-else class="no-image">📷</div>
+                        <div class="item-size">
+                            <span>尺码：{{ item.size }}</span>
                         </div>
-                        
-                        <div class="item-info">
-                            <h3 class="item-name">{{ item.shoeName }}</h3>
-                            <div class="item-meta">
-                                <span class="brand">{{ item.brandName }}</span>
-                                <span class="type">{{ item.typeName }}</span>
-                            </div>
-                            <div class="item-size">
-                                <span>尺码：{{ item.size }}</span>
-                            </div>
-                            <div class="item-points" v-if="item.points">
-                                <span class="points">积分：{{ item.points }} 分</span>
-                            </div>
-                        </div>
-                        
-                        <div class="item-price">
-                            <span class="current-price">¥{{ getCurrentPrice(item) }}</span>
-                            <span v-if="item.discountPrice && item.discountPrice < item.price" class="original-price">¥{{ item.price }}</span>
-                        </div>
-                        
-                        <div class="item-quantity">
-                            <button @click="decreaseQuantity(item)" :disabled="item.quantity <= 1">-</button>
-                            <input 
-                                v-model.number="item.quantity" 
-                                type="number" 
-                                min="1" 
-                                max="99"
-                                @blur="validateQuantity(item)"
-                                @keyup.enter="validateQuantity(item)"
-                            />
-                            <button @click="increaseQuantity(item)" :disabled="item.quantity >= 99">+</button>
-                        </div>
-                        
-                        <div class="item-subtotal">
-                            ¥{{ calculateSubtotal(item) }}
-                        </div>
-                        
-                        <div class="item-actions">
-                            <button @click="removeOrder(item)" class="remove-btn">删除</button>
-                            <button @click="paySingleItem(item)" :disabled="item.shoeDisabled" class="pay-btn">立即购买</button>
+                        <div class="item-points" v-if="item.points">
+                            <span class="points">积分：{{ item.points }} 分</span>
                         </div>
                     </div>
-                </div>
 
-                <!-- 底部汇总与操作 -->
-                <div class="cart-footer">
-                    <div class="totals">
-                        <div class="totals-line">
-                            <span>已选商品</span>
-                            <span>{{ totals.checkedCount }} 件</span>
-                        </div>
-                        <div class="totals-line" v-if="totals.original > 0">
-                            <span>商品总额</span>
-                            <span>¥{{ totals.original.toFixed(2) }}</span>
-                        </div>
-                        <div class="totals-line savings" v-if="totals.original > totals.discounted">
-                            <span>优惠</span>
-                            <span>-¥{{ (totals.original - totals.discounted).toFixed(2) }}</span>
-                        </div>
-                        <div class="totals-line points">
-                            <span>可获得积分</span>
-                            <span class="points-amount">{{ totals.points }} 分</span>
-                        </div>
-                        <div class="totals-line total">
-                            <span>应付总额</span>
-                            <span class="amount">¥{{ totals.discounted.toFixed(2) }}</span>
-                        </div>
+                    <div class="item-price">
+                        <span class="current-price">¥{{ getCurrentPrice(item) }}</span>
+                        <span v-if="item.discountPrice && item.discountPrice < item.price" class="original-price">¥{{
+                            item.price }}</span>
                     </div>
-                    <div class="footer-actions">
-                        <router-link to="/products" class="continue-shopping-btn">继续购物</router-link>
-                        <button 
-                            class="checkout-btn large" 
-                            :disabled="!hasCheckedItems" 
-                            @click="goCheckout"
-                        >去结算</button>
+
+                    <div class="item-quantity">
+                        <button @click="decreaseQuantity(item)" :disabled="item.quantity <= 1">-</button>
+                        <input v-model.number="item.quantity" type="number" min="1" max="99"
+                            @blur="validateQuantity(item)" @keyup.enter="validateQuantity(item)" />
+                        <button @click="increaseQuantity(item)" :disabled="item.quantity >= 99">+</button>
+                    </div>
+
+                    <div class="item-subtotal">
+                        ¥{{ calculateSubtotal(item) }}
+                    </div>
+
+                    <div class="item-actions">
+                        <button @click="removeOrder(item)" class="remove-btn">删除</button>
+                        <button @click="paySingleItem(item)" :disabled="item.shoeDisabled" class="pay-btn">立即购买</button>
                     </div>
                 </div>
             </div>
 
-            <!-- 空购物车 -->
-            <div v-else class="empty-cart">
-                <div class="empty-icon">🛒</div>
-                <h3>购物车是空的</h3>
-                <p>快去添加一些商品吧！</p>
-                <router-link to="/home" class="continue-shopping-btn">继续购物</router-link>
+            <!-- 底部汇总与操作 -->
+            <div class="cart-footer">
+                <div class="totals">
+                    <div class="totals-line">
+                        <span>已选商品</span>
+                        <span>{{ totals.checkedCount }} 件</span>
+                    </div>
+                    <div class="totals-line" v-if="totals.original > 0">
+                        <span>商品总额</span>
+                        <span>¥{{ totals.original.toFixed(2) }}</span>
+                    </div>
+                    <div class="totals-line savings" v-if="totals.original > totals.discounted">
+                        <span>优惠</span>
+                        <span>-¥{{ (totals.original - totals.discounted).toFixed(2) }}</span>
+                    </div>
+                    <div class="totals-line points">
+                        <span>可获得积分</span>
+                        <span class="points-amount">{{ totals.points }} 分</span>
+                    </div>
+                    <div class="totals-line total">
+                        <span>应付总额</span>
+                        <span class="amount">¥{{ totals.discounted.toFixed(2) }}</span>
+                    </div>
+                </div>
+                <div class="footer-actions">
+                    <router-link to="/products" class="continue-shopping-btn">继续购物</router-link>
+                    <button class="checkout-btn large" :disabled="!hasCheckedItems" @click="goCheckout">去结算</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 空购物车 -->
+        <div v-else class="empty-cart">
+            <div class="empty-icon">🛒</div>
+            <h3>购物车是空的</h3>
+            <p>快去添加一些商品吧！</p>
+            <router-link to="/home" class="continue-shopping-btn">继续购物</router-link>
         </div>
         <SiteFooter />
+
+        <!-- Toast组件 -->
+        <BasicToast ref="toast" :message="toastMessage" :type="toastType" />
+
+        <!-- 确认对话框组件 -->
+        <confirmDialog v-model:visible="showConfirmDialog" :title="confirmDialog.title" :message="confirmDialog.message"
+            :type="confirmDialog.type" @confirm="confirmDialog.onConfirm" @cancel="confirmDialog.onCancel" />
     </div>
 </template>
 
@@ -148,10 +128,12 @@ import { ShoeAPI, ShoesSizeAPI } from '@/api'
 import cartManager from '@/utils/cart'
 import userManager from '@/utils/userManager'
 import SiteFooter from '@/views/layout/Footer.vue'
+import BasicToast from '@/views/BasicToast.vue'
+import confirmDialog from '@/views/confirmDialog.vue'
 
 export default {
     name: 'CartPage',
-    components: { SiteFooter },
+    components: { SiteFooter, BasicToast, confirmDialog },
     data() {
         return {
             loading: false,
@@ -161,7 +143,19 @@ export default {
             cartItems: [],
             sizeOptions: [],
             keyword: '',
-            searchHistory: []
+            searchHistory: [],
+            // 确认对话框相关
+            showConfirmDialog: false,
+            confirmDialog: {
+                title: '',
+                message: '',
+                type: 'default',
+                onConfirm: null,
+                onCancel: null
+            },
+            // Toast相关
+            toastMessage: '',
+            toastType: 'info'
         }
     },
     computed: {
@@ -171,23 +165,23 @@ export default {
                 return this.cartItems
             }
             const keyword = this.keyword.toLowerCase().trim()
-            return this.cartItems.filter(item => 
+            return this.cartItems.filter(item =>
                 item.shoeName?.toLowerCase().includes(keyword) ||
                 item.brandName?.toLowerCase().includes(keyword) ||
                 item.typeName?.toLowerCase().includes(keyword) ||
                 item.orderNumber?.toLowerCase().includes(keyword)
             )
         },
-        
+
         // 搜索建议
         searchSuggestions() {
             if (!this.keyword.trim()) {
                 return this.searchHistory.slice(0, 5)
             }
-            
+
             const keyword = this.keyword.toLowerCase().trim()
             const suggestions = []
-            
+
             // 从商品名称中搜索建议
             this.cartItems.forEach(item => {
                 if (item.shoeName?.toLowerCase().includes(keyword)) {
@@ -200,11 +194,11 @@ export default {
                     suggestions.push(item.typeName)
                 }
             })
-            
+
             // 去重并限制数量
             return [...new Set(suggestions)].slice(0, 5)
         },
-        
+
         // 计算总数和价格
         totals() {
             const checkedItems = this.cartItems.filter(item => item.checked && !item.shoeDisabled)
@@ -213,7 +207,7 @@ export default {
             const original = checkedItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0)
             const discounted = checkedItems.reduce((sum, item) => sum + (this.getCurrentPrice(item) * (item.quantity || 1)), 0)
             const points = checkedItems.reduce((sum, item) => sum + (item.points || 0) * (item.quantity || 1), 0)
-            
+
             return {
                 count,
                 checkedCount,
@@ -222,7 +216,7 @@ export default {
                 points
             }
         },
-        
+
         // 全选状态
         selectAll: {
             get() {
@@ -237,14 +231,14 @@ export default {
                 })
             }
         },
-        
+
         // 半选状态
         isIndeterminate() {
             const availableItems = this.cartItems.filter(item => !item.shoeDisabled)
             const checkedCount = availableItems.filter(item => item.checked).length
             return checkedCount > 0 && checkedCount < availableItems.length
         },
-        
+
         // 是否有选中的商品
         hasCheckedItems() {
             return this.cartItems.some(item => item.checked && !item.shoeDisabled)
@@ -265,25 +259,25 @@ export default {
         async loadCartData() {
             this.loading = true
             this.error = ''
-            
+
             try {
                 console.log('=== 开始加载购物车数据 ===')
                 console.log('当前用户ID:', this.userId)
                 console.log('购物车管理器用户ID:', cartManager.userId)
-                
+
                 // 使用购物车管理器获取购物车数据
                 let cartData = await cartManager.getCartDetails()
                 console.log('购物车管理器返回的数据:', cartData)
                 console.log('第一个订单的详细结构:', cartData[0])
                 console.log('第一个订单的orderShoeNum:', cartData[0]?.orderShoeNum)
-                
+
                 if (cartData && cartData.length > 0) {
                     console.log('购物车有数据，开始处理...')
                     // 处理购物车数据，确保包含所有必要信息
                     this.cartItems = cartData.map(order => {
                         console.log('处理订单:', order)
                         console.log('订单的orderShoeNum:', order.orderShoeNum)
-                        
+
                         return {
                             orderId: order.orderId,
                             shoeId: order.orderShoeNum?.shoeId,
@@ -305,13 +299,13 @@ export default {
                     console.log('购物车没有数据')
                     this.cartItems = []
                 }
-                
+
                 // 检查商品是否已下线
                 await this.checkProductStatus()
-                
+
                 // 加载商品详细信息（名称、品牌、类型等）
                 await this.loadShoeDetails()
-                
+
             } catch (error) {
                 console.error('加载购物车数据失败:', error)
                 this.error = '加载购物车数据失败，请重试'
@@ -319,7 +313,7 @@ export default {
                 this.loading = false
             }
         },
-        
+
         // 检查商品状态
         async checkProductStatus() {
             try {
@@ -331,9 +325,9 @@ export default {
                             item.shoeDisabled = true
                             return
                         }
-                        
+
                         console.log('检查商品状态，商品ID:', item.shoeId)
-                        
+
                         // 调用后端API检查商品状态
                         const response = await ShoeAPI.getById(item.shoeId)
                         if (response.data?.code === 200 && response.data.data) {
@@ -350,25 +344,25 @@ export default {
                         item.shoeDisabled = true
                     }
                 })
-                
+
                 await Promise.all(checkPromises)
             } catch (error) {
                 console.error('检查商品状态失败:', error)
             }
         },
-        
+
         async loadShoeDetails() {
             try {
                 const promises = this.cartItems.map(async (item) => {
                     if (item.shoeId) {
                         try {
                             console.log('加载商品详情，商品ID:', item.shoeId)
-                            
+
                             const shoeResponse = await ShoeAPI.getById(item.shoeId)
                             if (shoeResponse.data?.code === 200) {
                                 const shoe = shoeResponse.data.data
                                 console.log('获取到的商品信息:', shoe)
-                                
+
                                 Object.assign(item, {
                                     shoeName: shoe.name || item.shoeName,
                                     serialNumber: shoe.serialNumber,
@@ -379,7 +373,7 @@ export default {
                                     typeName: shoe.shoesType?.typeName || item.typeName,
                                     shoeDisabled: shoe.shoeDisabled || false
                                 })
-                                
+
                                 // 获取商品图片
                                 try {
                                     const imageResponse = await ShoeAPI.getImages(item.shoeId)
@@ -401,14 +395,14 @@ export default {
                         console.warn('商品ID为空，跳过详情加载:', item)
                     }
                 })
-                
+
                 await Promise.all(promises)
                 console.log('所有商品详情加载完成:', this.cartItems)
             } catch (error) {
                 console.error('加载商品详情失败:', error)
             }
         },
-        
+
         // 处理图片加载错误
         handleImageError(event) {
             event.target.style.display = 'none'
@@ -417,19 +411,19 @@ export default {
                 noImage.style.display = 'flex'
             }
         },
-        
+
         // 获取当前价格
         getCurrentPrice(item) {
             return item.discountPrice || item.price || 0
         },
-        
+
         // 计算商品小计
         calculateSubtotal(item) {
             const price = this.getCurrentPrice(item)
             const quantity = item.quantity || 1
             return (price * quantity).toFixed(2)
         },
-        
+
         // 加载尺码选项
         async loadSizeOptions() {
             try {
@@ -441,13 +435,13 @@ export default {
                 console.error('加载尺码选项失败:', error)
             }
         },
-        
+
         // 获取尺码名称
         getSizeName(sizeId) {
             const size = this.sizeOptions.find(s => s.sizeId === sizeId)
             return size ? size.size : `尺码${sizeId}`
         },
-        
+
         // 获取订单状态文本
         getStatusText(status) {
             switch (status) {
@@ -457,7 +451,7 @@ export default {
                 default: return '未知状态'
             }
         },
-        
+
         // 获取订单状态样式类
         getStatusClass(status) {
             switch (status) {
@@ -467,7 +461,7 @@ export default {
                 default: return 'status-unknown'
             }
         },
-        
+
         // 获取商品图片
         getShoeImage(item) {
             if (item.image) {
@@ -475,7 +469,7 @@ export default {
             }
             return '/src/assets/logo.png'
         },
-        
+
         // 增加商品数量
         increaseQuantity(item) {
             if (item.quantity < 99) {
@@ -483,7 +477,7 @@ export default {
                 this.updateOrderQuantity(item)
             }
         },
-        
+
         // 减少商品数量
         decreaseQuantity(item) {
             if (item.quantity > 1) {
@@ -491,7 +485,7 @@ export default {
                 this.updateOrderQuantity(item)
             }
         },
-        
+
         // 验证商品数量
         validateQuantity(item) {
             if (item.quantity < 1) {
@@ -504,12 +498,12 @@ export default {
             // 更新到后端
             this.updateOrderQuantity(item)
         },
-        
+
         async updateOrderSize(item) {
             try {
                 // 使用购物车管理器更新尺码
                 const success = await cartManager.updateCartItemSize(item.orderId, item.sizeId)
-                
+
                 if (success) {
                     this.showSuccess('尺码更新成功')
                 } else {
@@ -524,7 +518,7 @@ export default {
                 this.loadCartData()
             }
         },
-        
+
         async updateOrderQuantity(item) {
             try {
                 console.log('更新商品数量:', {
@@ -532,10 +526,10 @@ export default {
                     shoeId: item.shoeId,
                     quantity: item.quantity
                 })
-                
+
                 // 使用购物车管理器更新数量
                 const success = await cartManager.updateCartItemQuantity(item.orderId, item.shoeId, item.quantity)
-                
+
                 if (success) {
                     this.showSuccess('数量更新成功')
                     // 触发购物车更新事件
@@ -552,21 +546,59 @@ export default {
                 this.loadCartData()
             }
         },
-        
+
+        // 显示确认对话框
+        showConfirm(title, message, type = 'default') {
+            return new Promise((resolve) => {
+                this.confirmDialog = {
+                    title,
+                    message,
+                    type,
+                    onConfirm: () => {
+                        this.showConfirmDialog = false
+                        resolve(true)
+                    },
+                    onCancel: () => {
+                        this.showConfirmDialog = false
+                        resolve(false)
+                    }
+                }
+                this.showConfirmDialog = true
+            })
+        },
+
         // 删除订单
         async removeOrder(item) {
-            if (!confirm(`确定要删除商品"${item.shoeName}"吗？`)) return
-            
+            const confirmed = await this.showConfirm(
+                '确认删除',
+                `确定要删除商品"${item.shoeName}"吗？`,
+                'warning'
+            )
+
+            if (!confirmed) return
+
             try {
+                console.log('删除商品:', item)
+                
+                // 验证必要参数
+                if (!item.orderId || !item.shoeId) {
+                    console.error('删除失败：缺少必要参数', {
+                        orderId: item.orderId,
+                        shoeId: item.shoeId
+                    })
+                    this.showError('删除失败：商品信息不完整')
+                    return
+                }
+                
                 console.log('删除商品:', {
                     orderId: item.orderId,
                     shoeId: item.shoeId,
                     shoeName: item.shoeName
                 })
-                
+
                 // 使用购物车管理器删除商品
                 const success = await cartManager.removeFromCart(item.orderId, item.shoeId)
-                
+
                 if (success) {
                     this.showSuccess('删除成功')
                     // 从本地列表中移除
@@ -574,23 +606,30 @@ export default {
                     // 使用购物车管理器触发更新
                     cartManager.triggerUpdate()
                 } else {
-                    this.showError('删除失败')
+                    console.error('删除失败：API返回失败')
+                    this.showError('删除失败，请重试')
                 }
             } catch (error) {
-                console.error('删除订单失败:', error)
-                this.showError('删除失败')
+                console.error('删除订单异常:', error)
+                this.showError('删除失败：' + (error.message || '未知错误'))
             }
         },
-        
+
         async clearAll() {
-            if (!confirm(`确定要清空购物车吗？\n当前购物车中有 ${this.cartItems.length} 件商品，此操作不可恢复！`)) return
-            
+            const confirmed = await this.showConfirm(
+                '确认清空',
+                `确定要清空购物车吗？\n当前购物车中有 ${this.cartItems.length} 件商品，此操作不可恢复！`,
+                'danger'
+            )
+
+            if (!confirmed) return
+
             try {
                 console.log('清空购物车，用户ID:', this.userId)
-                
+
                 // 使用购物车管理器清空购物车
                 const success = await cartManager.clearCart()
-                
+
                 if (success) {
                     this.showSuccess('购物车已清空')
                     this.cartItems = []
@@ -604,27 +643,27 @@ export default {
                 this.showError('清空购物车失败')
             }
         },
-        
+
         // 继续购物
         goShopping() {
             this.$router.push('/')
         },
-        
+
         // 去结算
         goCheckout() {
             if (!this.hasCheckedItems) {
                 this.showWarning('请先选择要购买的商品')
                 return
             }
-            
+
             // 获取选中的商品
             const selectedItems = this.cartItems.filter(item => item.checked && !item.shoeDisabled)
-            
+
             if (selectedItems.length === 0) {
                 this.showWarning('没有选中的商品')
                 return
             }
-            
+
             // 跳转到订单确认页面，传递购物车商品信息
             this.$router.push({
                 name: 'OrderConfirmation',
@@ -647,19 +686,19 @@ export default {
                 }
             })
         },
-        
+
         // 单个商品支付
         async paySingleItem(item) {
             if (item.shoeDisabled) {
                 this.showWarning('该商品已下线，无法购买')
                 return
             }
-            
+
             try {
                 // 跳转到订单确认页面，传递单个商品信息
-                this.$router.push({ 
-                    name: 'OrderConfirmation', 
-                    query: { 
+                this.$router.push({
+                    name: 'OrderConfirmation',
+                    query: {
                         fromCart: 'true',
                         orderIds: item.orderId.toString(),
                         items: JSON.stringify([{
@@ -685,43 +724,46 @@ export default {
 
         // 显示消息提示
         showMessage(message, type = 'info') {
-            // 这里可以实现消息提示功能
-            console.log(`${type}: ${message}`)
-            alert(message)
+            // 使用Toast组件显示消息
+            if (this.$refs.toast) {
+                this.toastMessage = message
+                this.toastType = type === 'success' ? 'success' : type === 'error' ? 'error' : 'warning'
+                this.$refs.toast.show()
+            }
         },
-        
+
         // 显示成功消息
         showSuccess(message) {
             this.showMessage(message, 'success')
         },
-        
+
         // 显示错误消息
         showError(message) {
             this.showMessage(message, 'error')
         },
-        
+
         // 显示警告消息
         showWarning(message) {
             this.showMessage(message, 'warning')
         },
-        
+
         // 切换全选状态
         toggleSelectAll() {
             const availableItems = this.cartItems.filter(item => !item.shoeDisabled)
             const allChecked = availableItems.every(item => item.checked)
-            
+
             availableItems.forEach(item => {
                 item.checked = !allChecked
             })
         },
-        
+
         // 更新商品选择状态
         updateSelection() {
             // 触发计算属性重新计算
             this.$forceUpdate()
         }
     },
-    
+
     async mounted() {
         // 获取用户信息
         const user = userManager.getCurrentUser()
@@ -737,7 +779,7 @@ export default {
         if (this.userId && cartManager.userId !== this.userId) {
             cartManager.setUserId(this.userId)
         }
-        
+
         // 加载购物车数据和尺码选项
         await Promise.all([
             this.loadCartData(),
@@ -750,14 +792,14 @@ export default {
 <style scoped>
 .cart-page {
     min-height: 100vh;
-    background: linear-gradient(180deg, #f5f7fa 0%, #eef1f6 100%);
+    background: #ffffff;
     font-family: 'Helvetica Neue', Arial, 'Microsoft YaHei', sans-serif;
     color: #111;
     line-height: 1.6;
     --accent-color: #C6FF00;
     --accent-hover: #B8FF2E;
-    --bg-start: #f5f7fa;
-    --bg-end: #eef1f6;
+    --bg-start: #ffffff;
+    --bg-end: #ffffff;
     --card-bg: rgba(255, 255, 255, 0.9);
     --border-color: rgba(17, 17, 17, 0.08);
     --ring: rgba(17, 17, 17, 0.12);
@@ -849,7 +891,7 @@ export default {
     align-items: center;
     padding: 24px 32px;
     border-bottom: 1px solid var(--border-color);
-    background: linear-gradient(180deg, rgba(248,249,250,0.95), rgba(248,249,250,0.85));
+    background: linear-gradient(180deg, rgba(248, 249, 250, 0.95), rgba(248, 249, 250, 0.85));
 }
 
 .select-all {
@@ -898,13 +940,13 @@ export default {
     opacity: 0.5;
 }
 
-.checkout-btn.large { 
-    padding: 12px 22px !important; 
-    font-size: 0.95rem; 
+.checkout-btn.large {
+    padding: 12px 22px !important;
+    font-size: 0.95rem;
     border-radius: 12px;
-    background: var(--primary) !important; 
-    color: white !important; 
-    border: 2px solid var(--primary) !important; 
+    background: var(--primary) !important;
+    color: white !important;
+    border: 2px solid var(--primary) !important;
 }
 
 .checkout-btn.large:disabled {
@@ -917,7 +959,9 @@ export default {
     opacity: 0.5;
 }
 
-.cart-items { padding: 0; }
+.cart-items {
+    padding: 0;
+}
 
 .cart-item {
     display: grid;
@@ -938,113 +982,507 @@ export default {
 
 .cart-item.disabled {
     opacity: 0.6;
-    background: rgba(248, 249, 250, 0.8); 
+    background: rgba(248, 249, 250, 0.8);
 }
 
-/* 未选中商品样式 - 白色背景，灰色文字 */
+/* 未选中商品样式 - 保持一致的白色背景和颜色 */
 .cart-item:not(.disabled) {
     background: rgba(255, 255, 255, 0.9);
 }
 
 .cart-item:not(.disabled) .item-name {
-    color: var(--muted);
+    color: var(--primary);
 }
 
 .cart-item:not(.disabled) .item-size {
-    color: var(--muted);
+    color: var(--primary);
 }
 
 .cart-item:not(.disabled) .current-price {
-    color: var(--muted);
+    color: var(--primary);
 }
 
 .cart-item:not(.disabled) .item-subtotal {
-    color: var(--muted);
+    color: var(--primary);
 }
 
-/* 选中商品样式 - 黑色背景，白色文字 */
+/* 禁用状态的商品样式 - 保持与正常状态一致的颜色，只改变背景透明度 */
 .cart-item.disabled {
-    background: var(--primary);
+    background: rgba(255, 255, 255, 0.9);
 }
 
 .cart-item.disabled .item-name {
-    color: white;
+    color: var(--primary);
 }
 
 .cart-item.disabled .item-size {
-    color: white;
+    color: var(--primary);
 }
 
 .cart-item.disabled .current-price {
-    color: white;
+    color: var(--primary);
 }
 
 .cart-item.disabled .item-subtotal {
     color: white;
 }
 
-.item-checkbox input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--primary); }
+.item-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--primary);
+}
 
-.item-image { width: 140px; height: 140px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px var(--shadow-color); border: 1px solid var(--border-color); }
-.item-image img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; }
-.item-image:hover img { transform: scale(1.05); }
-.no-image { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #f1f3f5; color: var(--muted); font-size: 2.5rem; border: 2px dashed var(--border-color); }
+.item-image {
+    width: 140px;
+    height: 140px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px var(--shadow-color);
+    border: 1px solid var(--border-color);
+}
 
-.item-info { min-width: 0; padding: 0 16px; }
-.item-name { margin: 0 0 12px 0; font-size: 1rem; color: var(--primary); font-weight: 700; line-height: 1.4; }
-.item-meta { display: flex; gap: 20px; margin-bottom: 12px; font-size: 0.85rem; color: var(--muted); }
-.brand, .type { background: rgba(17, 17, 17, 0.05); padding: 6px 12px; border-radius: 20px; font-weight: 600; font-size: 0.8rem; }
-.item-size { font-size: 0.9rem; color: var(--primary); font-weight: 600; margin-bottom: 8px; }
-.item-points { margin-top: 8px; }
-.item-points .points { font-size: 0.9rem; color: var(--primary); background: rgba(17, 17, 17, 0.06); padding: 4px 10px; border-radius: 6px; font-weight: 600; }
+.item-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
 
-.item-price { text-align: center; padding: 16px; background: rgba(255, 255, 255, 0.8); border-radius: 10px; border: 1px solid var(--border-color); }
-.current-price { display: block; font-size: 1rem; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
-.original-price { display: block; font-size: 0.85rem; color: var(--muted); text-decoration: line-through; }
+.item-image:hover img {
+    transform: scale(1.05);
+}
 
-.item-quantity { display: flex; align-items: center; gap: 12px; justify-content: center; padding: 16px; background: rgba(255, 255, 255, 0.8); border-radius: 10px; border: 1px solid var(--border-color); }
-.item-quantity button { width: 30px; height: 30px; border: 2px solid var(--border-color); background: white; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; color: var(--primary); }
-.item-quantity button:hover:not(:disabled) { background: var(--primary); color: white; border-color: var(--primary); transform: scale(1.1); }
-.item-quantity button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.item-quantity input { width: 56px; height: 30px; text-align: center; border: 2px solid var(--border-color); border-radius: 8px; font-size: 0.85rem; font-weight: 600; color: var(--primary); }
-.item-quantity input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.1); }
+.no-image {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f3f5;
+    color: var(--muted);
+    font-size: 2.5rem;
+    border: 2px dashed var(--border-color);
+}
 
-.item-subtotal { text-align: center; font-size: 1rem; font-weight: 700; color: var(--primary); padding: 16px; background: rgba(255, 255, 255, 0.8); border-radius: 10px; border: 1px solid var(--border-color); }
+.item-info {
+    min-width: 0;
+    padding: 0 16px;
+}
 
-.item-actions { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
-.remove-btn, .pay-btn { padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: all 0.2s ease; text-transform: uppercase; letter-spacing: 0.5px; }
-.remove-btn { background: #fff; color: var(--primary); border: 2px solid var(--primary); box-shadow: none; }
-.remove-btn:hover { background: var(--primary); color: #fff; transform: translateY(-2px); }
-.pay-btn { background: var(--primary); color: white; box-shadow: none; border: none; }
-.pay-btn:hover:not(:disabled) { background: var(--primary-700); transform: translateY(-2px); }
-.pay-btn:disabled { background: var(--muted); cursor: not-allowed; transform: none; box-shadow: none; }
+.item-name {
+    margin: 0 0 12px 0;
+    font-size: 1rem;
+    color: var(--primary);
+    font-weight: 700;
+    line-height: 1.4;
+}
 
-.cart-footer { display: grid; grid-template-columns: 1fr 360px; gap: 32px; padding: 32px; background: linear-gradient(180deg, rgba(248,249,250,0.96), rgba(248,249,250,0.88)); border-top: 1px solid var(--border-color); }
-.totals { background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 24px 28px; border: 1px solid var(--border-color); box-shadow: 0 4px 16px var(--shadow-color); }
-.totals-line { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px dashed var(--border-color); color: var(--primary); font-size: 0.95rem; }
-.totals-line:last-child { border-bottom: none; }
-.totals-line.total { font-weight: 800; font-size: 1.1rem; color: var(--primary); border-top: 2px solid var(--primary); padding-top: 16px; margin-top: 8px; }
-.totals-line.savings { color: var(--primary); font-weight: 600; }
-.totals .amount { color: var(--primary); font-weight: 800; }
-.totals-line.points { color: var(--primary); font-weight: 600; }
-.totals .points-amount { color: var(--primary); font-weight: 700; }
+.item-meta {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 12px;
+    font-size: 0.85rem;
+    color: var(--muted);
+}
 
-.footer-actions { display: flex; flex-direction: column; align-items: stretch; gap: 16px; }
-.checkout-btn.large { padding: 18px 32px; font-size: 1.2rem; border-radius: 12px; }
+.brand,
+.type {
+    background: rgba(17, 17, 17, 0.05);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
 
-.continue-shopping-btn { display: inline-block; padding: 12px 20px; background: white; color: var(--primary); text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 0.95rem; text-align: center; transition: all 0.2s ease; border: 2px solid var(--primary); box-shadow: 0 4px 12px rgba(17, 17, 17, 0.1); }
-.continue-shopping-btn:hover { background: var(--primary); color: white; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(17, 17, 17, 0.2); }
+.item-size {
+    font-size: 0.9rem;
+    color: var(--primary);
+    font-weight: 600;
+    margin-bottom: 8px;
+}
 
-.empty-cart { text-align: center; padding: 120px 48px; background: var(--card-bg); margin: 48px; border-radius: 20px; box-shadow: 0 8px 24px var(--shadow-color); backdrop-filter: saturate(140%) blur(6px); border: 1px solid var(--border-color); }
-.empty-icon { font-size: 6rem; margin-bottom: 24px; opacity: 0.7; }
-.empty-cart h3 { margin: 0 0 16px 0; color: var(--primary); font-size: 2rem; font-weight: 700; }
-.empty-cart p { margin: 0 0 32px 0; color: var(--muted); font-size: 1.2rem; }
+.item-points {
+    margin-top: 8px;
+}
+
+.item-points .points {
+    font-size: 0.9rem;
+    color: var(--primary);
+    background: rgba(17, 17, 17, 0.06);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+.item-price {
+    text-align: center;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.current-price {
+    display: block;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 4px;
+}
+
+.original-price {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-decoration: line-through;
+}
+
+.item-quantity {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.item-quantity button {
+    width: 30px;
+    height: 30px;
+    border: 2px solid var(--border-color);
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    color: var(--primary);
+}
+
+.item-quantity button:hover:not(:disabled) {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    transform: scale(1.1);
+}
+
+.item-quantity button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.item-quantity input {
+    width: 56px;
+    height: 30px;
+    text-align: center;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.item-quantity input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.1);
+}
+
+.item-subtotal {
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary);
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.item-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+}
+
+.remove-btn,
+.pay-btn {
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.remove-btn {
+    background: #fff;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    box-shadow: none;
+}
+
+.remove-btn:hover {
+    background: var(--primary);
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.pay-btn {
+    background: var(--primary);
+    color: white;
+    box-shadow: none;
+    border: none;
+}
+
+.pay-btn:hover:not(:disabled) {
+    background: var(--primary-700);
+    transform: translateY(-2px);
+}
+
+.pay-btn:disabled {
+    background: var(--muted);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.cart-footer {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 32px;
+    padding: 32px;
+    background: linear-gradient(180deg, rgba(248, 249, 250, 0.96), rgba(248, 249, 250, 0.88));
+    border-top: 1px solid var(--border-color);
+}
+
+.totals {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 16px;
+    padding: 24px 28px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 16px var(--shadow-color);
+}
+
+.totals-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px dashed var(--border-color);
+    color: var(--primary);
+    font-size: 0.95rem;
+}
+
+.totals-line:last-child {
+    border-bottom: none;
+}
+
+.totals-line.total {
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: var(--primary);
+    border-top: 2px solid var(--primary);
+    padding-top: 16px;
+    margin-top: 8px;
+}
+
+.totals-line.savings {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.totals .amount {
+    color: var(--primary);
+    font-weight: 800;
+}
+
+.totals-line.points {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.totals .points-amount {
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.footer-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+}
+
+.checkout-btn.large {
+    padding: 18px 32px;
+    font-size: 1.2rem;
+    border-radius: 12px;
+}
+
+.continue-shopping-btn {
+    display: inline-block;
+    padding: 12px 20px;
+    background: white;
+    color: var(--primary);
+    text-decoration: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-align: center;
+    transition: all 0.2s ease;
+    border: 2px solid var(--primary);
+    box-shadow: 0 4px 12px rgba(17, 17, 17, 0.1);
+}
+
+.continue-shopping-btn:hover {
+    background: var(--primary);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(17, 17, 17, 0.2);
+}
+
+.empty-cart {
+    text-align: center;
+    padding: 120px 48px;
+    background: var(--card-bg);
+    margin: 48px;
+    border-radius: 20px;
+    box-shadow: 0 8px 24px var(--shadow-color);
+    backdrop-filter: saturate(140%) blur(6px);
+    border: 1px solid var(--border-color);
+}
+
+.empty-icon {
+    font-size: 6rem;
+    margin-bottom: 24px;
+    opacity: 0.7;
+}
+
+.empty-cart h3 {
+    margin: 0 0 16px 0;
+    color: var(--primary);
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.empty-cart p {
+    margin: 0 0 32px 0;
+    color: var(--muted);
+    font-size: 1.2rem;
+}
 
 /* 响应式设计（保持不变） */
-@media (max-width: 1400px) { .cart-header { padding: 24px 32px; } .header-content { max-width: 1200px; } .cart-content { margin: 0 32px 32px 32px; } .cart-item { grid-template-columns: 50px 120px 1fr 120px 140px 120px 120px; gap: 16px; padding: 24px 28px; } .item-image { width: 120px; height: 120px; } }
-@media (max-width: 1200px) { .cart-item { grid-template-columns: 50px 100px 1fr 100px 120px 100px 100px; gap: 12px; padding: 20px 24px; } .item-image { width: 100px; height: 100px; } .cart-footer { grid-template-columns: 1fr 320px; gap: 24px; padding: 24px; } }
-@media (max-width: 768px) { .cart-header { padding: 20px 24px; } .header-content { flex-direction: column; gap: 16px; text-align: center; } .cart-header h1 { font-size: 2rem; } .cart-content { margin: 0 16px 16px 16px; } .cart-item { grid-template-columns: 1fr; gap: 20px; padding: 24px; text-align: center; } .item-image { width: 140px; height: 140px; margin: 0 auto; } .item-quantity { justify-content: center; } .item-actions { flex-direction: row; justify-content: center; } .batch-actions { flex-direction: column; gap: 20px; text-align: center; } .cart-footer { grid-template-columns: 1fr; gap: 20px; padding: 20px; } .empty-cart { margin: 16px; padding: 80px 24px; } }
+@media (max-width: 1400px) {
+    .cart-header {
+        padding: 24px 32px;
+    }
+
+    .header-content {
+        max-width: 1200px;
+    }
+
+    .cart-content {
+        margin: 0 32px 32px 32px;
+    }
+
+    .cart-item {
+        grid-template-columns: 50px 120px 1fr 120px 140px 120px 120px;
+        gap: 16px;
+        padding: 24px 28px;
+    }
+
+    .item-image {
+        width: 120px;
+        height: 120px;
+    }
+}
+
+@media (max-width: 1200px) {
+    .cart-item {
+        grid-template-columns: 50px 100px 1fr 100px 120px 100px 100px;
+        gap: 12px;
+        padding: 20px 24px;
+    }
+
+    .item-image {
+        width: 100px;
+        height: 100px;
+    }
+
+    .cart-footer {
+        grid-template-columns: 1fr 320px;
+        gap: 24px;
+        padding: 24px;
+    }
+}
+
+@media (max-width: 768px) {
+    .cart-header {
+        padding: 20px 24px;
+    }
+
+    .header-content {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+    }
+
+    .cart-header h1 {
+        font-size: 2rem;
+    }
+
+    .cart-content {
+        margin: 0 16px 16px 16px;
+    }
+
+    .cart-item {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        padding: 24px;
+        text-align: center;
+    }
+
+    .item-image {
+        width: 140px;
+        height: 140px;
+        margin: 0 auto;
+    }
+
+    .item-quantity {
+        justify-content: center;
+    }
+
+    .item-actions {
+        flex-direction: row;
+        justify-content: center;
+    }
+
+    .batch-actions {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+    }
+
+    .cart-footer {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        padding: 20px;
+    }
+
+    .empty-cart {
+        margin: 16px;
+        padding: 80px 24px;
+    }
+}
 </style>
-
-
-

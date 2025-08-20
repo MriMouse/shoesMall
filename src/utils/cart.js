@@ -109,15 +109,23 @@ class CartManager {
     // 从购物车移除商品
     async removeFromCart(orderId, shoeId) {
         try {
+            console.log('调用删除API:', { orderId, shoeId })
             const response = await CartAPI.removeFromCart(orderId, shoeId)
+            console.log('删除API响应:', response.data)
+            
             if (response.data?.code === 200) {
+                console.log('删除成功，更新购物车数量')
                 await this.loadCartItemCount()
                 return true
+            } else {
+                console.error('删除失败，错误码:', response.data?.code, '错误信息:', response.data?.msg)
+                return false
             }
         } catch (error) {
             console.error('从购物车移除商品失败:', error)
+            console.error('错误详情:', error.response?.data)
+            return false
         }
-        return false
     }
 
     // 加入购物车 - 核心功能
