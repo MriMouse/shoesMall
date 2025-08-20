@@ -3,7 +3,12 @@
         <!-- 购物车头部 -->
         <div class="cart-header">
             <div class="header-content">
-                <h1>我的购物车</h1>
+                <div class="header-left">
+                    <button @click="goHome" class="back-home-btn" type="button">
+                        返回主页
+                    </button>
+                    <h1>我的购物车</h1>
+                </div>
                 <div class="cart-summary">
                     <span>共 {{ cartItems.length }} 件商品</span>
                     <button @click="clearAll" class="clear-all-btn">清空购物车</button>
@@ -644,6 +649,11 @@ export default {
             }
         },
 
+        // 返回主页
+        goHome() {
+            this.$router.push('/home')
+        },
+        
         // 继续购物
         goShopping() {
             this.$router.push('/')
@@ -828,6 +838,47 @@ export default {
     justify-content: space-between;
     align-items: center;
 }
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-shrink: 0;
+}
+
+.back-home-btn {
+    padding: 12px 20px;
+    background: #ffffff !important;
+    color: #111 !important;
+    border: 2px solid #111 !important;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    display: inline-block !important;
+    text-decoration: none;
+    min-width: 100px;
+    text-align: center;
+    position: relative;
+    z-index: 10;
+}
+
+.back-home-btn:hover {
+    background: #111 !important;
+    color: #ffffff !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* 确保按钮在所有情况下都可见 */
+.back-home-btn:focus {
+    outline: 3px solid #007bff;
+    outline-offset: 2px;
+}
+
+
 
 .cart-header h1 {
     margin: 0;
@@ -1436,6 +1487,12 @@ export default {
         flex-direction: column;
         gap: 16px;
         text-align: center;
+    }
+
+    .header-left {
+        flex-direction: column;
+        gap: 16px;
+        align-items: center;
     }
 
     .cart-header h1 {
