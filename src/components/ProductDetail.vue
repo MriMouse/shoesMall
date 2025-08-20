@@ -54,6 +54,79 @@
                                 class="thumbnail-image">
                         </div>
                     </div>
+
+                    <!-- 评论展示区域 -->
+                    <div class="comments-preview-section">
+                        <div class="comments-header">
+                            <h3 class="comments-title">用户评价</h3>
+                            <div class="rating-summary">
+                                <span class="average-rating">{{ averageRating.toFixed(1) }}</span>
+                                <div class="stars">
+                                    <span 
+                                        v-for="i in 5" 
+                                        :key="i" 
+                                        class="star"
+                                        :class="{ 'filled': i <= Math.round(averageRating) }"
+                                    >
+                                        ★
+                                    </span>
+                                </div>
+                                <span class="comment-count">{{ comments.length }} 条评价</span>
+                            </div>
+                        </div>
+
+                        <!-- 评论列表预览 -->
+                        <div v-if="comments.length > 0" class="comments-preview">
+                            <div v-for="(comment) in previewComments" :key="`${comment.userId}-${comment.shoeId}`" 
+                                 class="comment-preview-item">
+                                <div class="comment-user-info">
+                                    <div class="user-avatar">
+                                        <img v-if="getUserAvatar(comment.userId)" 
+                                             :src="getUserAvatar(comment.userId)" 
+                                             :alt="getUserName(comment.userId)"
+                                             class="avatar-image">
+                                        <span v-else>👤</span>
+                                    </div>
+                                    <div class="user-details">
+                                        <div class="username">{{ getUserName(comment.userId) }}</div>
+                                        <div class="comment-rating">
+                                            <span 
+                                                v-for="i in 5" 
+                                                :key="i" 
+                                                class="star-small"
+                                                :class="{ 'filled': i <= comment.rating }"
+                                            >
+                                                ★
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="comment-content-preview">
+                                    {{ comment.content.length > 50 ? comment.content.substring(0, 50) + '...' : comment.content }}
+                                </div>
+                                <div class="comment-time">{{ formatCommentTime(comment.commentTime) }}</div>
+                            </div>
+                        </div>
+
+                        <!-- 无评论状态 -->
+                        <div v-else class="no-comments">
+                            <div class="no-comments-icon">💬</div>
+                            <p>暂无评价，快来发表第一条评价吧！</p>
+                        </div>
+
+                        <!-- 评论操作区域 -->
+                        <div class="comment-actions">
+                            <!-- 查看全部评论按钮 -->
+                            <div class="view-all-comments">
+                                <router-link 
+                                    :to="{ name: 'ViewComments', params: { shoeId: product.shoeId } }" 
+                                    class="view-all-btn"
+                                >
+                                    查看全部评价 →
+                                </router-link>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 右侧产品信息区域 -->
@@ -226,7 +299,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
 import BasicToast from '@/views/BasicToast.vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
@@ -244,6 +317,11 @@ const product = ref(null)
 const loading = ref(true)
 const error = ref('')
 const inventoryData = ref(null)
+
+// 评论相关数据
+const comments = ref([])
+const commentsLoading = ref(false)
+const userInfoMap = ref({}) // 存储用户信息映射
 
 // 图片相关
 const currentImageIndex = ref(0)
@@ -300,6 +378,18 @@ const maxQuantity = computed(() => {
 
     const selectedInventory = inventoryData.value.find(item => item.sizeId === selectedSize.value)
     return selectedInventory ? Math.min(selectedInventory.inventoryNumber, 99) : 99
+})
+
+// 评论相关计算属性
+const averageRating = computed(() => {
+    if (comments.value.length === 0) return 0
+    const total = comments.value.reduce((sum, comment) => sum + comment.rating, 0)
+    return total / comments.value.length
+})
+
+const previewComments = computed(() => {
+    // 只显示前3条评论作为预览
+    return comments.value.slice(0, 3)
 })
 
 // 获取鞋子性别文本
@@ -361,6 +451,8 @@ const loadProductDetail = async () => {
 
             // 获取库存信息
             await loadInventoryData(shoeId)
+            // 加载评论数据
+            await loadComments(shoeId)
         } else {
             error.value = response.data?.message || '获取产品详情失败'
         }
@@ -405,6 +497,51 @@ const loadInventoryData = async (shoeId) => {
     } catch (err) {
         console.error('获取库存信息失败:', err)
         inventoryData.value = []
+    }
+}
+
+// 加载评论数据
+const loadComments = async (shoeId) => {
+    try {
+        commentsLoading.value = true
+        const response = await axios.post('/api/comment/getByShoeId', 
+            `shoeId=${shoeId}`,
+            { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+        )
+        
+        if (response.data && response.data.code === 200 && response.data.data) {
+            comments.value = response.data.data
+            
+            // 逐个加载用户信息，因为后端只支持单个用户ID查询
+            const userIds = [...new Set(comments.value.map(c => c.userId))]
+            if (userIds.length > 0) {
+                try {
+                    // 逐个查询用户信息
+                    for (const userId of userIds) {
+                        try {
+                            const userResponse = await axios.post('/api/users/getUsersByIds',
+                                `id=${userId}`,
+                                { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+                            )
+                            if (userResponse.data && userResponse.data.code === 200 && userResponse.data.data) {
+                                userInfoMap.value[userId] = userResponse.data.data
+                            }
+                        } catch (userError) {
+                            console.warn(`获取用户${userId}信息失败:`, userError)
+                        }
+                    }
+                } catch (userError) {
+                    console.warn('获取用户信息失败:', userError)
+                }
+            }
+        } else {
+            comments.value = []
+        }
+    } catch (err) {
+        console.error('获取评论失败:', err)
+        comments.value = []
+    } finally {
+        commentsLoading.value = false
     }
 }
 
@@ -543,6 +680,32 @@ const formatDate = (dateString) => {
     }
 }
 
+// 格式化评论时间
+const formatCommentTime = (timeString) => {
+    if (!timeString) return '未知时间'
+    try {
+        const date = new Date(timeString)
+        return date.toLocaleDateString('zh-CN')
+    } catch (error) {
+        return timeString
+    }
+}
+
+// 获取用户头像
+const getUserAvatar = (userId) => {
+    const user = userInfoMap.value[userId]
+    if (user?.avatarPath) {
+        return `/api/shoeImg/getImage/${user.avatarPath}`
+    }
+    return null
+}
+
+// 获取用户名
+const getUserName = (userId) => {
+    const user = userInfoMap.value[userId]
+    return user?.username || `用户${userId}`
+}
+
 // 生命周期
 onMounted(() => {
     loadProductDetail()
@@ -551,6 +714,14 @@ onMounted(() => {
     // 进入详情页记录一次点击
     recordClickOnEnter()
     updateLoginState()
+    
+    // 监听用户登录状态变化
+    window.addEventListener('user-login-change', updateLoginState)
+})
+
+// 组件卸载时清理事件监听
+onUnmounted(() => {
+    window.removeEventListener('user-login-change', updateLoginState)
 })
 
 // 进入详情页记录历史（带本地短期阻止，避免刚删又写回）
@@ -1074,6 +1245,26 @@ async function recordClickOnEnter() {
     font-weight: 600;
 }
 
+.rating-display {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.detail-stars {
+    display: flex;
+    gap: 2px;
+}
+
+.star-detail {
+    font-size: 1rem;
+    color: #ccc;
+}
+
+.star-detail.filled {
+    color: #e74c3c;
+}
+
 .description-section {
     border-top: 1px solid #eee;
     padding-top: 30px;
@@ -1090,6 +1281,173 @@ async function recordClickOnEnter() {
     line-height: 1.8;
     color: var(--color-subtext);
     font-size: 1rem;
+}
+
+/* 评论展示区域 */
+.comments-preview-section {
+    margin-top: 40px;
+    padding-top: 30px;
+    border-top: 1px solid #eee;
+}
+
+.comments-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.comments-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--color-text);
+    margin: 0;
+}
+
+.rating-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.average-rating {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #e74c3c;
+}
+
+.stars {
+    display: flex;
+    gap: 3px;
+}
+
+.star {
+    font-size: 1.2rem;
+    color: #ccc;
+}
+
+.star.filled {
+    color: #e74c3c;
+}
+
+.comment-count {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.comments-preview {
+    margin-bottom: 20px;
+}
+
+.comment-preview-item {
+    background: var(--color-bg-soft);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 1px solid #eee;
+}
+
+.comment-user-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.user-avatar {
+    font-size: 1.5rem;
+    margin-right: 10px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0f0f0;
+}
+
+.avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.user-details {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.username {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.comment-rating {
+    display: flex;
+    gap: 3px;
+}
+
+.star-small {
+    font-size: 0.8rem;
+    color: #ccc;
+}
+
+.star-small.filled {
+    color: #e74c3c;
+}
+
+.comment-content-preview {
+    font-size: 0.95rem;
+    color: var(--color-subtext);
+    line-height: 1.6;
+    margin-bottom: 10px;
+}
+
+.comment-time {
+    font-size: 0.8rem;
+    color: #999;
+    text-align: right;
+}
+
+.no-comments {
+    text-align: center;
+    padding: 40px 0;
+    color: #999;
+}
+
+.no-comments-icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+}
+
+/* 评论操作区域 */
+.comment-actions {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.view-all-comments {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.view-all-btn {
+    display: inline-block;
+    padding: 10px 20px;
+    background: #f2f2f2;
+    color: #333;
+    border-radius: var(--btn-radius);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: background .15s ease, color .15s ease;
+}
+
+.view-all-btn:hover {
+    background: #e0e0e0;
+    color: #000;
 }
 
 /* 响应式设计 */
@@ -1117,6 +1475,28 @@ async function recordClickOnEnter() {
 
     .size-options {
         justify-content: center;
+    }
+
+    /* 评论区域响应式调整 */
+    .comments-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .rating-summary {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .comment-preview-item {
+        padding: 12px;
+    }
+
+    .comment-user-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
     }
 }
 

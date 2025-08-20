@@ -446,3 +446,107 @@ export const PointsAPI = {
     return api.post("/points/adjust", params);
   },
 };
+
+// 新增：评论相关API
+export const CommentAPI = {
+  // 添加评论
+  addComment({ userId, shoeId, content, rating, commentTime }) {
+    const params = new URLSearchParams();
+    params.append("userId", userId);
+    params.append("shoeId", shoeId);
+    params.append("content", content);
+    params.append("rating", rating);
+    if (commentTime) params.append("commentTime", commentTime);
+    return api.post("/comment/add", params);
+  },
+
+  // 删除评论
+  deleteComment({ userId, shoeId }) {
+    const params = new URLSearchParams();
+    params.append("userId", userId);
+    params.append("shoeId", shoeId);
+    return api.post("/comment/delete", params);
+  },
+
+  // 更新评论
+  updateComment({ userId, shoeId, content, rating, commentTime }) {
+    const params = new URLSearchParams();
+    params.append("userId", userId);
+    params.append("shoeId", shoeId);
+    params.append("content", content);
+    params.append("rating", rating);
+    if (commentTime) params.append("commentTime", commentTime);
+    return api.post("/comment/update", params);
+  },
+
+  // 根据用户ID和鞋子ID获取评论
+  getComment({ userId, shoeId }) {
+    const params = new URLSearchParams();
+    params.append("userId", userId);
+    params.append("shoeId", shoeId);
+    return api.post("/comment/get", params);
+  },
+
+  // 获取所有评论
+  getAllComments() {
+    return api.post("/comment/getAll");
+  },
+
+  // 分页获取评论
+  getCommentPage({ pageNum = 1, pageSize = 10 }) {
+    const params = new URLSearchParams();
+    params.append("pageNum", pageNum);
+    params.append("pageSize", pageSize);
+    return api.post("/comment/getPage", params);
+  },
+
+  // 根据用户ID获取评论
+  getCommentsByUserId(userId) {
+    const params = new URLSearchParams();
+    params.append("userId", userId);
+    return api.post("/comment/getByUserId", params);
+  },
+
+  // 根据鞋子ID获取评论
+  getByShoeId(shoeId) {
+    const params = new URLSearchParams();
+    params.append("shoeId", shoeId);
+    return api.post("/comment/getByShoeId", params);
+  },
+
+  // 根据评分获取评论
+  getCommentsByRating(rating) {
+    const params = new URLSearchParams();
+    params.append("rating", rating);
+    return api.post("/comment/getByRating", params);
+  },
+
+  // 根据评分范围获取评论
+  getCommentsByRatingRange({ minRating, maxRating }) {
+    const params = new URLSearchParams();
+    params.append("minRating", minRating);
+    params.append("maxRating", maxRating);
+    return api.post("/comment/getByRatingRange", params);
+  },
+
+  // 获取鞋子的平均评分
+  getAverageRatingByShoeId(shoeId) {
+    const params = new URLSearchParams();
+    params.append("shoeId", shoeId);
+    return api.post("/comment/getAverageRating", params);
+  },
+
+  // 获取用户评论数量
+  getUserCommentCount(userId) {
+    const params = new URLSearchParams();
+    params.append("userId", userId);
+    return api.post("/comment/getUserCommentCount", params);
+  },
+
+  // 获取鞋子评论数量
+  getShoeCommentCount(shoeId) {
+    const params = new URLSearchParams();
+    params.append("shoeId", shoeId);
+    return api.post("/comment/getShoeCommentCount", params);
+  },
+};

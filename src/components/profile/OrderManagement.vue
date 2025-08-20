@@ -133,11 +133,17 @@
                   <button @click="requestRefund(order)" class="btn btn-warning btn-compact">
                     申请退款
                   </button>
+                  <button @click="goToComment(order)" class="btn btn-outline btn-compact">
+                    评论
+                  </button>
                 </div>
                 
                 <div v-else-if="order.status === '3'" class="action-buttons">
                   <button @click="requestRefund(order)" class="btn btn-warning btn-compact">
                     申请退款
+                  </button>
+                  <button @click="goToComment(order)" class="btn btn-outline btn-compact">
+                    评论
                   </button>
                   <button @click="buyAgain(order)" class="btn btn-outline btn-compact">
                     再次购买
@@ -145,9 +151,9 @@
                 </div>
                 
                 <div v-else-if="['11','12','13'].includes(order.status)" class="action-buttons">
-                  <button @click="viewRefundStatus(order)" class="btn btn-outline btn-compact">
-                    查看退款状态
-                  </button>
+                  <div class="refund-status-display">
+                    <span class="refund-status-text">{{ getRefundStatusText(order.status) }}</span>
+                  </div>
                 </div>
                 
                 <div v-if="order.status === '10'" class="action-buttons">
@@ -652,11 +658,18 @@ export default {
       }
     },
     
-    // 新增：查看退款状态
-    viewRefundStatus(order) {
-      const originalStatus = String(Number(order.status) - 10)
-      const originalStatusText = this.getOrderStatus(originalStatus)
-      showToast(`退款状态：订单从“${originalStatusText}”申请退款，正在处理中，预计3-5个工作日完成`)
+    // 获取退款状态显示文本
+    getRefundStatusText(status) {
+      switch (status) {
+        case '11':
+          return '退款审核中'
+        case '12':
+          return '退款处理中'
+        case '13':
+          return '退款到账中'
+        default:
+          return '退款处理中'
+      }
     },
     
     async submitReturnRequest() {
@@ -705,6 +718,31 @@ export default {
     buyAgain() {
       // 跳转到商品页面
       this.$router.push('/home')
+    },
+    
+    // 新增：跳转到评论页面
+    goToComment(order) {
+      // 获取订单中的第一个商品ID用于评论
+      let shoeId = null;
+      if (order.products && order.products.length > 0) {
+        shoeId = order.products[0].id;
+      }
+      
+      if (!shoeId) {
+        this.showToast('无法获取商品信息，请重试');
+        return;
+      }
+      
+      // 跳转到专门的评论页面，传递商品ID
+      this.$router.push({
+        name: 'ProductComment',
+        params: { shoeId: shoeId },
+        query: { 
+          orderId: order.orderId,
+          orderNumber: order.orderNumber,
+          productName: order.products[0]?.name || '商品'
+        }
+      });
     },
     
     // 新增：批量操作订单状态
@@ -1695,4 +1733,192 @@ export default {
 .confirm-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: #111; }
 .confirm-message { font-size: 14px; color: #444; line-height: 1.6; margin-bottom: 14px; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+/* 模态框样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* 订单详情样式 */
+.order-detail-content {
+  max-width: 600px;
+}
+
+.detail-section {
+  margin-bottom: 24px;
+}
+
+.detail-section h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111;
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 8px;
+}
+
+.detail-row {
+  display: flex;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.detail-row .label {
+  min-width: 80px;
+  font-weight: 500;
+  color: #666;
+  margin-right: 12px;
+}
+
+.detail-row .value {
+  color: #111;
+  flex: 1;
+}
+
+.detail-row .amount {
+  font-weight: 600;
+  color: #e74c3c;
+  font-size: 18px;
+}
+
+/* 商品详情样式 */
+.product-detail {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.product-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+.product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.no-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  font-size: 24px;
+  color: #999;
+}
+
+.product-info {
+  flex: 1;
+}
+
+.product-info h5 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111;
+}
+
+.product-info p {
+  margin: 0 0 4px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.product-info .price {
+  color: #e74c3c;
+  font-weight: 600;
+  font-size: 16px;
+  margin-top: 8px;
+}
+
+/* 退款状态显示样式 */
+.refund-status-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 6px;
+  min-width: 120px;
+}
+
+.refund-status-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #856404;
+  text-align: center;
+}
 </style>
