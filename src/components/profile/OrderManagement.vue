@@ -10,8 +10,8 @@
           <option value="2">已发货</option>
           <option value="3">已完成</option>
           <option value="4">已取消</option>
-          <option value="5">退货中</option>
-          <option value="6">已退货</option>
+          <option value="5">已退货</option>
+          <option value="6">已取消</option>
           <option value="11">已支付-退款中</option>
           <option value="12">已发货-退款中</option>
           <option value="13">已完成-退款中</option>
@@ -34,7 +34,12 @@
 
     <div v-else class="orders-list">
       <div v-for="order in visibleOrders" :key="order.orderId" class="order-item">
-        
+        <!-- 订单选择框 -->
+        <div class="order-select">
+          <input type="checkbox" :value="order.orderId" v-model="order.selected" @change="updateSelection"
+            class="order-checkbox">
+        </div>
+
         <div class="order-header-info">
           <div class="order-number">
             <span class="label">订单号：</span>
@@ -58,12 +63,15 @@
                 </div>
                 <div class="product-info mini">
                   <div class="product-name one-line">{{ product.name || '' }}</div>
-                  <div class="product-meta">尺码：{{ product.size || '' }} · 颜色：{{ product.color || '' }} · 数量：{{ product.quantity || '' }}</div>
+                  <div class="product-meta">尺码：{{ product.size || '' }} · 颜色：{{ product.color || '' }} · 数量：{{
+                    product.quantity || '' }}</div>
                 </div>
               </div>
             </div>
             <div v-else class="product-item compact">
-              <div class="product-image small"><div class="no-image">📦</div></div>
+              <div class="product-image small">
+                <div class="no-image">📦</div>
+              </div>
               <div class="product-info mini">
                 <div class="product-name one-line">商品信息加载中...</div>
                 <div class="product-price">¥{{ (order.amount || 0).toFixed(2) }}</div>
@@ -96,59 +104,49 @@
                   <span class="value">{{ order.phone || '' }}</span>
                 </div>
               </div>
- 
+
               <div class="order-actions">
-                 <button @click="viewOrderDetail(order)" class="btn btn-outline btn-compact">
-                   查看详情
-                 </button>
-                 
-                 <!-- 根据订单状态显示不同的操作按钮 -->
-                 <div v-if="['0'].includes(order.status)" class="action-buttons">
-                   <!-- 待支付订单只能支付或取消 -->
-                   <button @click="payOrder(order)" class="btn btn-primary btn-compact">
-                     立即支付
-                   </button>
-                   <button @click="cancelOrder(order)" class="btn btn-secondary btn-compact">
-                     取消订单
-                   </button>
-                 </div>
-                 
-                 <div v-else-if="['1','2','3'].includes(order.status)" class="action-buttons">
-                   <!-- 已支付、已发货、已完成的订单可以申请退款和评论 -->
-                   <button @click="requestRefund(order)" class="btn btn-warning btn-compact">
-                     申请退款
-                   </button>
-                   <button @click="goToComment(order)" class="btn btn-outline btn-compact">
-                     评论
-                   </button>
-                   <button v-if="order.status === '3'" @click="buyAgain(order)" class="btn btn-outline btn-compact">
-                     再次购买
-                   </button>
-                 </div>
-                 
-                 <div v-else-if="['11','12','13'].includes(order.status)" class="action-buttons">
-                   <!-- 退款中的订单只能显示退款状态 -->
-                   <div class="refund-status-display">
-                     <span class="refund-status-text">{{ getRefundStatusText(order.status) }}</span>
-                   </div>
-                 </div>
-                 
-                 <div v-else-if="['4','5','6'].includes(order.status)" class="action-buttons">
-                   <!-- 已取消、退货中、已退货的订单可以评论 -->
-                   <button @click="goToComment(order)" class="btn btn-outline btn-compact">
-                     评论
-                   </button>
-                 </div>
-                 
-                 <div v-if="order.status === '10'" class="action-buttons">
-                   <button @click="payOrder(order)" class="btn btn-primary">
-                     结算购物车
-                   </button>
-                   <button @click="cancelOrder(order)" class="btn btn-secondary">
-                     清空购物车
-                   </button>
-                 </div>
-               </div>
+                <button @click="viewOrderDetail(order)" class="btn btn-outline btn-compact">
+                  查看详情
+                </button>
+
+                <!-- 根据订单状态显示不同的操作按钮 -->
+                <div v-if="['0', '1', '2'].includes(order.status)" class="action-buttons">
+                  <button @click="requestRefund(order)" class="btn btn-warning btn-compact">
+                    申请退款
+                  </button>
+                  <button @click="goToComment(order)" class="btn btn-outline btn-compact">
+                    评论
+                  </button>
+                </div>
+
+                <div v-else-if="order.status === '3'" class="action-buttons">
+                  <button @click="requestRefund(order)" class="btn btn-warning btn-compact">
+                    申请退款
+                  </button>
+                  <button @click="goToComment(order)" class="btn btn-outline btn-compact">
+                    评论
+                  </button>
+                  <button @click="buyAgain(order)" class="btn btn-outline btn-compact">
+                    再次购买
+                  </button>
+                </div>
+
+                <div v-else-if="['11', '12', '13'].includes(order.status)" class="action-buttons">
+                  <div class="refund-status-display">
+                    <span class="refund-status-text">{{ getRefundStatusText(order.status) }}</span>
+                  </div>
+                </div>
+
+                <div v-if="order.status === '10'" class="action-buttons">
+                  <button @click="payOrder(order)" class="btn btn-primary">
+                    结算购物车
+                  </button>
+                  <button @click="cancelOrder(order)" class="btn btn-secondary">
+                    清空购物车
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -160,7 +158,8 @@
       <div class="confirm-dialog">
         <div class="confirm-title">确认操作</div>
         <div class="confirm-message">
-          确定要申请退款吗？订单状态将从“{{ getOrderStatus(refundTarget?.status) }}”变为“{{ getOrderStatus(String(Number(refundTarget?.status) + 10)) }}”。
+          确定要申请退款吗？订单状态将从“{{ getOrderStatus(refundTarget?.status) }}”变为“{{
+            getOrderStatus(String(Number(refundTarget?.status) + 10)) }}”。
         </div>
         <div class="confirm-actions">
           <button class="btn btn-secondary btn-compact" @click="cancelRefund">取消</button>
@@ -206,12 +205,7 @@
               <h4>商品信息</h4>
               <div v-for="product in selectedOrder.products" :key="product.id" class="product-detail">
                 <div class="product-image">
-                  <img 
-                    v-if="product.image" 
-                    :src="product.image" 
-                    :alt="product.name" 
-                    @error="handleImageError" 
-                  />
+                  <img v-if="product.image" :src="product.image" :alt="product.name" @error="handleImageError" />
                   <div v-else class="no-image">📷</div>
                 </div>
                 <div class="product-info">
@@ -266,11 +260,11 @@
             </div>
             <div class="form-group">
               <label>详细说明</label>
-              <textarea v-model="returnDescription" class="form-textarea" 
-                        placeholder="请详细描述退货原因..."></textarea>
+              <textarea v-model="returnDescription" class="form-textarea" placeholder="请详细描述退货原因..."></textarea>
             </div>
             <div class="form-actions">
-              <button @click="submitReturnRequest" class="btn btn-primary" :disabled="!returnReason || !returnDescription">
+              <button @click="submitReturnRequest" class="btn btn-primary"
+                :disabled="!returnReason || !returnDescription">
                 {{ submittingReturn ? '提交中...' : '提交申请' }}
               </button>
               <button @click="closeReturnModal" class="btn btn-secondary">取消</button>
@@ -346,14 +340,14 @@ export default {
         this.loading = true
         const userId = await userManager.getUserId()
         console.log('当前用户ID:', userId)
-        
+
         if (!userId) {
           console.error('用户ID为空，无法加载订单')
           this.orders = []
           this.filteredOrders = []
           return
         }
-        
+
         // 尝试获取包含完整信息的订单数据
         console.log('正在获取订单数据...')
         let response;
@@ -367,11 +361,11 @@ export default {
           response = await OrderAPI.getAll();
           console.log('基础订单API响应:', response);
         }
-        
+
         if (response.data?.code === 200 && response.data.data) {
           const allOrders = response.data.data
           console.log('所有订单:', allOrders)
-          
+
           // 过滤当前用户的订单
           this.orders = await Promise.all(allOrders
             .filter(order => order.userId === userId)
@@ -386,26 +380,26 @@ export default {
                 phone: order.phone,
                 receiverPhone: order.receiverPhone
               })
-              
+
               // 获取订单的商品信息
               const products = await this.getOrderProducts(order.orderId)
               console.log('订单商品信息:', order.orderId, products)
-              
+
               // 获取订单的地址信息
               const addressInfo = await this.getOrderAddress(order.addressId)
               console.log('订单地址信息:', order.orderId, addressInfo)
-              
+
               // 计算订单总金额
               const totalAmount = products.reduce((sum, product) => {
                 return sum + (product.price * product.quantity)
               }, 0)
-              
+
               // 尝试从订单数据本身获取地址信息作为备选
               const fallbackAddressInfo = this.extractOrderInfo(order)
               console.log('订单备选地址信息:', order.orderId, fallbackAddressInfo)
-              
+
               const processedOrder = {
-                ...order, 
+                ...order,
                 selected: false,
                 // 根据后端真实数据结构处理字段
                 orderNumber: order.orderNumber || `ORD${order.orderId}`,
@@ -421,13 +415,13 @@ export default {
                 receiver: addressInfo.receiver || fallbackAddressInfo.receiver || '',
                 phone: addressInfo.phone || fallbackAddressInfo.phone || ''
               }
-              
+
               console.log('处理后的订单:', processedOrder.orderId, '金额:', processedOrder.amount, '商品数量:', processedOrder.products.length)
               return processedOrder
             }))
-          
+
           console.log('处理后的用户订单:', this.orders)
-          
+
           if (this.orders.length === 0) {
             console.log('用户没有订单')
             this.filteredOrders = []
@@ -464,7 +458,7 @@ export default {
         this.loading = false
       }
     },
-    
+
     filterOrders() {
       if (!this.statusFilter) {
         this.filteredOrders = [...this.orders]
@@ -479,7 +473,7 @@ export default {
         return dateA - dateB
       })
     },
-    
+
     getOrderStatus(status) {
       const statusMap = {
         '0': '待支付',
@@ -487,8 +481,8 @@ export default {
         '2': '已发货',
         '3': '已完成',
         '4': '已取消',
-        '5': '退货中',
-        '6': '已退货',
+        '5': '已退货',
+        '6': '已取消',
         '10': '购物车', // 购物车状态
         '11': '已支付-退款中',
         '12': '已发货-退款中',
@@ -496,7 +490,7 @@ export default {
       }
       return statusMap[status] || '未知状态'
     },
-    
+
     getStatusClass(status) {
       const classMap = {
         '0': 'status-pending',
@@ -513,17 +507,17 @@ export default {
       }
       return classMap[status] || 'status-unknown'
     },
-    
+
     formatDate(dateString) {
       if (!dateString) return '未知'
       return new Date(dateString).toLocaleDateString('zh-CN')
     },
-    
+
     viewOrderDetail(order) {
       this.selectedOrder = order
       this.showOrderDetailModal = true
     },
-    
+
     closeOrderDetailModal() {
       this.showOrderDetailModal = false
       this.selectedOrder = null
@@ -535,7 +529,7 @@ export default {
       this.returnReason = ''
       this.returnDescription = ''
     },
-    
+
     async payOrder(order) {
       try {
         // 跳转到订单确认页面进行支付
@@ -553,7 +547,7 @@ export default {
         alert('跳转失败，请重试')
       }
     },
-    
+
     async cancelOrder(order) {
       if (confirm('确定要取消这个订单吗？')) {
         try {
@@ -566,7 +560,7 @@ export default {
             // 其他状态取消后变为已取消
             newStatus = '4';
           }
-          
+
           const updatedOrder = { ...order, status: newStatus }
           const response = await OrderAPI.updateOrder(updatedOrder)
           if (response.data?.code === 200) {
@@ -583,7 +577,7 @@ export default {
         }
       }
     },
-    
+
     async confirmReceived(order) {
       if (confirm('确认已收到商品？')) {
         try {
@@ -604,12 +598,12 @@ export default {
         }
       }
     },
-    
+
     requestReturn(order) {
       this.selectedOrder = order
       this.showReturnModal = true
     },
-    
+
     // 新增：申请退款
     requestRefund(order) {
       this.refundTarget = order
@@ -625,7 +619,7 @@ export default {
       if (target) await this.submitRefundRequest(target)
       this.refundTarget = null
     },
-    
+
     // 新增：提交退款申请
     async submitRefundRequest(order) {
       try {
@@ -633,7 +627,7 @@ export default {
         const newStatus = String(Number(order.status) + 10)
         const updatedOrder = { ...order, status: newStatus }
         const response = await OrderAPI.updateOrder(updatedOrder)
-        
+
         if (response.data?.code === 200) {
           order.status = newStatus
           order.updatedAt = new Date().toISOString()
@@ -647,7 +641,7 @@ export default {
         showToast('提交退款申请失败，请重试')
       }
     },
-    
+
     // 获取退款状态显示文本
     getRefundStatusText(status) {
       switch (status) {
@@ -661,13 +655,13 @@ export default {
           return '退款处理中'
       }
     },
-    
+
     async submitReturnRequest() {
       if (!this.returnReason.trim()) {
         alert('请选择退货原因')
         return
       }
-      
+
       try {
         // 使用现有接口：更新订单状态为退货中
         const updatedOrder = { ...this.selectedOrder, status: '5' }
@@ -700,16 +694,16 @@ export default {
         alert('提交退货申请失败，请重试')
       }
     },
-    
+
     viewReturnStatus() {
       alert('退货状态：正在处理中，预计3-5个工作日完成')
     },
-    
+
     buyAgain() {
       // 跳转到商品页面
       this.$router.push('/home')
     },
-    
+
     // 新增：跳转到评论页面
     goToComment(order) {
       // 获取订单中的第一个商品ID用于评论
@@ -717,25 +711,88 @@ export default {
       if (order.products && order.products.length > 0) {
         shoeId = order.products[0].id;
       }
-      
+
       if (!shoeId) {
         this.showToast('无法获取商品信息，请重试');
         return;
       }
-      
+
       // 跳转到专门的评论页面，传递商品ID
       this.$router.push({
         name: 'ProductComment',
         params: { shoeId: shoeId },
-        query: { 
+        query: {
           orderId: order.orderId,
           orderNumber: order.orderNumber,
           productName: order.products[0]?.name || '商品'
         }
       });
     },
-    
-    
+
+    // 新增：批量操作订单状态
+    async batchUpdateStatus(newStatus) {
+      const selectedOrders = this.filteredOrders.filter(order => order.selected)
+      if (selectedOrders.length === 0) {
+        alert('请先选择要操作的订单')
+        return
+      }
+
+      if (confirm(`确定要将选中的${selectedOrders.length}个订单状态更新为"${this.getOrderStatus(newStatus)}"吗？`)) {
+        try {
+          const orderIds = selectedOrders.map(order => order.orderId)
+          // 使用现有接口：批量更新订单状态
+          const response = await OrderAPI.batchUpdateOrderStatus(orderIds, newStatus)
+          if (response.data?.code === 200) {
+            // 更新本地订单状态
+            selectedOrders.forEach(order => {
+              order.status = newStatus
+              order.updatedAt = new Date().toISOString()
+            })
+            this.filterOrders()
+            alert('批量更新订单状态成功')
+
+            // 如果批量支付成功，则为这些订单累计积分
+            if (newStatus === '1') {
+              try {
+                const userId = await userManager.getUserId()
+                // 批量支付时若订单号一致可合并一次；否则逐个订单ID调用
+                const firstOrderNumber = selectedOrders[0]?.orderNumber
+                const allSameNumber = firstOrderNumber && selectedOrders.every(o => o.orderNumber === firstOrderNumber)
+                if (allSameNumber) {
+                  await PointsAPI.accrueByOrder({ userId, orderNumber: firstOrderNumber })
+                } else {
+                  for (const order of selectedOrders) {
+                    if (order && order.orderId) {
+                      await PointsAPI.accrueByOrder({ userId, orderId: order.orderId })
+                    }
+                  }
+                }
+              } catch (e) {
+                console.warn('批量支付后累计积分失败:', e)
+              }
+            }
+          } else {
+            alert('批量更新订单状态失败，请重试')
+          }
+        } catch (error) {
+          console.error('批量更新订单状态失败:', error)
+          alert('批量更新订单状态失败，请重试')
+        }
+      }
+    },
+
+    // 新增：更新选择框状态
+    updateSelection() {
+      this.selectedCount = this.visibleOrders.filter(order => order.selected).length
+    },
+
+    // 新增：切换全选/取消全选
+    toggleSelectAll() {
+      this.visibleOrders.forEach(order => {
+        order.selected = !this.isAllSelected
+      })
+      this.updateSelection()
+    },
 
     // 新增：处理图片加载失败
     handleImageError(event) {
@@ -748,7 +805,7 @@ export default {
     // 新增：计算订单总金额
     async calculateOrderAmount(order) {
       console.log('计算订单金额:', order.orderId, 'orderShoeNum:', order.orderShoeNum)
-      
+
       try {
         // 如果orderShoeNum是数组，计算总金额
         if (Array.isArray(order.orderShoeNum)) {
@@ -758,7 +815,7 @@ export default {
               console.warn('商品ID缺失:', item);
               return 0;
             }
-            
+
             try {
               // 调用ShoeAPI获取真实商品价格
               const shoeResponse = await ShoeAPI.getById(shoeId);
@@ -778,22 +835,22 @@ export default {
               return 0;
             }
           }));
-          
+
           const totalAmount = total.reduce((sum, itemTotal) => sum + itemTotal, 0);
           console.log('数组计算总金额:', totalAmount);
           return totalAmount;
         }
-        
+
         // 如果orderShoeNum是单个对象
         if (order.orderShoeNum && typeof order.orderShoeNum === 'object') {
           const item = order.orderShoeNum;
           const shoeId = item.shoeId || item.id;
-          
+
           if (!shoeId) {
             console.warn('商品ID缺失:', item);
             return 0;
           }
-          
+
           try {
             // 调用ShoeAPI获取真实商品价格
             const shoeResponse = await ShoeAPI.getById(shoeId);
@@ -813,13 +870,13 @@ export default {
             return 0;
           }
         }
-        
+
         // 如果orderShoeNum为null，返回0
         if (order.orderShoeNum === null || order.orderShoeNum === undefined) {
           console.log('orderShoeNum为null，无法计算金额');
           return 0;
         }
-        
+
         // 如果没有商品信息，返回0
         console.log('没有商品信息，返回0');
         return 0;
@@ -847,7 +904,7 @@ export default {
     // 新增：从订单中提取商品信息
     async extractProductsFromOrder(order) {
       console.log('提取商品信息:', order.orderId, 'orderShoeNum:', order.orderShoeNum)
-      
+
       try {
         // 如果orderShoeNum是数组
         if (Array.isArray(order.orderShoeNum)) {
@@ -857,7 +914,7 @@ export default {
               console.warn('商品ID缺失:', item);
               return null;
             }
-            
+
             try {
               // 调用ShoeAPI获取真实商品信息
               const shoeResponse = await ShoeAPI.getById(shoeId);
@@ -881,23 +938,23 @@ export default {
               return null;
             }
           }));
-          
+
           // 过滤掉null值
           const validProducts = products.filter(p => p !== null);
           console.log('数组商品信息:', validProducts);
           return validProducts;
         }
-        
+
         // 如果orderShoeNum是单个对象
         if (order.orderShoeNum && typeof order.orderShoeNum === 'object') {
           const item = order.orderShoeNum;
           const shoeId = item.shoeId || item.id;
-          
+
           if (!shoeId) {
             console.warn('商品ID缺失:', item);
             return [];
           }
-          
+
           try {
             // 调用ShoeAPI获取真实商品信息
             const shoeResponse = await ShoeAPI.getById(shoeId);
@@ -923,13 +980,13 @@ export default {
             return [];
           }
         }
-        
+
         // 如果orderShoeNum为null，返回空数组
         if (order.orderShoeNum === null || order.orderShoeNum === undefined) {
           console.log('orderShoeNum为null，无法获取商品信息');
           return [];
         }
-        
+
         // 如果没有商品信息，返回空数组
         console.log('没有商品信息，返回空数组');
         return [];
@@ -981,10 +1038,10 @@ export default {
       // 如果所有字段都为空，返回默认值
       if (!address && !receiver && !phone) {
         console.log('订单中没有找到任何地址相关信息');
-        return { 
-          address: '地址信息待完善', 
-          receiver: '收货人信息待完善', 
-          phone: '联系电话待完善' 
+        return {
+          address: '地址信息待完善',
+          receiver: '收货人信息待完善',
+          phone: '联系电话待完善'
         };
       }
 
@@ -997,12 +1054,12 @@ export default {
         // 首先获取订单的商品数量信息
         const orderShoeNumResponse = await OrderShoeNumAPI.getByOrderId(orderId);
         console.log('订单商品数量响应:', orderId, orderShoeNumResponse);
-        
+
         if (orderShoeNumResponse.data?.code === 200 && orderShoeNumResponse.data.data) {
-          const orderShoeNums = Array.isArray(orderShoeNumResponse.data.data) 
-            ? orderShoeNumResponse.data.data 
+          const orderShoeNums = Array.isArray(orderShoeNumResponse.data.data)
+            ? orderShoeNumResponse.data.data
             : [orderShoeNumResponse.data.data];
-          
+
           // 获取每个商品的详细信息
           const products = await Promise.all(orderShoeNums.map(async (item) => {
             try {
@@ -1011,22 +1068,22 @@ export default {
                 console.warn('商品ID缺失:', item);
                 return null;
               }
-              
+
               // 获取商品详情
               const shoeResponse = await ShoeAPI.getById(shoeId);
               if (shoeResponse.data?.code === 200 && shoeResponse.data.data) {
                 const shoe = shoeResponse.data.data;
-                
+
                 // 获取商品图片信息
                 let imageUrl = null; // 不使用默认图片
                 try {
                   // 调用ShoeAPI.getImages获取商品图片
                   const shoeImgResponse = await ShoeAPI.getImages(shoeId);
                   if (shoeImgResponse.data?.code === 200 && shoeImgResponse.data.data) {
-                    const shoeImgs = Array.isArray(shoeImgResponse.data.data) 
-                      ? shoeImgResponse.data.data 
+                    const shoeImgs = Array.isArray(shoeImgResponse.data.data)
+                      ? shoeImgResponse.data.data
                       : [shoeImgResponse.data.data];
-                    
+
                     if (shoeImgs.length > 0) {
                       // 使用第一张图片
                       const firstImg = shoeImgs[0];
@@ -1041,7 +1098,7 @@ export default {
                   console.warn('获取商品图片失败:', shoeId, imgError);
                   // 图片获取失败时不设置图片URL
                 }
-                
+
                 // 统一价格规则：优先使用折扣价
                 const unitPrice = (shoe.discountPrice && shoe.discountPrice < shoe.price)
                   ? shoe.discountPrice
@@ -1065,7 +1122,7 @@ export default {
               return null;
             }
           }));
-          
+
           // 过滤掉null值
           const validProducts = products.filter(p => p !== null);
           console.log('订单商品信息:', orderId, validProducts);
@@ -1088,24 +1145,24 @@ export default {
           console.warn('地址ID为空，尝试从订单数据获取地址信息');
           return { address: '', receiver: '', phone: '' };
         }
-        
+
         // 使用现有的地址API获取地址信息
         const userId = await userManager.getUserId();
         if (!userId) {
           console.warn('用户ID为空，无法获取地址信息');
           return { address: '', receiver: '', phone: '' };
         }
-        
+
         const addressResponse = await AddressAPI.getList(userId);
         console.log('地址列表响应:', addressResponse);
-        
+
         if (addressResponse.data?.code === 200 && addressResponse.data.data) {
           const addresses = addressResponse.data.data;
           console.log('用户地址列表:', addresses);
-          
+
           // 查找匹配的地址
           const targetAddress = addresses.find(addr => addr.addressId === addressId);
-          
+
           if (targetAddress) {
             console.log('找到匹配的地址:', targetAddress);
             return {
@@ -1257,8 +1314,13 @@ export default {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* 空状态 */
@@ -1396,7 +1458,8 @@ export default {
   align-items: center;
   gap: 1rem;
   padding: 0.75rem;
-  border: none; /* 去掉商品外层细线 */
+  border: none;
+  /* 去掉商品外层细线 */
   border-radius: 8px;
   background: #f8f9fa;
 }
@@ -1438,10 +1501,17 @@ export default {
   gap: 12px;
   margin-top: 8px;
   align-items: center;
-  flex-direction: row;      /* 强制横向 */
-  flex-wrap: nowrap;        /* 不换行 */
+  flex-direction: row;
+  /* 强制横向 */
+  flex-wrap: nowrap;
+  /* 不换行 */
 }
-.action-buttons { display: flex; flex-direction: row; gap: 12px; }
+
+.action-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+}
 
 /* 响应式设计 */
 @media (max-width: 768px) {
@@ -1450,32 +1520,42 @@ export default {
     align-items: flex-start;
     gap: 1rem;
   }
-  
 
-  
+  .batch-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .batch-buttons {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
   .order-header-info {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.75rem;
   }
-  
+
   .order-details {
     flex-direction: column;
     gap: 1rem;
   }
-  
+
   .order-item {
     padding: 1rem;
   }
-  
+
   .product-item {
     flex-direction: column;
     align-items: flex-start;
     text-align: center;
   }
-  
+
   .order-actions {
-    flex-wrap: wrap; /* 小屏才允许换行 */
+    flex-wrap: wrap;
+    /* 小屏才允许换行 */
   }
 }
 
@@ -1484,7 +1564,7 @@ export default {
     padding: 0.5rem 1rem;
     font-size: 0.8rem;
   }
-  
+
   .product-image {
     width: 50px;
     height: 50px;
@@ -1493,14 +1573,18 @@ export default {
 
 /* 信息灰框：除订单编号外的内容 */
 .order-info-box {
-  background: transparent; /* 去掉灰色背景 */
-  border: none;            /* 取消边框 */
+  background: transparent;
+  /* 去掉灰色背景 */
+  border: none;
+  /* 取消边框 */
   border-radius: 12px;
   padding: 12px;
-  max-width: 980px;  /* 整体变窄 */
+  max-width: 980px;
+  /* 整体变窄 */
   margin: 8px auto 0 auto;
   display: grid;
-  grid-template-columns: 320px 1fr;  /* 左图右信息 */
+  grid-template-columns: 320px 1fr;
+  /* 左图右信息 */
   gap: 16px;
 }
 
@@ -1509,8 +1593,10 @@ export default {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 120px; /* 统一宽度，便于对齐 */
-  height: 40px;     /* 统一高度 */
+  min-width: 120px;
+  /* 统一宽度，便于对齐 */
+  height: 40px;
+  /* 统一高度 */
   padding: 0 !important;
   line-height: 40px;
   border-radius: 8px;
@@ -1523,32 +1609,75 @@ export default {
   color: #111111;
   border: 2px solid #111111;
 }
+
 .btn-warning:hover {
   background: #111111;
   color: #fff;
 }
 
 /* 左侧缩略商品列表（更紧凑） */
-.products-list.summary { padding: 0; }
-.product-item.compact { 
-  display: flex; 
-  gap: 10px; 
-  padding: 8px 6px; 
-  border: none; /* 去掉商品外层细线 */
-  border-radius: 8px; 
-  background: #fff; 
-  margin-bottom: 8px; 
+.products-list.summary {
+  padding: 0;
 }
-.product-image.small { width: 72px; height: 72px; border-radius: 8px; overflow: hidden; border: 1px solid #eee; }
-.product-image.small img { width: 100%; height: 100%; object-fit: cover; }
-.product-info.mini { display: flex; flex-direction: column; gap: 4px; }
-.one-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
-.product-meta { font-size: 12px; color: #666; }
+
+.product-item.compact {
+  display: flex;
+  gap: 10px;
+  padding: 8px 6px;
+  border: none;
+  /* 去掉商品外层细线 */
+  border-radius: 8px;
+  background: #fff;
+  margin-bottom: 8px;
+}
+
+.product-image.small {
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #eee;
+}
+
+.product-image.small img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-info.mini {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.one-line {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.product-meta {
+  font-size: 12px;
+  color: #666;
+}
 
 /* 右侧信息更紧凑 */
-.order-right { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
-.order-info { gap: 4px; }
-.info-row { margin-bottom: 6px; }
+.order-right {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.order-info {
+  gap: 4px;
+}
+
+.info-row {
+  margin-bottom: 6px;
+}
 
 /* 取消全选按钮样式 */
 .btn-outline {
@@ -1559,18 +1688,87 @@ export default {
 
 .btn-outline:hover {
   background: #111111;
-  color: #fff;
+  border-color: #111111;
 }
 
-.simple-toast { position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%); background: rgba(33,33,33,.92); color: #fff; padding: 10px 14px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .3s ease, transform .3s ease; z-index: 9999; }
-.simple-toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+.order-checkbox:checked::after,
+.select-all input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 10px;
+  border-right: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(45deg);
+}
+
+/* 让复选框在高分屏上也清晰 */
+.order-checkbox:focus-visible,
+.select-all input[type="checkbox"]:focus-visible {
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.12);
+}
+
+.simple-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 80px;
+  transform: translateX(-50%);
+  background: rgba(33, 33, 33, .92);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity .3s ease, transform .3s ease;
+  z-index: 9999;
+}
+
+.simple-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
 
 /* 自定义确认浮层 */
-.confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; z-index: 9998; }
-.confirm-dialog { width: 420px; max-width: 90vw; background: #fff; border-radius: 12px; box-shadow: 0 12px 28px rgba(0,0,0,.18); padding: 18px 20px; }
-.confirm-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: #111; }
-.confirm-message { font-size: 14px; color: #444; line-height: 1.6; margin-bottom: 14px; }
-.confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998;
+}
+
+.confirm-dialog {
+  width: 420px;
+  max-width: 90vw;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .18);
+  padding: 18px 20px;
+}
+
+.confirm-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #111;
+}
+
+.confirm-message {
+  font-size: 14px;
+  color: #444;
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
 
 /* 模态框样式 */
 .modal-overlay {

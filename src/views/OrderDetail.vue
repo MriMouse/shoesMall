@@ -333,7 +333,7 @@ export default {
 <style scoped>
 .order-detail {
     min-height: 100vh;
-    background: #f8f9fa;
+    background: #ffffff;
     padding: 2rem 0;
 }
 
