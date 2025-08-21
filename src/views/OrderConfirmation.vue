@@ -1428,13 +1428,25 @@ const paymentTimeout = () => {
     // 可以在这里添加其他超时处理逻辑
 }
 
-// 取消支付
-const cancelPayment = () => {
+// 取消支付（生成待支付订单）
+const cancelPayment = async () => {
+    if (isProcessingPayment.value) return
     clearInterval(paymentTimer.value)
-    showPaymentModal.value = false
-    // 清除用户选择标志
-    window.shouldUpdateExistingOrder = false
-    showError('支付取消')
+    try {
+        const created = await createOrderWithStatus('0')
+        if (created) {
+            showSuccess('已生成待支付订单，可在订单中继续支付')
+        } else {
+            showError('生成待支付订单失败，请重试')
+        }
+    } catch (e) {
+        console.error('取消支付并创建待支付订单失败:', e)
+        showError('生成待支付订单失败，请重试')
+    } finally {
+        showPaymentModal.value = false
+        // 清除用户选择标志
+        window.shouldUpdateExistingOrder = false
+    }
 }
 
 // 创建订单的通用方法
