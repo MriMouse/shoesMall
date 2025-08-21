@@ -135,9 +135,6 @@
                   <button @click="goToComment(order)" class="btn btn-outline btn-compact">
                     评论
                   </button>
-                  <button @click="buyAgain(order)" class="btn btn-outline btn-compact">
-                    再次购买
-                  </button>
                 </div>
 
                 <div v-else-if="['11', '12', '13'].includes(order.status)" class="action-buttons">
