@@ -23,7 +23,7 @@
 		<div class="nav-inner">
 			<div class="brand" @click="goHome" aria-label="ShoesMall Home">
 				<div class="brand-logo" role="img" aria-label="Shoes Logo">
-					<img src="./logo.png" width="80" height="28" alt="Shoes Logo" />
+					<img src="./图片2.png" width="60" height="60" alt="Shoes Logo" />
 				</div>
 			</div>
 			<nav class="primary-nav" @mouseenter="cancelClose" @mouseleave="scheduleClose">
@@ -136,9 +136,9 @@
 											<div class="result-name">{{ product.name }}</div>
 											<div class="result-meta">
 												<span class="result-brand">{{ product.brand?.brandName || 'N/A'
-													}}</span>
+												}}</span>
 												<span class="result-type">{{ product.shoesType?.typeName || 'N/A'
-													}}</span>
+												}}</span>
 											</div>
 											<div class="result-price">¥{{ product.discountPrice || product.price }}
 											</div>
@@ -1623,21 +1623,25 @@ export default {
 .brand-logo {
 	padding: 2px 0;
 	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
-.brand-logo svg {
+.brand-logo img {
 	display: block;
 	filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.08));
 	max-width: 100%;
 	height: auto;
+	object-fit: contain;
 }
 
 .primary-nav {
-	margin-left: 40px;
+	margin-left: 24px;
 	flex-shrink: 0;
 }
 
-/* 减少左边距，与logo一起左移 */
+/* 调整左边距，使logo和男鞋的间距等于导航项之间的间距 */
 
 .primary-nav .nav-list {
 	list-style: none;
@@ -2611,9 +2615,9 @@ export default {
 		margin-left: -20px;
 	}
 
-	.brand-logo svg {
-		width: 90px;
-		height: 32px;
+	.brand-logo img {
+		width: 50px;
+		height: 50px;
 	}
 
 	.primary-nav {
@@ -2726,9 +2730,9 @@ export default {
 		margin-left: -8px;
 	}
 
-	.brand-logo svg {
-		width: 80px;
-		height: 28px;
+	.brand-logo img {
+		width: 45px;
+		height: 45px;
 	}
 
 	.primary-nav {
@@ -2831,9 +2835,9 @@ export default {
 		padding-right: 6px;
 	}
 
-	.brand-logo svg {
-		width: 70px;
-		height: 24px;
+	.brand-logo img {
+		width: 40px;
+		height: 40px;
 	}
 
 	.primary-nav .nav-list {
@@ -2934,9 +2938,9 @@ export default {
 		margin-left: -4px;
 	}
 
-	.brand-logo svg {
-		width: 60px;
-		height: 20px;
+	.brand-logo img {
+		width: 35px;
+		height: 35px;
 	}
 
 	.primary-nav {
@@ -3008,9 +3012,9 @@ export default {
 		padding: 0 2px;
 	}
 
-	.brand-logo svg {
-		width: 50px;
-		height: 18px;
+	.brand-logo img {
+		width: 30px;
+		height: 30px;
 	}
 
 	.primary-nav .nav-list {
