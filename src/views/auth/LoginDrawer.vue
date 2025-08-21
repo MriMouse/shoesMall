@@ -217,27 +217,34 @@ export default {
 				params.append('username', loginForm.value.username);
 				params.append('password', loginForm.value.password);
 				
-				const response = await axios.post('/api/usersLogin/userLogin', params, {
+				const response = await axios.post('/api/usersLogin/login', params, {
 					headers: {
 						'Content-Type': 'application/x-www-form-urlencoded'
 					}
 				});
 
-				if (response.data.code === 200 && response.data.data === true) {
-					localStorage.setItem('user', loginForm.value.username);
-					// 触发自定义事件，通知其他组件登录状态变化
-					window.dispatchEvent(new CustomEvent('user-login-change'));
-					emit('login-success');
-					onClose();
-					// 登录成功后跳转到主页面
-					window.location.href = '/';
+				if (response.data.code === 200) {
+					const token = response.data.data;
+					if (typeof token === 'string' && token) {
+						localStorage.setItem('token', token);
+						localStorage.setItem('user', loginForm.value.username);
+						// 触发自定义事件，通知其他组件登录状态变化
+						window.dispatchEvent(new CustomEvent('user-login-change'));
+						emit('login-success');
+						onClose();
+						// 登录成功后跳转到主页面
+						window.location.href = '/';
+					} else {
+						loginError.value = '登录失败：无效的令牌';
+					}
 				} else {
-					loginError.value = '登录失败，密码或用户名错误';
+					loginError.value = '密码或用户名错误';
 				}
 			} catch (error) {
 				console.error('登录错误:', error);
 				if (error.response?.data?.msg) {
-					loginError.value = error.response.data.msg;
+					// 无论后端返回什么错误信息，都统一显示"密码或用户名错误"
+					loginError.value = '密码或用户名错误';
 				} else if (error.code === 'ERR_NETWORK') {
 					loginError.value = '无法连接到服务器，请检查后端服务是否启动';
 				} else {
