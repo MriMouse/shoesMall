@@ -1011,11 +1011,11 @@ export default {
 			}
 			searchDebounceTimer = setTimeout(() => {
 				if (query.trim()) {
-					searchProducts(query);
+					serverSearch(query);
 				} else {
 					searchResults.value = [];
 				}
-			}, 300); // 300ms 防抖延迟
+			}, 300);
 		};
 
 		// 新增：记录搜索历史
@@ -1171,116 +1171,48 @@ export default {
 		};
 
 		// 新增：搜索产品函数
-		async function searchProducts(query) {
+		async function serverSearch(query, limit = 5) {
 			if (!query || !query.trim()) {
 				searchResults.value = [];
 				return;
 			}
-
 			searchLoading.value = true;
 			try {
-				// 使用现有的全量商品数据进行本地搜索
-				let allShoes = [];
-				if (allShoesCache) {
-					allShoes = allShoesCache;
-				} else {
-					const response = await axios.post('/api/shoe/getAll', {}, {
-						headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-					});
-					if (response.data && response.data.data) {
-						allShoes = response.data.data;
-						allShoesCache = allShoes;
-					}
-				}
-
-				if (allShoes.length > 0) {
-					// 本地模糊搜索
-					const searchTerm = query.toLowerCase().trim();
-					const filteredProducts = allShoes.filter(product => {
-						// 搜索商品名称
-						if (product.name && product.name.toLowerCase().includes(searchTerm)) {
-							return true;
-						}
-						// 搜索品牌名称
-						if (product.brand?.brandName && product.brand.brandName.toLowerCase().includes(searchTerm)) {
-							return true;
-						}
-						// 搜索商品类型
-						if (product.shoesType?.typeName && product.shoesType.typeName.toLowerCase().includes(searchTerm)) {
-							return true;
-						}
-						// 搜索颜色
-						if (product.color?.colorName && product.color.colorName.toLowerCase().includes(searchTerm)) {
-							return true;
-						}
-						// 搜索产品编号
-						if (product.serialNumber && product.serialNumber.toLowerCase().includes(searchTerm)) {
-							return true;
-						}
-						return false;
-					});
-
-					// 限制搜索结果数量为5个
-					searchResults.value = filteredProducts.slice(0, 5);
-
-					// 为搜索结果加载图片数据
-					await Promise.all(
-						searchResults.value.map(async (product) => {
-							try {
-								// 检查图片缓存
-								const cacheKey = `product_${product.shoeId}`;
-								if (imageCache.has(cacheKey)) {
-									product.images = imageCache.get(cacheKey);
+				const params = new URLSearchParams({ q: query.trim(), limit });
+				const res = await axios.post('/api/shoe/search', params, {
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+				});
+				const list = (res.data && res.data.data) ? res.data.data : [];
+				searchResults.value = list;
+				// 为每个结果加载图片（与原逻辑一致）
+				await Promise.all(
+					searchResults.value.map(async (product) => {
+						try {
+							const cacheKey = `product_${product.shoeId}`;
+							if (imageCache.has(cacheKey)) {
+								product.images = imageCache.get(cacheKey);
+							} else {
+								const imageResponse = await axios.get(`/api/shoeImg/list/${product.shoeId}`, { timeout: 5000 });
+								if (imageResponse.data && imageResponse.data.data) {
+									product.images = imageResponse.data.data;
+									imageCache.set(cacheKey, product.images);
 								} else {
-									const imageResponse = await axios.get(`/api/shoeImg/list/${product.shoeId}`, { timeout: 5000 });
-									if (imageResponse.data && imageResponse.data.data) {
-										product.images = imageResponse.data.data;
-										// 存入缓存
-										imageCache.set(cacheKey, product.images);
-									} else {
-										product.images = [];
-									}
+									product.images = [];
 								}
-							} catch (error) {
-								console.warn(`加载产品 ${product.name} 图片失败:`, error);
-								product.images = [];
 							}
-							return product;
-						})
-					);
-				} else {
-					searchResults.value = [];
-				}
+						} catch (error) {
+							product.images = [];
+						}
+						return product;
+					})
+				);
 			} catch (error) {
-				console.error('搜索产品失败:', error);
 				searchResults.value = [];
 			} finally {
 				searchLoading.value = false;
 			}
 		}
 
-		// 新增：处理搜索图片加载成功
-		function handleSearchImageLoad(event) {
-			const img = event.target;
-			img.style.display = 'block';
-			img.classList.add('loaded');
-			// 隐藏占位符
-			const placeholder = img.parentElement.querySelector('.result-placeholder');
-			if (placeholder) {
-				placeholder.style.display = 'none';
-			}
-		}
-
-		// 新增：处理搜索图片加载错误
-		function handleSearchImageError(event) {
-			const img = event.target;
-			img.style.display = 'none';
-			// 显示占位符
-			const placeholder = img.parentElement.querySelector('.result-placeholder');
-			if (placeholder) {
-				placeholder.style.display = 'flex';
-			}
-		}
 
 		function toggleSearchPanel() {
 			isSearchPanelOpen.value = !isSearchPanelOpen.value;
@@ -1473,9 +1405,6 @@ export default {
 			onLoginStatusClick,
 			searchLoading,
 			searchResults,
-			searchProducts,
-			handleSearchImageError,
-			handleSearchImageLoad,
 			hotSearches,
 			// 新增：搜索历史相关
 			searchHistory,
