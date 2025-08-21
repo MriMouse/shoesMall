@@ -409,11 +409,11 @@ export default {
           this.stats.totalSpending = validOrders.reduce((sum, o) => sum + (o.shippingFee || 0), 0)
           
           // 计算所有商品的基价合计（按订单表中的商品ID明细求和）
-          const allBaseAmount = validOrders.reduce((sum, o) => sum + (o.baseAmount || 0), 0)
+          // const allBaseAmount = validOrders.reduce((sum, o) => sum + (o.baseAmount || 0), 0)
           const allDiscountSaved = validOrders.reduce((sum, o) => sum + (o.discountSaved || 0), 0)
           
-          // 总节省：商品基价合计 - 运费总支出 + 折扣节省（原价-折后价）
-          this.stats.totalSavings = Math.max(0, allBaseAmount - this.stats.totalSpending + allDiscountSaved)
+          // 总节省：仅统计商品折扣差额（原价-折后价）
+          this.stats.totalSavings = Math.max(0, allDiscountSaved)
 
           // 月度统计（排除购物车和已取消订单）
           const now = new Date()
@@ -430,11 +430,11 @@ export default {
           this.userStats.monthlySpent = monthlyOrders.reduce((sum, o) => sum + (o.shippingFee || 0), 0)
           
           // 本月商品基价合计与折扣节省
-          const monthBaseAmount = monthlyOrders.reduce((sum, o) => sum + (o.baseAmount || 0), 0)
+          // const monthBaseAmount = monthlyOrders.reduce((sum, o) => sum + (o.baseAmount || 0), 0)
           const monthDiscountSaved = monthlyOrders.reduce((sum, o) => sum + (o.discountSaved || 0), 0)
           
-          // 本月节省：本月商品基价合计 - 本月运费 + 本月折扣节省
-          this.userStats.monthlySaved = Math.max(0, monthBaseAmount - this.userStats.monthlySpent + monthDiscountSaved)
+          // 本月节省：仅统计本月商品折扣差额
+          this.userStats.monthlySaved = Math.max(0, monthDiscountSaved)
           // 积分增长计算：基于本月订单中商品的实际积分
           this.userStats.pointsEarned = monthlyOrders.reduce(
             (sum, o) => sum + (o.computedPoints || 0),

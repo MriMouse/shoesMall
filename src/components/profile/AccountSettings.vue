@@ -526,8 +526,8 @@ export default {
 /* 滑块 */
 .toggle-switch span {
   position: absolute;
-  top: 2px;
-  left: 2px;
+  top: 1px;
+  left: 1px;
   width: 22px;
   height: 22px;
   background: #111111;
