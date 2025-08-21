@@ -238,13 +238,23 @@ export default {
 						loginError.value = '登录失败：无效的令牌';
 					}
 				} else {
-					loginError.value = '密码或用户名错误';
+					const backendMsg = response.data.msg || '';
+					if (backendMsg.includes('禁用')) {
+						loginError.value = backendMsg;
+					} else {
+						loginError.value = '密码或用户名错误';
+					}
 				}
 			} catch (error) {
 				console.error('登录错误:', error);
 				if (error.response?.data?.msg) {
-					// 无论后端返回什么错误信息，都统一显示"密码或用户名错误"
-					loginError.value = '密码或用户名错误';
+					const backendMsg = error.response.data.msg;
+					if (backendMsg.includes('禁用')) {
+						loginError.value = backendMsg;
+					} else {
+						// 无论后端返回什么错误信息，都统一显示"密码或用户名错误"
+						loginError.value = '密码或用户名错误';
+					}
 				} else if (error.code === 'ERR_NETWORK') {
 					loginError.value = '无法连接到服务器，请检查后端服务是否启动';
 				} else {
