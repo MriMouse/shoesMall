@@ -118,7 +118,7 @@
 </template>
 
 <script>
-import { AddressAPI } from '@/api'
+import { AddressAPI, OrderAPI } from '@/api'
 import userManager from '@/utils/userManager'
 import confirmDialog from '@/views/confirmDialog.vue'
 import BasicToast from '@/views/BasicToast.vue' // Added import for BasicToast
@@ -285,6 +285,58 @@ export default {
     async deleteAddress(address) {
       this.pendingDeleteAddress = address
       this.showDeleteDialog = true
+    },
+
+    // 确认删除（先检查是否在订单中使用）
+    async handleDeleteConfirm() {
+      const address = this.pendingDeleteAddress
+      if (!address) {
+        this.showDeleteDialog = false
+        return
+      }
+
+      try {
+        const userId = await userManager.getUserId()
+        // 获取所有订单（优先基础接口，确保稳定）
+        let usedByOrders = null
+        try {
+          const res = await OrderAPI.getAll()
+          if (res?.data?.code === 200 && Array.isArray(res.data.data)) {
+            const orders = res.data.data
+            usedByOrders = orders.some(o => {
+              const sameUser = (o?.userId === userId) || (o?.user?.id === userId) || (o?.userID === userId)
+              const sameAddress = String(o?.addressId) === String(address.id)
+              return sameUser && sameAddress
+            })
+          } else {
+            // 明确失败：阻止删除
+            this.showToast('检查地址是否被订单使用失败', 'warning')
+            this.showDeleteDialog = false
+            this.pendingDeleteAddress = null
+            return
+          }
+        } catch (e) {
+          console.warn('检查地址是否被订单使用失败：', e)
+          // 安全失败：阻止删除，避免后端500
+          this.showToast('检查失败，请稍后再试', 'warning')
+          this.showDeleteDialog = false
+          this.pendingDeleteAddress = null
+          return
+        }
+
+        if (usedByOrders) {
+          this.showToast('该地址已在订单中使用，无法删除', 'warning')
+          this.showDeleteDialog = false
+          this.pendingDeleteAddress = null
+          return
+        }
+
+        // 未被使用，执行删除
+        await this.confirmDelete()
+      } catch (e) {
+        console.error('删除前校验失败：', e)
+        this.showToast('删除失败：系统异常', 'error')
+      }
     },
 
     async confirmDelete() {
